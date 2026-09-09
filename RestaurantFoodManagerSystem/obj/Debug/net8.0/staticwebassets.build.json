@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "W+xUFoE3knxeBWs8SdOqPJnhiEcTMHubP6x0Af0yRBI=",
+  "Source": "RestaurantFoodManagerSystem",
+  "BasePath": "_content/RestaurantFoodManagerSystem",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "RestaurantFoodManagerSystem\\wwwroot",
+      "Source": "RestaurantFoodManagerSystem",
+      "ContentRoot": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\wwwroot\\",
+      "BasePath": "_content/RestaurantFoodManagerSystem",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}
