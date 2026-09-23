@@ -1,0 +1,472 @@
+.kitchen-page {
+    padding-bottom: 0;
+}
+
+.kitchen-page .app-shell {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+.kitchen-announcement {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.kitchen-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+.kitchen-summary-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    min-height: 102px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.kitchen-summary-card span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.kitchen-summary-card strong {
+    font-size: 26px;
+}
+
+.kitchen-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+.filter-group {
+    display: grid;
+    gap: 8px;
+}
+
+.filter-group > span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.segmented-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.segment-button {
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.segment-button:hover,
+.segment-button:focus-visible,
+.segment-button.is-active {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.kitchen-board {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+    min-width: 0;
+}
+
+.kitchen-status-tabs {
+    display: none;
+}
+
+.kitchen-column {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.kitchen-column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    margin-bottom: 12px;
+}
+
+.kitchen-column-header span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.ticket-list {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+
+.kitchen-ticket {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.ticket-topline,
+.ticket-meta,
+.ticket-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ticket-code {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.ticket-code strong {
+    font-size: 17px;
+}
+
+.ticket-code span,
+.ticket-meta,
+.ticket-note {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.ticket-items {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ticket-items li {
+    min-width: 0;
+    border-radius: 6px;
+    background: var(--surface-strong);
+}
+
+.ticket-item-check {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+    min-height: 48px;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.ticket-item-check:has(input:disabled) {
+    cursor: default;
+}
+
+.ticket-item-check input {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    accent-color: var(--success);
+    cursor: inherit;
+}
+
+.ticket-item-check input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+
+.ticket-item-content {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ticket-item-content > span,
+.ticket-progress {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.ticket-item-quantity {
+    white-space: nowrap;
+}
+
+.ticket-items .is-complete {
+    background: #edf7ef;
+}
+
+.ticket-item-content .ticket-item-status,
+.ticket-ready {
+    color: var(--success);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.ticket-actions {
+    flex-wrap: wrap;
+}
+
+.ticket-action {
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+    font-weight: 700;
+}
+
+.ticket-action:hover,
+.ticket-action:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.ticket-action.primary {
+    border-color: var(--primary);
+    color: #ffffff;
+    background: var(--primary);
+}
+
+.ticket-action.primary:hover,
+.ticket-action.primary:focus-visible {
+    background: var(--primary-strong);
+}
+
+.priority-high {
+    color: var(--danger);
+    background: #fee2e2;
+}
+
+.priority-medium {
+    color: var(--warning);
+    background: #fef3c7;
+}
+
+.priority-normal {
+    color: var(--info);
+    background: #dbeafe;
+}
+
+.empty-column {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface);
+}
+
+@media (max-width: 1180px) {
+    .kitchen-summary,
+    .kitchen-board {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 760px) {
+    .kitchen-screen .section-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .kitchen-screen .section-heading h2 {
+        font-size: 20px;
+    }
+
+    .kitchen-screen .section-heading .primary-action {
+        min-height: 38px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    .kitchen-toolbar,
+    .kitchen-board {
+        grid-template-columns: 1fr;
+    }
+
+    .kitchen-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .kitchen-summary-card {
+        min-height: 54px;
+        padding: 8px;
+        box-shadow: none;
+    }
+
+    .kitchen-summary-card span {
+        font-size: 11px;
+    }
+
+    .kitchen-summary-card strong {
+        font-size: 18px;
+    }
+
+    .kitchen-toolbar {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 8px;
+    }
+
+    .filter-group {
+        gap: 4px;
+    }
+
+    .filter-group > span {
+        font-size: 11px;
+    }
+
+    .segmented-control {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0;
+        scrollbar-width: none;
+    }
+
+    .segment-button {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .kitchen-status-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .status-tab {
+        display: grid;
+        gap: 3px;
+        min-height: 48px;
+        padding: 7px;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        background: var(--surface);
+        text-align: left;
+    }
+
+    .status-tab.is-active,
+    .status-tab:hover,
+    .status-tab:focus-visible {
+        border-color: var(--primary);
+        color: var(--primary);
+        outline: none;
+    }
+
+    .status-tab strong {
+        font-size: 12px;
+        line-height: 1.2;
+    }
+
+    .status-tab span {
+        color: var(--muted);
+        font-size: 12px;
+    }
+
+    .kitchen-board {
+        gap: 8px;
+    }
+
+    .kitchen-column {
+        display: none;
+        padding: 0;
+    }
+
+    .kitchen-column.is-active-status {
+        display: block;
+    }
+
+    .kitchen-column-header {
+        margin-bottom: 8px;
+    }
+
+    .ticket-list {
+        gap: 8px;
+    }
+
+    .kitchen-ticket {
+        gap: 8px;
+        padding: 10px;
+        box-shadow: none;
+    }
+
+    .ticket-items {
+        gap: 6px;
+    }
+
+    .ticket-item-check {
+        padding: 8px;
+    }
+
+    .ticket-actions {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .ticket-action {
+        width: 100%;
+    }
+
+    .kitchen-column-header,
+    .ticket-topline,
+    .ticket-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .ticket-code strong {
+        font-size: 16px;
+    }
+}

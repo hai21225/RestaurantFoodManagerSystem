@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bếp - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/kitchen.css">
+</head>
+<body class="kitchen-page">
+    <div class="app-shell">
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Màn hình bếp</p>
+                    <h1>Xử lý món</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Nhân viên bếp</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="kitchen-screen" aria-labelledby="kitchen-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Hàng đợi chế biến</p>
+                            <h2 id="kitchen-title">Phiếu bếp</h2>
+                        </div>
+                        <button class="primary-action" type="button" id="refreshKitchenButton">Làm mới</button>
+                    </div>
+
+                    <div class="kitchen-summary" id="kitchenSummary" aria-label="Thống kê đơn bếp"></div>
+
+                    <section class="panel kitchen-toolbar" aria-label="Bộ lọc bếp">
+                        <div class="filter-group">
+                            <span>Khu vực bếp</span>
+                            <div class="segmented-control" id="stationFilters"></div>
+                        </div>
+
+                        <div class="filter-group">
+                            <span>Mức ưu tiên</span>
+                            <div class="segmented-control" id="priorityFilters"></div>
+                        </div>
+                    </section>
+
+                    <div class="kitchen-status-tabs" id="kitchenStatusTabs" aria-label="Trạng thái phiếu bếp"></div>
+                    <p class="kitchen-announcement" id="kitchenAnnouncement" role="status" aria-live="polite" aria-atomic="true"></p>
+                    <div class="kitchen-board" id="kitchenBoard" aria-label="Bảng trạng thái món"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/data/kitchen.data.js"></script>
+    <script src="../js/pages/kitchen.js"></script>
+</body>
+</html>
