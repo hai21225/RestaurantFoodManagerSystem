@@ -1,0 +1,224 @@
+.app-shell {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+    min-height: 100vh;
+    overflow-x: hidden;
+}
+
+.app-shell > * {
+    min-width: 0;
+}
+
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 18px;
+    color: #ffffff;
+    background: #163238;
+    overflow-x: hidden;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    min-height: 48px;
+}
+
+.brand-mark {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border-radius: 8px;
+    color: #163238;
+    background: #d9f99d;
+    font-weight: 700;
+}
+
+.brand span:last-child {
+    display: block;
+    margin-top: 3px;
+    color: #bed4d8;
+    font-size: 13px;
+}
+
+.brand div {
+    min-width: 0;
+}
+
+.brand strong,
+.brand span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.main-nav {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.nav-item {
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 8px;
+    color: #dce9ec;
+    background: transparent;
+    text-align: left;
+}
+
+.nav-item:hover,
+.nav-item:focus-visible,
+.nav-item.is-active {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.13);
+    outline: none;
+}
+
+.workspace {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+.topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+    min-height: 82px;
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+}
+
+.topbar > div:first-child {
+    min-width: 0;
+}
+
+.content {
+    min-width: 0;
+    padding: 28px;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.is-visible {
+    display: block;
+}
+
+.section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+@media (max-width: 760px) {
+    body {
+        padding-bottom: 58px;
+    }
+
+    .app-shell {
+        grid-template-columns: minmax(0, 1fr);
+        width: 100%;
+        max-width: 100vw;
+    }
+
+    .sidebar {
+        position: fixed;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 10;
+        width: 100%;
+        max-width: 100vw;
+        padding: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+    }
+
+    .brand {
+        display: none;
+    }
+
+    .main-nav {
+        display: flex;
+        gap: 0;
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        overflow-x: auto;
+        padding: 6px;
+        scrollbar-width: none;
+    }
+
+    .nav-item {
+        flex: 1 0 86px;
+        width: auto;
+        min-height: 44px;
+        padding: 0 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+        text-align: center;
+    }
+
+    .topbar {
+        min-height: 58px;
+        padding: 10px 14px;
+    }
+
+    .section-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        width: 100%;
+        gap: 12px;
+    }
+
+    .content {
+        padding: 12px;
+    }
+}
+
+@media (max-width: 420px) {
+    .sidebar {
+        gap: 12px;
+        padding: 12px;
+    }
+
+    .brand-mark {
+        width: 38px;
+        height: 38px;
+    }
+
+    .nav-item {
+        flex-basis: 78px;
+        min-height: 42px;
+        padding: 0 10px;
+        font-size: 14px;
+    }
+
+    .topbar {
+        padding: 14px;
+    }
+
+    .content {
+        padding: 14px;
+    }
+}
