@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt món - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/order.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item is-active" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Phục vụ tại bàn</p>
+                    <h1>Đặt món</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Nhân viên</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="order-screen" aria-labelledby="order-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Bàn đang chọn</p>
+                            <h2 id="order-title">Chưa chọn bàn</h2>
+                            <p class="order-context" id="orderContext">Hãy chọn bàn trước khi đặt món.</p>
+                        </div>
+                        <div class="order-actions">
+                            <button class="secondary-action" type="button" id="chooseTableButton">Chọn bàn</button>
+                            <button class="secondary-action" type="button" id="clearOrderButton">Xóa đơn tạm</button>
+                            <button class="primary-action" type="button" id="sendKitchenButton">Gửi bếp</button>
+                        </div>
+                    </div>
+
+                    <div class="order-layout">
+                        <aside class="panel category-panel" aria-labelledby="category-title">
+                            <div class="panel-header">
+                                <h3 id="category-title">Danh mục</h3>
+                                <span id="categoryCount">0 mục</span>
+                            </div>
+                            <div class="category-list" id="categoryList"></div>
+                        </aside>
+
+                        <section class="panel menu-panel" aria-labelledby="menu-title">
+                            <div class="menu-header">
+                                <div>
+                                    <h3 id="menu-title">Món ăn</h3>
+                                    <span id="foodCount">0 món</span>
+                                </div>
+                                <label class="search-box">
+                                    <span>Tìm món</span>
+                                    <input type="search" id="foodSearchInput" placeholder="Nhập tên món">
+                                </label>
+                            </div>
+
+                            <div class="food-grid" id="foodGrid"></div>
+                        </section>
+
+                        <aside class="panel cart-panel" aria-labelledby="cart-title">
+                            <div class="panel-header">
+                                <h3 id="cart-title">Đơn tạm</h3>
+                                <span id="cartItemCount">0 món</span>
+                                <button class="cart-close-button" type="button" id="closeCartButton" aria-label="Đóng đơn tạm">×</button>
+                            </div>
+
+                            <div class="cart-list" id="cartList"></div>
+
+                            <label class="order-note">
+                                <span>Ghi chú đơn</span>
+                                <textarea id="orderNoteInput" rows="3" placeholder="Nhập ghi chú cho đơn"></textarea>
+                            </label>
+
+                            <div class="cart-summary" aria-label="Tạm tính đơn hàng">
+                                <div>
+                                    <span>Tạm tính</span>
+                                    <strong id="subtotalAmount">0đ</strong>
+                                </div>
+                                <div>
+                                    <span>Phí phục vụ</span>
+                                    <strong id="serviceAmount">0đ</strong>
+                                </div>
+                                <div class="total-row">
+                                    <span>Tổng cộng</span>
+                                    <strong id="totalAmount">0đ</strong>
+                                </div>
+                            </div>
+                        </aside>
+                    </div>
+
+                    <button class="cart-dock" type="button" id="cartDock">
+                        <span>
+                            <strong id="cartDockCount">0 món</strong>
+                            <small>Đơn tạm</small>
+                        </span>
+                        <strong id="cartDockTotal">0đ</strong>
+                    </button>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/data/order.data.js"></script>
+    <script src="../js/pages/order.js"></script>
+</body>
+</html>
