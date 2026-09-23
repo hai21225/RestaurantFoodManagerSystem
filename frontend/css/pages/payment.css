@@ -1,0 +1,423 @@
+.payment-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+.payment-summary-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    min-height: 102px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.payment-summary-card span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.payment-summary-card strong {
+    font-size: 26px;
+}
+
+.payment-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.42fr) minmax(0, 1fr) minmax(320px, 0.42fr);
+    gap: 18px;
+    align-items: start;
+    min-width: 0;
+}
+
+.search-box,
+.discount-box,
+.payment-note {
+    display: grid;
+    gap: 6px;
+}
+
+.search-box {
+    margin-bottom: 14px;
+}
+
+.search-box span,
+.discount-box span,
+.payment-note span {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.search-box input,
+.discount-box input,
+.payment-note textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.search-box input,
+.discount-box input {
+    min-height: 40px;
+    padding: 0 12px;
+}
+
+.payment-note textarea {
+    resize: vertical;
+    min-height: 82px;
+    padding: 10px 12px;
+}
+
+.search-box input:focus,
+.discount-box input:focus,
+.payment-note textarea:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.bill-list,
+.method-list {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.bill-button {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    min-height: 112px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface-strong);
+    text-align: left;
+}
+
+.bill-button:hover,
+.bill-button:focus-visible,
+.bill-button.is-selected {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.bill-button.is-selected {
+    background: #ecfdf5;
+}
+
+.bill-button-top,
+.bill-button-bottom,
+.bill-info-row,
+.payment-total div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.bill-button strong {
+    font-size: 16px;
+}
+
+.bill-button span,
+.bill-info-row span,
+.payment-total span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.bill-detail {
+    display: grid;
+    gap: 16px;
+    min-width: 0;
+}
+
+.bill-heading {
+    display: grid;
+    gap: 6px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.bill-heading strong {
+    font-size: 22px;
+}
+
+.bill-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+.bill-info-row {
+    min-height: 62px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.bill-items {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.bill-items li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 70px 110px;
+    gap: 12px;
+    align-items: center;
+    min-width: 0;
+    padding: 10px;
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.bill-items span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.method-button {
+    min-height: 44px;
+    max-width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+    text-align: left;
+    font-weight: 700;
+}
+
+.method-button:hover,
+.method-button:focus-visible,
+.method-button.is-active {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.discount-box,
+.payment-note,
+.payment-total {
+    margin-top: 14px;
+}
+
+.payment-total {
+    display: grid;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.grand-total {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 18px;
+}
+
+.grand-total strong {
+    color: var(--primary);
+}
+
+.confirm-payment-button {
+    width: 100%;
+    margin-top: 16px;
+}
+
+.empty-state {
+    margin: 0;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface);
+}
+
+@media (max-width: 1240px) {
+    .payment-layout {
+        grid-template-columns: minmax(260px, 0.45fr) minmax(0, 1fr);
+    }
+
+    .payment-method-panel {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 860px) {
+    .payment-screen .section-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .payment-screen .section-heading h2 {
+        font-size: 20px;
+    }
+
+    .payment-screen .section-heading .primary-action {
+        min-height: 38px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    .payment-layout,
+    .bill-info-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .payment-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .payment-summary-card {
+        min-height: 54px;
+        padding: 8px;
+        box-shadow: none;
+    }
+
+    .payment-summary-card span {
+        font-size: 11px;
+    }
+
+    .payment-summary-card strong {
+        font-size: 15px;
+        line-height: 1.2;
+        word-break: break-word;
+    }
+
+    .payment-layout {
+        gap: 8px;
+    }
+
+    .bill-list-panel,
+    .bill-detail-panel,
+    .payment-method-panel {
+        padding: 10px;
+    }
+
+    .bill-list-panel .panel-header,
+    .bill-detail-panel .panel-header,
+    .payment-method-panel .panel-header {
+        margin-bottom: 10px;
+    }
+
+    .search-box {
+        margin-bottom: 8px;
+    }
+
+    .search-box input,
+    .discount-box input {
+        min-height: 36px;
+        border-radius: 6px;
+    }
+
+    .bill-list {
+        gap: 6px;
+    }
+
+    .bill-button {
+        min-height: 82px;
+        gap: 5px;
+        padding: 9px;
+        border-radius: 6px;
+    }
+
+    .bill-button strong {
+        font-size: 14px;
+    }
+
+    .bill-button span {
+        font-size: 12px;
+    }
+
+    .bill-items li {
+        grid-template-columns: 1fr;
+        gap: 5px;
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .bill-detail {
+        gap: 10px;
+    }
+
+    .bill-heading {
+        padding-bottom: 10px;
+    }
+
+    .bill-heading strong {
+        font-size: 20px;
+    }
+
+    .bill-info-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .bill-info-row {
+        align-items: flex-start;
+        flex-direction: column;
+        min-height: 54px;
+        gap: 4px;
+        padding: 8px;
+        border-radius: 6px;
+    }
+
+    .method-list {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .method-button {
+        min-height: 38px;
+        padding: 0 8px;
+        border-radius: 6px;
+        font-size: 13px;
+        text-align: center;
+    }
+
+    .discount-box,
+    .payment-note,
+    .payment-total {
+        margin-top: 10px;
+    }
+
+    .payment-note textarea {
+        min-height: 64px;
+        border-radius: 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bill-button-top,
+    .bill-button-bottom,
+    .payment-total div {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .method-button {
+        width: 100%;
+    }
+}
