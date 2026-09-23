@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý món ăn - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/foods.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item is-active" type="button" data-page="foods.html">Món ăn</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Quản lý thực đơn</p>
+                    <h1>Món ăn</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Quản lý</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="foods-screen" aria-labelledby="foods-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Danh sách món</p>
+                            <h2 id="foods-title">Thực đơn đang bán</h2>
+                        </div>
+                        <button class="primary-action" type="button" id="addFoodButton">Thêm món</button>
+                    </div>
+
+                    <div class="foods-summary" id="foodsSummary" aria-label="Thống kê món ăn"></div>
+
+                    <section class="panel foods-toolbar" aria-label="Bộ lọc món ăn">
+                        <label class="search-box">
+                            <span>Tìm món</span>
+                            <input type="search" id="foodSearchInput" placeholder="Nhập tên món hoặc mã món">
+                        </label>
+
+                        <div class="filter-group">
+                            <span>Danh mục</span>
+                            <div class="segmented-control" id="categoryFilters"></div>
+                        </div>
+
+                        <div class="filter-group">
+                            <span>Trạng thái</span>
+                            <div class="segmented-control" id="statusFilters"></div>
+                        </div>
+                    </section>
+
+                    <div class="foods-layout">
+                        <section class="panel foods-table-panel" aria-labelledby="foods-table-title">
+                            <div class="panel-header">
+                                <h3 id="foods-table-title">Thực đơn</h3>
+                                <span id="visibleFoodCount">0 món</span>
+                            </div>
+
+                            <div class="food-list" id="foodList"></div>
+                        </section>
+
+                        <aside class="panel food-detail-panel" aria-labelledby="food-detail-title">
+                            <div class="panel-header">
+                                <h3 id="food-detail-title">Chi tiết món</h3>
+                                <span id="selectedFoodStatus">Chưa chọn</span>
+                                <button class="detail-close-button" type="button" id="closeFoodDetailButton" aria-label="Đóng chi tiết món">×</button>
+                            </div>
+
+                            <div class="food-detail" id="foodDetail">
+                                <p>Chọn một món để xem thông tin và thao tác.</p>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/data/foods.data.js"></script>
+    <script src="../js/pages/foods.js"></script>
+</body>
+</html>
