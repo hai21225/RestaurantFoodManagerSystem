@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurant Food Manager</title>
+    <link rel="stylesheet" href="css/base.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/pages/dashboard.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item is-active" type="button" data-screen="dashboard">Tổng quan</button>
+                <button class="nav-item" type="button" data-screen="tables" onclick="window.location.href='pages/tables.html'">Bàn ăn</button>
+                <button class="nav-item" type="button" data-screen="orders" onclick="window.location.href='pages/order.html'">Đặt món</button>
+                <button class="nav-item" type="button" data-screen="kitchen" onclick="window.location.href='pages/kitchen.html'">Bếp</button>
+                <button class="nav-item" type="button" data-screen="payment" onclick="window.location.href='pages/payment.html'">Thanh toán</button>
+                <button class="nav-item" type="button" data-screen="foods" onclick="window.location.href='pages/foods.html'">Món ăn</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Ca làm việc</p>
+                    <h1>Bảng điều khiển nhà hàng</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Nhân viên</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="screen is-visible" id="dashboard-screen" aria-labelledby="dashboard-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Tổng quan hôm nay</p>
+                            <h2 id="dashboard-title">Tình hình phục vụ</h2>
+                        </div>
+                        <button class="primary-action" type="button">Tạo đơn mới</button>
+                    </div>
+
+                    <div class="metric-grid" id="metricGrid" aria-label="Chỉ số trong ca"></div>
+
+                    <div class="dashboard-layout">
+                        <section class="panel table-panel" aria-labelledby="table-status-title">
+                            <div class="panel-header">
+                                <h3 id="table-status-title">Trạng thái bàn</h3>
+                                <span id="dashboardTableCount">0 bàn</span>
+                            </div>
+                            <div class="table-map" id="tableMap"></div>
+                        </section>
+
+                        <section class="panel order-panel" aria-labelledby="order-queue-title">
+                            <div class="panel-header">
+                                <h3 id="order-queue-title">Đơn đang xử lý</h3>
+                                <span id="queueCount">0 đơn</span>
+                            </div>
+
+                            <div class="filter-bar" aria-label="Lọc đơn hàng">
+                                <button class="filter-button is-active" type="button" data-filter="all">Tất cả</button>
+                                <button class="filter-button" type="button" data-filter="preparing">Đang làm</button>
+                                <button class="filter-button" type="button" data-filter="ready">Đã xong</button>
+                            </div>
+
+                            <div class="order-list" id="orderList"></div>
+                        </section>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="js/data/dashboard.data.js"></script>
+    <script src="js/common/navigation.js"></script>
+    <script src="js/pages/dashboard.js"></script>
+</body>
+</html>
