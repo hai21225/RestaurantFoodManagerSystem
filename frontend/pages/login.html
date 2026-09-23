@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/login.css">
+    <script src="../js/pages/login.js" defer></script>
+</head>
+<body class="login-page">
+    <header class="login-topbar">
+        <div class="login-brand" aria-label="Restaurant - Hệ thống quản lý nhà hàng">
+            <span class="login-brand-mark" aria-hidden="true">RF</span>
+            <div class="login-brand-name">
+                <strong>Restaurant</strong>
+                <span>Quản lý nhà hàng</span>
+            </div>
+        </div>
+        <span class="login-staff-label">Cổng nhân viên</span>
+    </header>
+
+    <main class="login-main">
+        <section class="panel login-card" aria-label="Đăng nhập nhân viên">
+            <div id="loginFormView">
+                <div class="login-heading">
+                    <p class="eyebrow">Tài khoản nội bộ</p>
+                    <h1>Đăng nhập</h1>
+                    <p>Chào bạn, một ca làm việc mới bắt đầu.</p>
+                </div>
+
+                <form id="loginForm" class="login-form" data-state="default" novalidate>
+                    <fieldset id="loginFields" class="login-fields">
+                        <legend class="login-visually-hidden">Thông tin đăng nhập</legend>
+
+                        <div class="login-field">
+                            <label for="loginUsername">Tên đăng nhập hoặc email</label>
+                            <input id="loginUsername" type="text" autocomplete="username"
+                                autocapitalize="none" spellcheck="false" maxlength="128"
+                                placeholder="Nhập tên đăng nhập hoặc email" required
+                                aria-describedby="usernameError" aria-invalid="false">
+                            <p id="usernameError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="loginPassword">Mật khẩu</label>
+                            <div class="login-password-field">
+                                <input id="loginPassword" type="password" autocomplete="current-password"
+                                    maxlength="128" placeholder="Nhập mật khẩu" required
+                                    aria-describedby="passwordError" aria-invalid="false">
+                                <button id="togglePassword" class="login-password-toggle" type="button"
+                                    aria-label="Hiện mật khẩu" aria-controls="loginPassword"
+                                    aria-pressed="false" title="Hiện mật khẩu">
+                                    <svg class="login-eye" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                        <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    <svg class="login-eye-off" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" hidden>
+                                        <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+                                        <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                                        <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+                                        <path d="m2 2 20 20" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p id="passwordError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-options">
+                            <label class="login-remember" for="rememberMe">
+                                <input id="rememberMe" type="checkbox">
+                                <span>Ghi nhớ đăng nhập</span>
+                            </label>
+                            <button id="forgotPassword" class="login-text-button" type="button">Quên mật khẩu?</button>
+                        </div>
+
+                        <div class="login-notice-slot">
+                            <p id="loginError" class="login-error" role="alert" hidden></p>
+                            <p id="loginStatus" class="login-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                        </div>
+
+                        <button id="loginSubmit" class="primary-action login-submit" type="submit" disabled>
+                            <span class="login-spinner" aria-hidden="true" hidden></span>
+                            <span id="loginSubmitLabel">Đăng nhập</span>
+                        </button>
+                    </fieldset>
+                </form>
+                <noscript><p class="login-noscript">Cần bật JavaScript để mở biểu mẫu.</p></noscript>
+            </div>
+
+            <div id="loginSuccess" class="login-success" role="status" hidden>
+                <svg class="login-success-icon" xmlns="http://www.w3.org/2000/svg" width="48" height="48"
+                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="m16 9-5.5 5.5L8 12" />
+                </svg>
+                <h1 id="loginSuccessTitle">Đăng nhập thành công</h1>
+                <p>Chúc bạn một ca làm việc thuận lợi.</p>
+                <button id="restartLogin" class="primary-action login-submit" type="button" aria-describedby="loginSuccessTitle">Quay lại đăng nhập</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="login-footer">
+        <span>Restaurant Food Manager</span>
+        <span>Bản mẫu giao diện</span>
+    </footer>
+
+    <dialog id="forgotDialog" class="login-dialog" aria-labelledby="forgotTitle" aria-describedby="forgotDescription">
+        <h2 id="forgotTitle">Quên mật khẩu?</h2>
+        <p id="forgotDescription">Liên hệ quản lý nhà hàng để được hỗ trợ cấp lại mật khẩu.</p>
+        <form method="dialog">
+            <button class="primary-action login-dialog-close" type="submit" autofocus>Đóng</button>
+        </form>
+    </dialog>
+
+    <!--
+    Icons: Lucide eye, eye-off, circle-check (https://lucide.dev), ISC License.
+    Copyright (c) 2026 Lucide Icons and Contributors
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted, provided that the above
+    copyright notice and this permission notice appear in all copies.
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+    -->
+</body>
+</html>
