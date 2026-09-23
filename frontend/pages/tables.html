@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chọn bàn - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/tables.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item is-active" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Khu vực phục vụ</p>
+                    <h1>Chọn bàn</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Nhân viên</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="tables-screen" aria-labelledby="tables-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Sơ đồ bàn</p>
+                            <h2 id="tables-title">Bàn đang phục vụ</h2>
+                        </div>
+                        <button class="primary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                    </div>
+
+                    <div class="tables-summary" id="tablesSummary" aria-label="Thống kê trạng thái bàn"></div>
+
+                    <section class="panel tables-toolbar" aria-label="Bộ lọc bàn">
+                        <div class="filter-group">
+                            <span>Khu vực</span>
+                            <div class="segmented-control" id="areaFilters"></div>
+                        </div>
+
+                        <div class="filter-group">
+                            <span>Trạng thái</span>
+                            <div class="segmented-control" id="statusFilters"></div>
+                        </div>
+                    </section>
+
+                    <div class="tables-layout">
+                        <section class="panel table-board" aria-labelledby="table-board-title">
+                            <div class="panel-header">
+                                <h3 id="table-board-title">Danh sách bàn</h3>
+                                <span id="visibleTableCount">0 bàn</span>
+                            </div>
+                            <div class="restaurant-map" id="restaurantMap"></div>
+                        </section>
+
+                        <aside class="panel table-detail" aria-labelledby="table-detail-title">
+                            <div class="panel-header">
+                                <h3 id="table-detail-title">Chi tiết bàn</h3>
+                                <span id="selectedTableStatus">Chưa chọn</span>
+                                <button class="detail-close-button" type="button" id="closeTableDetailButton" aria-label="Đóng chi tiết bàn">×</button>
+                            </div>
+
+                            <div class="selected-table" id="selectedTable">
+                                <p>Chọn một bàn để xem chi tiết và thao tác tiếp theo.</p>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/data/tables.data.js"></script>
+    <script src="../js/pages/tables.js"></script>
+</body>
+</html>
