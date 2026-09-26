@@ -1,0 +1,304 @@
+.management-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.summary-tile {
+    display: grid;
+    gap: 7px;
+    min-height: 88px;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+}
+
+.summary-tile span,
+.field-label,
+.table-caption {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.summary-tile strong {
+    font-size: 24px;
+}
+
+.management-toolbar {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+
+.management-toolbar .field {
+    display: grid;
+    flex: 1 1 180px;
+    gap: 7px;
+}
+
+.management-toolbar .field:first-child {
+    flex-basis: 280px;
+}
+
+.field input,
+.field select,
+.profile-form input,
+.profile-form select {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 11px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.field input:focus,
+.field select:focus,
+.profile-form input:focus,
+.profile-form select:focus {
+    border-color: var(--primary);
+    outline: 2px solid rgba(15, 118, 110, 0.14);
+}
+
+.management-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 18px;
+    align-items: start;
+}
+
+.management-list {
+    min-height: 310px;
+}
+
+.empty-workspace {
+    display: grid;
+    min-height: 230px;
+    place-items: center;
+    padding: 28px;
+    border: 1px dashed var(--line);
+    border-radius: 7px;
+    color: var(--muted);
+    text-align: center;
+}
+
+.empty-workspace div {
+    max-width: 390px;
+}
+
+.empty-workspace strong {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text);
+    font-size: 16px;
+}
+
+.quick-actions,
+.settings-list {
+    display: grid;
+    gap: 9px;
+}
+
+.quick-actions button {
+    width: 100%;
+}
+
+.permission-matrix {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.permission-matrix th,
+.permission-matrix td {
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: center;
+}
+
+.permission-matrix th:first-child,
+.permission-matrix td:first-child {
+    text-align: left;
+}
+
+.permission-matrix th {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.permission-check {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.report-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.report-option {
+    min-height: 112px;
+    padding: 15px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    text-align: left;
+}
+
+.report-option:hover,
+.report-option:focus-visible,
+.report-option.is-active {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.report-option strong,
+.report-option span {
+    display: block;
+}
+
+.report-option span {
+    margin-top: 7px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.profile-layout {
+    display: grid;
+    grid-template-columns: 250px minmax(0, 1fr);
+    gap: 18px;
+}
+
+.profile-identity {
+    text-align: center;
+}
+
+.profile-avatar {
+    display: grid;
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 14px;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: #163238;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.profile-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.profile-form label {
+    display: grid;
+    gap: 7px;
+}
+
+.profile-form .full-width {
+    grid-column: 1 / -1;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    grid-column: 1 / -1;
+}
+
+.ui-message {
+    min-height: 20px;
+    margin: 10px 0 0;
+    color: var(--primary);
+    font-size: 13px;
+}
+
+@media (max-width: 1050px) {
+    .management-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .management-grid,
+    .profile-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .management-summary {
+        grid-template-columns: repeat(4, minmax(105px, 1fr));
+        overflow-x: auto;
+        gap: 7px;
+        margin-bottom: 10px;
+        scrollbar-width: none;
+    }
+
+    .summary-tile {
+        min-height: 70px;
+        padding: 10px;
+    }
+
+    .summary-tile strong {
+        font-size: 19px;
+    }
+
+    .management-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 10px;
+        padding: 10px;
+    }
+
+    .management-toolbar .field {
+        flex-basis: auto;
+    }
+
+    .management-grid {
+        gap: 10px;
+    }
+
+    .report-options {
+        display: flex;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .report-option {
+        flex: 0 0 220px;
+    }
+
+    .permission-table-wrap {
+        overflow-x: auto;
+    }
+
+    .permission-matrix {
+        min-width: 720px;
+    }
+
+    .profile-form {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-form .full-width,
+    .form-actions {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 460px) {
+    .form-actions {
+        flex-direction: column;
+    }
+
+    .form-actions button {
+        width: 100%;
+    }
+}
