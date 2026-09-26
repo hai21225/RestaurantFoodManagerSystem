@@ -50,12 +50,20 @@
         return userDtos;
     }
 
-    public async Task<UserDto> FindUserByUsernameAsync(string username)
+    public async Task<UserDto?> FindUserByUsernameAsync(string username)
     {
-        var user = await _userRepository.FindOneAsync(u => u.UserName == username);
+        var normalizedUsername = username.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
+        {
+            return null;
+        }
+
+        var user = await _userRepository.FindOneAsync(
+            u => u.UserName == normalizedUsername);
+
         if (user == null)
         {
-            throw new Exception("User not found");
+            return null;
         }
         var userDto = new UserDto
         {
@@ -74,12 +82,30 @@
 
     public async Task<bool> AddUserAsync(UserDto userdto)
     {
+        var username = userdto.UserName?.Trim();
+        var email = userdto.Email?.Trim();
+
+        if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email))
+        {
+            throw new ArgumentException("Username and email are required");
+        }
+
+        if (await _userRepository.ExistsAsync(x => x.UserName == username))
+        {
+            throw new InvalidOperationException("Username already exists");
+        }
+
+        if (await _userRepository.ExistsAsync(x => x.UserEmail == email))
+        {
+            throw new InvalidOperationException("Email already exists");
+        }
+
         var user = new Users
         {
-            UserName = userdto.UserName??"",
+            UserName = username,
             UserPassword = userdto.Password??"",
             UserFullName = userdto.FullName??"",
-            UserEmail = userdto.Email??"",
+            UserEmail = email,
             UserPhone = userdto.Phone??"",
             IsActive = true,
             CreatedAt = DateTime.Now,

@@ -1,6 +1,4 @@
-﻿
-
-public class AuthService
+﻿public class AuthService
 {
     private readonly UserService _userService;
     private readonly UserRoleService _userRoleService;
@@ -12,26 +10,43 @@ public class AuthService
         _roleService = roleService;
     }
 
-    public async Task<bool> Login(string username, string password)
+    public async Task<UserDto?> Login(string username, string password)
     {
         var users = await _userService.FindUserByUsernameAsync(username);
 
-        if (users == null)
+        if (users == null || users.IsActive != true || string.IsNullOrWhiteSpace(users.Password))
         {
-            return false;
+            return null;
         }
 
         var result = BCrypt.Net.BCrypt.Verify(password, users.Password);
         
-        return result;
+        if(!result)
+        {
+            return null;
+        }
+
+        return users;
     }
 
     public async Task<bool> Register(UserDto userDto)
     {
-        var user = await _userService.FindUserByUsernameAsync(userDto.UserName??"");
+        var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "");
         if (user != null)
         {
-            throw new Exception("Username already exists");
+            throw new InvalidOperationException("Username already exists");
+        }
+
+        if (string.IsNullOrWhiteSpace(userDto.UserName) ||
+            string.IsNullOrWhiteSpace(userDto.Email) ||
+            string.IsNullOrWhiteSpace(userDto.Password))
+        {
+            throw new ArgumentException("Username, email and password are required");
+        }
+
+        if(userDto.Password != userDto.ConfirmPassword)
+        {
+            return false;
         }
         var userdto = new UserDto
         {
@@ -45,12 +60,10 @@ public class AuthService
             UpdatedAt = DateTime.Now
         };
 
-        await _userService.AddUserAsync(userdto);
-
-        return true;
+        return await _userService.AddUserAsync(userdto);
     }
 
-    public async Task<bool> UserPermissionAssignment(int userid, string rolename)
+    public async Task<bool> AssignRoleToUser(int userid, string rolename)
     {
 
         var role = await _roleService.GetRoleByRoleNameAsync(rolename); 

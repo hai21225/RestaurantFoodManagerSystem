@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/payment.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item is-active" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Thu ngân</p>
+                    <h1>Thanh toán</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Thu ngân</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <section class="payment-screen" aria-labelledby="payment-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">Hóa đơn trong ca</p>
+                            <h2 id="payment-title">Phiếu thanh toán</h2>
+                        </div>
+                        <button class="primary-action" type="button" id="printBillButton">In tạm tính</button>
+                    </div>
+
+                    <div class="payment-summary" id="paymentSummary" aria-label="Thống kê thanh toán"></div>
+
+                    <div class="payment-layout">
+                        <section class="panel bill-list-panel" aria-labelledby="bill-list-title">
+                            <div class="panel-header">
+                                <h3 id="bill-list-title">Đơn chờ thanh toán</h3>
+                                <span id="billCount">0 đơn</span>
+                            </div>
+
+                            <label class="search-box">
+                                <span>Tìm bàn hoặc mã đơn</span>
+                                <input type="search" id="billSearchInput" placeholder="Nhập tên bàn hoặc mã đơn">
+                            </label>
+
+                            <div class="bill-list" id="billList"></div>
+                        </section>
+
+                        <section class="panel bill-detail-panel" aria-labelledby="bill-detail-title">
+                            <div class="panel-header">
+                                <h3 id="bill-detail-title">Chi tiết hóa đơn</h3>
+                                <span id="selectedBillStatus">Chưa chọn</span>
+                            </div>
+
+                            <div class="bill-detail" id="billDetail"></div>
+                        </section>
+
+                        <aside class="panel payment-method-panel" aria-labelledby="payment-method-title">
+                            <div class="panel-header">
+                                <h3 id="payment-method-title">Thanh toán</h3>
+                                <span id="paymentMethodLabel">Tiền mặt</span>
+                            </div>
+
+                            <div class="method-list" id="methodList" aria-label="Phương thức thanh toán"></div>
+
+                            <label class="discount-box">
+                                <span>Giảm giá</span>
+                                <input type="number" id="discountInput" min="0" step="1000" value="0">
+                            </label>
+
+                            <label class="payment-note">
+                                <span>Ghi chú thanh toán</span>
+                                <textarea id="paymentNoteInput" rows="3" placeholder="Nhập ghi chú thanh toán"></textarea>
+                            </label>
+
+                            <div class="payment-total" aria-label="Tổng tiền cần thanh toán">
+                                <div>
+                                    <span>Tạm tính</span>
+                                    <strong id="paymentSubtotal">0đ</strong>
+                                </div>
+                                <div>
+                                    <span>Thuế</span>
+                                    <strong id="paymentTax">0đ</strong>
+                                </div>
+                                <div>
+                                    <span>Giảm giá</span>
+                                    <strong id="paymentDiscount">0đ</strong>
+                                </div>
+                                <div class="grand-total">
+                                    <span>Cần thanh toán</span>
+                                    <strong id="paymentGrandTotal">0đ</strong>
+                                </div>
+                            </div>
+
+                            <button class="primary-action confirm-payment-button" type="button" id="confirmPaymentButton">Xác nhận thanh toán</button>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/common/navigation.js"></script>
+    <script src="../js/data/payment.data.js"></script>
+    <script src="../js/pages/payment.js"></script>
+</body>
+</html>

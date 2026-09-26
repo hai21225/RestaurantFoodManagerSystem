@@ -3,48 +3,180 @@
   "WorkspaceRootPath": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\domain\\enum\\roleenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\enum\\roleenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\user\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodsizecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodsizecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\user\\roleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\roleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\managementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\managementservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\user\\userroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\userroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\supplierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\supplierservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\bussinesslogic\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\bussinesslogic\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\controllers\\managementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\managementcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\dto\\roledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\dto\\roledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\orderservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\user\\roles.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\user\\roles.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodtoppingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\foodcontroller\\foodtoppingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\dto\\userroledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\dto\\userroledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\recipeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\recipeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\interfaces\\repositories\\irepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\foodcontroller\\toppingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\foodcontroller\\toppingcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\food\\toppingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\toppingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\food\\foodtoppingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\foodtoppingservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\food\\foodsizeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\foodsizeservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\food\\foodservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\foodservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\food\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\interfaces\\repositories\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\interfaces\\repositories\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\interfaces\\repositories\\irepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\interfaces\\repositories\\irepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\infrastructure\\repositories\\repository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\infrastructure\\repositories\\repository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\restaurant\\restauranttableservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\restaurant\\restauranttableservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\restauranttablecontroller\\restauranttablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\restauranttablecontroller\\restauranttablescontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\restaurant\\restauranttable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\restaurant\\restauranttable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\foodcontroller\\categorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\foodcontroller\\categorycontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\user\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\bussinesslogic\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\bussinesslogic\\authservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\usercontroller\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\usercontroller\\authcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\infrastructure\\repositories\\repository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\infrastructure\\repositories\\repository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\controllers\\usercontroller\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\controllers\\usercontroller\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\ingredient.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\ingredient.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\recipe.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\recipe.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\infrastructure\\repositories\\unitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\infrastructure\\repositories\\unitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\topping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\topping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\foodtopping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\foodtopping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\foodsize.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\foodsize.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\food.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\food.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\user\\userroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\userroleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\services\\user\\roleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\user\\roleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\enum\\roleenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\enum\\roleenum.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\user\\roles.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\user\\roles.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\user\\users.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -55,40 +187,8 @@
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\user\\userroles.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\services\\food\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\services\\food\\categoryservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\dto\\userdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\dto\\userdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\application\\interfaces\\repositories\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\interfaces\\repositories\\iunitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\application\\dto\\categorydto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\application\\dto\\categorydto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\appdbcontext\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\appdbcontext\\appdbcontext.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|d:\\hkdn\\quanlymonannhahang\\restaurantfoodmanagersystem\\restaurantfoodmanagersystem\\infrastructure\\repositories\\unitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\infrastructure\\repositories\\unitofwork.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\foodsize.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\foodsize.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\order\\orderitemtopping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -101,26 +201,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\order\\orderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\order\\orderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\kitchen\\kitchenorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\topping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\topping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\foodtopping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\foodtopping.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\food\\food.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\food\\food.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\order\\orderstatushistory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -139,36 +219,12 @@
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\promotion\\promotion.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\ingredient.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\ingredient.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\inventory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\inventory.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\inventorytransaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\inventorytransaction.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorder.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\purchaseorderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\recipe.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\recipe.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\restaurant\\restauranttable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\restaurant\\restauranttable.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|solutionrelative:restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\supplier.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{65853279-0530-4CC8-A583-6E049F00C2D2}|RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj|D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\restaurantfoodmanagersystem\\domain\\entity\\recipe_inventory\\recipeingredient.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -190,166 +246,179 @@
       "DocumentGroups": [
         {
           "DockedWidth": 135,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 6,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "SupplierService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\SupplierService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\SupplierService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\SupplierService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\SupplierService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAByAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T07:45:20.682Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "OrderService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\OrderService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\OrderService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\OrderService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\OrderService.cs",
+              "ViewState": "AQIAAHYAAAAAAAAAAAAgwD0AAAAyAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T07:34:28.083Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "ManagementService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\ManagementService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\ManagementService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\ManagementService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\ManagementService.cs",
+              "ViewState": "AQIAAAsAAAAAAAAAAIAxwBkAAABmAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T07:17:33.562Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "RecipeService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\RecipeService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\RecipeService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\RecipeService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\RecipeService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAABsAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T05:43:50.445Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
             },
             {
               "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "FoodToppingController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodToppingController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodToppingController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodToppingController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodToppingController.cs",
+              "ViewState": "AQIAAB4AAAAAAAAAAAAYwBYAAAApAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T09:30:32.869Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 0,
-              "Title": "RoleEnum.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAIAAAANAAAA",
+              "Title": "FoodsController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodsController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodsController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodsController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodsController.cs",
+              "ViewState": "AQIAAFEAAAAAAAAAAAAhwIkAAAATAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T06:08:03.727Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "RoleService.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwBIAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T05:58:27.854Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 5,
-              "Title": "RoleDto.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\RoleDto.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\DTO\\RoleDto.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\RoleDto.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\DTO\\RoleDto.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAIAAAAEAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T05:52:55.599Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 7,
-              "Title": "UserRoleDto.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\UserRoleDto.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\DTO\\UserRoleDto.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\UserRoleDto.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\DTO\\UserRoleDto.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAQAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T05:52:16.166Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "AuthService.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
-              "ViewState": "AQIAABgAAAAAAAAAAAAqwBIAAAAaAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T04:32:19.382Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 3,
-              "Title": "UserRoleService.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
-              "ViewState": "AQIAABYAAAAAAAAAAAAqwDEAAAA2AAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T04:18:08.539Z",
+              "WhenOpened": "2026-09-16T07:36:13.008Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "UserService.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAADsAAAAhAAAA",
+              "Title": "FoodSizeController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodSizeController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodSizeController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodSizeController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\FoodSizeController.cs",
+              "ViewState": "AQIAACkAAAAAAAAAAAAgwA4AAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T03:34:41.099Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 9,
-              "Title": "Repository.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
-              "ViewState": "AQIAABcAAAAAAAAAAAAgwCoAAAAFAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T01:43:48.761Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 11,
-              "Title": "Users.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAwAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:07:59.323Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 12,
-              "Title": "UserRoles.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:12:17.233Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 6,
-              "Title": "Roles.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:13:00.756Z",
+              "WhenOpened": "2026-09-16T09:28:55.113Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
               "DocumentIndex": 8,
-              "Title": "IRepository.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAsAAAAgAAAA",
+              "Title": "ToppingController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\ToppingController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\ToppingController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\ToppingController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\ToppingController.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAJQAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T01:44:32.635Z",
+              "WhenOpened": "2026-09-16T09:22:31.254Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ManagementController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\ManagementController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\ManagementController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\ManagementController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\ManagementController.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAA4AAADyAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T03:36:42.621Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "ToppingService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\ToppingService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\ToppingService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\ToppingService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\ToppingService.cs",
+              "ViewState": "AQIAAEsAAAAAAAAAAAAQwKoAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T09:19:42.978Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "FoodToppingService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodToppingService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodToppingService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodToppingService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodToppingService.cs",
+              "ViewState": "AQIAAGkAAAAAAAAAAAAgwHkAAAAWAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T09:30:12.419Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "FoodSizeService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodSizeService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodSizeService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodSizeService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodSizeService.cs",
+              "ViewState": "AQIAAGcAAAAAAAAAAAAQwAMBAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T09:26:04.056Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "FoodService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\FoodService.cs",
+              "ViewState": "AQIAADUAAAAAAAAAAAAgwFMAAAAZAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T07:30:43.828Z",
               "EditorCaption": ""
             },
             {
@@ -360,7 +429,7 @@
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\CategoryService.cs",
               "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Food\\CategoryService.cs",
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Food\\CategoryService.cs",
-              "ViewState": "AQIAAEsAAAAAAAAAAAAuwCQAAAAxAAAA",
+              "ViewState": "AQIAAEkAAAAAAAAAAAAtwFEAAAAyAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-09-08T06:40:53.765Z",
               "EditorCaption": ""
@@ -368,58 +437,6 @@
             {
               "$type": "Document",
               "DocumentIndex": 14,
-              "Title": "UserDto.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\UserDto.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\DTO\\UserDto.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\UserDto.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\DTO\\UserDto.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAcAAAAmAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T03:36:08.17Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 10,
-              "Title": "Program.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Program.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Program.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Program.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Program.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABEAAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T06:31:53.26Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 16,
-              "Title": "CategoryDTO.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\CategoryDTO.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\DTO\\CategoryDTO.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\DTO\\CategoryDTO.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\DTO\\CategoryDTO.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAYAAAAmAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T07:23:12.004Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
-              "Title": "AppDbContext.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
-              "ViewState": "AQIAAF8AAAAAAAAAAAAUwHIAAAAqAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T04:03:28.159Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 15,
               "Title": "IUnitOfWork.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IUnitOfWork.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IUnitOfWork.cs",
@@ -432,7 +449,307 @@
             },
             {
               "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "IRepository.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Interfaces\\Repositories\\IRepository.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAA0AAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-09T01:44:32.635Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Program.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Program.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Program.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Program.cs",
+              "ViewState": "AQIAAAwAAAAAAAAAAAAAAEgAAABhAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T06:31:53.26Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "RestaurantTableService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Restaurant\\RestaurantTableService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\Restaurant\\RestaurantTableService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\Restaurant\\RestaurantTableService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\Restaurant\\RestaurantTableService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAQAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-26T03:37:18.81Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "CategoryController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\CategoryController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\CategoryController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\FoodController\\CategoryController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\FoodController\\CategoryController.cs",
+              "ViewState": "AQIAAEEAAAAAAAAAAAAgwE4AAAAoAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T07:44:44.952Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "UserService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserService.cs",
+              "ViewState": "AQIAAEsAAAAAAAAAAAApwCoAAAApAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-09T03:34:41.099Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "AuthService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\BussinessLogic\\AuthService.cs",
+              "ViewState": "AQIAABkAAAAAAAAAAAAlwCEAAAA9AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-09T04:32:19.382Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
               "DocumentIndex": 18,
+              "Title": "RestaurantTablesController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\RestaurantTableController\\RestaurantTablesController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\RestaurantTableController\\RestaurantTablesController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\RestaurantTableController\\RestaurantTablesController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\RestaurantTableController\\RestaurantTablesController.cs",
+              "ViewState": "AQIAAGkAAAAAAAAAAIAwwIUAAAA8AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T07:07:58.87Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "RestaurantTable.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAkAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:51:35.554Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "AuthController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\UserController\\AuthController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\UserController\\AuthController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\UserController\\AuthController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\UserController\\AuthController.cs",
+              "ViewState": "AQIAADgAAAAAAAAAAAAgwEgAAAA0AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T06:16:42.642Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "Repository.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\Repository.cs",
+              "ViewState": "AQIAACIAAAAAAAAAAAAQwDIAAAAWAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-09T01:43:48.761Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\UserController\\UsersController.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Controllers\\UserController\\UsersController.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Controllers\\UserController\\UsersController.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Controllers\\UserController\\UsersController.cs",
+              "ViewState": "AQIAABIAAAAAAAAAAAAYwBAAAAATAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-16T06:36:45.404Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\appsettings.json",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\appsettings.json",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\appsettings.json",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\appsettings.json",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAABDAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-09-08T03:06:28.665Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "Ingredient.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAgAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:45:10.023Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "PurchaseOrder.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAkAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:46:23.9Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "PurchaseOrderItem.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAkAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:47:14.523Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 30,
+              "Title": "Recipe.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAkAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:44:01.925Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 31,
+              "Title": "Supplier.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAgAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:50:59.53Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 32,
+              "Title": "KitchenOrder.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAoAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:56:02.983Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 33,
+              "Title": "KitchenOrderItem.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAAlAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:56:46.501Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 35,
+              "Title": "Category.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAcAAAArAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:19:10.01Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 37,
+              "Title": "FoodTopping.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAQAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:35:23.809Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 38,
+              "Title": "FoodSize.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wAoAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:23:47.91Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 39,
+              "Title": "Food.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAA+wA0AAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:21:00.986Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 36,
+              "Title": "Topping.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAcAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:33:05.485Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 34,
               "Title": "UnitOfWork.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\UnitOfWork.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\UnitOfWork.cs",
@@ -440,77 +757,95 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Infrastructure\\Repositories\\UnitOfWork.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAA8AAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-09T01:59:29.922Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-09T01:59:29.922Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\appsettings.json",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\appsettings.json",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\appsettings.json",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\appsettings.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAABAAAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2026-09-08T03:06:28.665Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 25,
-              "Title": "KitchenOrderItem.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrderItem.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAAlAAAA",
+              "DocumentIndex": 41,
+              "Title": "RoleService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\RoleService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAABAAAAAUAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:56:46.501Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-09T05:58:27.854Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
-              "Title": "Category.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Category.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAABAAAA",
+              "DocumentIndex": 40,
+              "Title": "UserRoleService.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Application\\Services\\User\\UserRoleService.cs",
+              "ViewState": "AQIAABMAAAAAAAAAAAAAwDMAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:19:10.01Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-09T04:18:08.539Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
-              "Title": "KitchenOrder.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Kitchen\\KitchenOrder.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAoAAAABAAAA",
+              "DocumentIndex": 42,
+              "Title": "RoleEnum.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Enum\\RoleEnum.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAIAAAANAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:56:02.983Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-09T06:08:03.727Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
-              "Title": "Topping.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Topping.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAcAAAABAAAA",
+              "DocumentIndex": 44,
+              "Title": "Users.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Users.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAwAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:33:05.485Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:07:59.323Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 45,
+              "Title": "UserRoles.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\UserRoles.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAQAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:12:17.233Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 43,
+              "Title": "Roles.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\User\\Roles.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAUAAAABAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T03:13:00.756Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 46,
+              "Title": "AppDbContext.cs",
+              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
+              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
+              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
+              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\AppDbContext\\AppDbContext.cs",
+              "ViewState": "AQIAAF8AAAAAAAAAAAAUwHIAAAAqAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-09-08T04:03:28.159Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 49,
               "Title": "OrderItem.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItem.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItem.cs",
@@ -518,12 +853,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItem.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAAUAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:57:32.643Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:57:32.643Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 48,
               "Title": "Order.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\Order.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\Order.cs",
@@ -531,12 +865,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\Order.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwA4AAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:53:59.727Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:53:59.727Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 47,
               "Title": "OrderItemTopping.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItemTopping.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItemTopping.cs",
@@ -544,51 +877,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderItemTopping.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAAUAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:55:41.629Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:55:41.629Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
-              "Title": "FoodSize.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodSize.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAoAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:23:47.91Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 28,
-              "Title": "FoodTopping.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\FoodTopping.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAQAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:35:23.809Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 29,
-              "Title": "Food.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Food\\Food.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwA0AAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:21:00.986Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 50,
               "Title": "OrderStatusHistory.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderStatusHistory.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderStatusHistory.cs",
@@ -596,12 +889,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Order\\OrderStatusHistory.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:54:41.267Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:54:41.267Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 51,
               "Title": "PromotionFood.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionFood.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionFood.cs",
@@ -609,12 +901,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionFood.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:59:47.501Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:59:47.501Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 52,
               "Title": "PromotionCategory.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionCategory.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionCategory.cs",
@@ -622,12 +913,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\PromotionCategory.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T04:00:18.826Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T04:00:18.826Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 53,
               "Title": "Promotion.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\Promotion.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\Promotion.cs",
@@ -635,25 +925,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Promotion\\Promotion.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAwAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:59:19.477Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:59:19.477Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
-              "Title": "Ingredient.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Ingredient.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAgAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:45:10.023Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 54,
               "Title": "Inventory.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Inventory.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Inventory.cs",
@@ -661,12 +937,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Inventory.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAcAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:45:49.351Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:45:49.351Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 55,
               "Title": "InventoryTransaction.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\InventoryTransaction.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\InventoryTransaction.cs",
@@ -674,77 +949,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\InventoryTransaction.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwA4AAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:48:08.07Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:48:08.07Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
-              "Title": "PurchaseOrder.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrder.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:46:23.9Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 38,
-              "Title": "PurchaseOrderItem.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\PurchaseOrderItem.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:47:14.523Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 39,
-              "Title": "Recipe.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Recipe.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:44:01.925Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 40,
-              "Title": "RestaurantTable.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Restaurant\\RestaurantTable.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAgAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:51:35.554Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 41,
-              "Title": "Supplier.cs",
-              "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
-              "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
-              "ToolTip": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
-              "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\Supplier.cs",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAuwAgAAAABAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:50:59.53Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 56,
               "Title": "RecipeIngredient.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\RecipeIngredient.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\RecipeIngredient.cs",
@@ -752,12 +961,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Recipe_Inventory\\RecipeIngredient.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAUAAAABAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:38:37.975Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:38:37.975Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 57,
               "Title": "Payment.cs",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\Domain\\Entity\\Payment\\Payment.cs",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\Domain\\Entity\\Payment\\Payment.cs",
@@ -765,12 +973,11 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\Domain\\Entity\\Payment\\Payment.cs",
               "ViewState": "AQIAAAAAAAAAAAAAAAAuwAkAAAAmAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-09-08T03:55:07.655Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:55:07.655Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 58,
               "Title": "RestaurantFoodManagerSystem.csproj",
               "DocumentMoniker": "D:\\HKDN\\QuanLyMonAnNhaHang\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj",
               "RelativeDocumentMoniker": "RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj",
@@ -778,8 +985,7 @@
               "RelativeToolTip": "RestaurantFoodManagerSystem\\RestaurantFoodManagerSystem.csproj",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAABcAAAAlAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
-              "WhenOpened": "2026-09-08T03:00:22.323Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-09-08T03:00:22.323Z"
             }
           ]
         },

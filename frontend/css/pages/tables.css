@@ -1,0 +1,459 @@
+.tables-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+.table-summary-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    min-height: 102px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+}
+
+.table-summary-card span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.table-summary-card strong {
+    font-size: 26px;
+}
+
+.tables-toolbar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    min-width: 0;
+    margin-bottom: 18px;
+}
+
+.filter-group {
+    display: grid;
+    gap: 8px;
+}
+
+.filter-group > span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.segmented-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+}
+
+.segment-button {
+    min-height: 36px;
+    max-width: 100%;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+}
+
+.segment-button:hover,
+.segment-button:focus-visible,
+.segment-button.is-active {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.tables-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.38fr);
+    gap: 18px;
+    align-items: start;
+    min-width: 0;
+}
+
+.detail-close-button {
+    display: none;
+}
+
+.restaurant-map {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    min-width: 0;
+}
+
+.restaurant-map .empty-state {
+    grid-column: 1 / -1;
+}
+
+.restaurant-table-card {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+    min-height: 132px;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-strong);
+    text-align: left;
+}
+
+.restaurant-table-card.status-empty {
+    background: #f7faf8;
+}
+
+.restaurant-table-card.status-serving {
+    background: #eef4fb;
+}
+
+.restaurant-table-card.status-waiting {
+    background: #fff8e7;
+}
+
+.restaurant-table-card.status-payment {
+    background: #fff1f0;
+}
+
+.restaurant-table-card:hover,
+.restaurant-table-card:focus-visible,
+.restaurant-table-card.is-selected {
+    border-color: var(--primary);
+    outline: none;
+}
+
+.restaurant-table-card.is-selected {
+    background: #ecfdf5;
+}
+
+.table-card-header,
+.table-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+.table-card-header strong {
+    font-size: 18px;
+}
+
+.table-area,
+.table-seats,
+.table-time,
+.table-order-code {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.table-detail-body {
+    display: grid;
+    gap: 14px;
+    min-width: 0;
+}
+
+.detail-title {
+    display: grid;
+    gap: 4px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+}
+
+.detail-title strong {
+    font-size: 22px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    min-width: 0;
+}
+
+.detail-item {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    min-height: 68px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface-strong);
+}
+
+.detail-item span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.detail-item strong {
+    font-size: 15px;
+}
+
+.detail-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.secondary-action {
+    min-height: 40px;
+    max-width: 100%;
+    padding: 0 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    background: var(--surface);
+    font-weight: 700;
+}
+
+.secondary-action:hover,
+.secondary-action:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.selected-table p {
+    margin-bottom: 0;
+    color: var(--muted);
+}
+
+@media (max-width: 1180px) {
+    .restaurant-map,
+    .tables-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tables-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 760px) {
+    .tables-screen .section-heading {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .tables-screen .section-heading h2 {
+        font-size: 20px;
+    }
+
+    .tables-screen .section-heading .primary-action {
+        min-height: 38px;
+        padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    .tables-toolbar,
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .tables-summary {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin-bottom: 8px;
+    }
+
+    .table-summary-card {
+        min-height: 54px;
+        padding: 8px;
+        box-shadow: none;
+    }
+
+    .table-summary-card span {
+        font-size: 11px;
+    }
+
+    .table-summary-card strong {
+        font-size: 18px;
+    }
+
+    .tables-toolbar {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding: 8px;
+    }
+
+    .filter-group {
+        gap: 4px;
+    }
+
+    .filter-group > span {
+        font-size: 11px;
+    }
+
+    .segmented-control {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 0;
+        scrollbar-width: none;
+    }
+
+    .segment-button {
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 10px;
+        border-radius: 6px;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .tables-layout {
+        gap: 8px;
+    }
+
+    .table-board {
+        padding: 10px;
+    }
+
+    .table-board .panel-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+
+    .restaurant-map {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .restaurant-table-card {
+        align-content: space-between;
+        gap: 4px;
+        min-height: 108px;
+        padding: 7px;
+        border-radius: 4px;
+    }
+
+    .restaurant-table-card.is-selected {
+        outline: 2px solid var(--primary);
+        outline-offset: -2px;
+    }
+
+    .table-card-header,
+    .table-card-footer {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .table-card-header strong {
+        font-size: 14px;
+    }
+
+    .restaurant-table-card .status {
+        align-self: start;
+        padding: 2px 5px;
+        border-radius: 4px;
+        font-size: 10px;
+    }
+
+    .table-area {
+        display: none;
+    }
+
+    .table-seats,
+    .table-time,
+    .table-order-code {
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    .table-detail {
+        position: fixed;
+        right: 10px;
+        bottom: 88px;
+        left: 10px;
+        z-index: 20;
+        max-height: min(68dvh, 520px);
+        overflow: auto;
+        padding: 12px;
+        visibility: hidden;
+        opacity: 0;
+        transform: translateY(calc(100% + 110px));
+        transition: transform 160ms ease;
+        pointer-events: none;
+    }
+
+    .table-detail.is-open {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .table-detail .panel-header {
+        position: sticky;
+        top: -12px;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 8px;
+        margin: -12px -12px 10px;
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--line);
+        background: var(--surface);
+    }
+
+    .detail-close-button {
+        display: grid;
+        width: 32px;
+        height: 32px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        color: var(--text);
+        background: var(--surface);
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .detail-item {
+        min-height: 58px;
+        padding: 9px;
+        border-radius: 6px;
+    }
+
+    .detail-actions .primary-action,
+    .detail-actions .secondary-action {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .secondary-action {
+        width: 100%;
+    }
+
+    .detail-title strong {
+        font-size: 20px;
+    }
+}
+
+@media (max-width: 360px) {
+    .restaurant-map {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
