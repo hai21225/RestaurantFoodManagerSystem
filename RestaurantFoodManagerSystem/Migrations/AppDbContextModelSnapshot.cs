@@ -803,14 +803,14 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("TableNumer")
+                    b.Property<string>("TableNumber")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
                     b.HasKey("TableId");
 
-                    b.HasIndex("TableNumer")
+                    b.HasIndex("TableNumber")
                         .IsUnique();
 
                     b.ToTable("restaurant_tables", (string)null);

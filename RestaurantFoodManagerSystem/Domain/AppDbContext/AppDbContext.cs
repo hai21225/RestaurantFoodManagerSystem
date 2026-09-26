@@ -370,7 +370,7 @@ namespace RestaurantFoodManagerSystem.Domain.AppDbContext
 
                 entity.HasKey(x => x.TableId);
 
-                entity.Property(x => x.TableNumer)
+                entity.Property(x => x.TableNumber)
                     .IsRequired()
                     .HasMaxLength(20);
 
@@ -381,10 +381,11 @@ namespace RestaurantFoodManagerSystem.Domain.AppDbContext
                     .IsRequired()
                     .HasMaxLength(50);
 
+
                 entity.Property(x => x.IsActive)
                     .IsRequired();
 
-                entity.HasIndex(x => x.TableNumer)
+                entity.HasIndex(x => x.TableNumber)
                     .IsUnique();
             });
 

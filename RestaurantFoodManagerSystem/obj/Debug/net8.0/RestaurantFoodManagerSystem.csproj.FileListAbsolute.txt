@@ -167,3 +167,5 @@ D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSyst
 D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSystem\obj\Debug\net8.0\RestaurantFoodManagerSystem.pdb
 D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSystem\obj\Debug\net8.0\RestaurantFoodManagerSystem.genruntimeconfig.cache
 D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSystem\obj\Debug\net8.0\ref\RestaurantFoodManagerSystem.dll
+D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSystem\obj\Debug\net8.0\RestaurantFoodManagerSystem.sourcelink.json
+D:\HKDN\QuanLyMonAnNhaHang\RestaurantFoodManagerSystem\RestaurantFoodManagerSystem\bin\Debug\net8.0\BCrypt-Net-Next.dll

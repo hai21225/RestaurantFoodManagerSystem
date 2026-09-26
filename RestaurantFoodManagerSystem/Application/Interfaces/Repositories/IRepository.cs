@@ -9,7 +9,7 @@ public interface IRepository<T> where T : class
     public Task<List<T>> FindAsync(
         Expression<Func<T, bool>> predicate);
 
-    public Task<T> FindOneAsync(
+    public Task<T?> FindOneAsync(
         Expression<Func<T, bool>> predicate);
 
     public Task<bool> ExistsAsync(
