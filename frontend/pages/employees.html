@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhân viên - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/management.css">
+</head>
+<body><div class="app-shell">
+    <aside class="sidebar" aria-label="Điều hướng chính"><div class="brand"><span class="brand-mark">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
+        <nav class="main-nav">
+            <button class="nav-item" data-page="../index.html">Tổng quan</button><button class="nav-item" data-page="tables.html">Bàn ăn</button><button class="nav-item" data-page="order.html">Đặt món</button><button class="nav-item" data-page="kitchen.html">Bếp</button><button class="nav-item" data-page="payment.html">Thanh toán</button><button class="nav-item" data-page="foods.html">Món ăn</button><button class="nav-item is-active" data-page="employees.html">Nhân viên</button><button class="nav-item" data-page="roles.html">Phân quyền</button><button class="nav-item" data-page="inventory.html">Kho hàng</button><button class="nav-item" data-page="purchases.html">Nhập hàng</button><button class="nav-item" data-page="reports.html">Báo cáo</button><button class="nav-item" data-page="account.html">Tài khoản</button>
+        </nav></aside>
+    <div class="workspace"><header class="topbar"><div><p class="eyebrow">Quản trị nhân sự</p><h1>Nhân viên</h1></div><div class="operator"><span class="operator-role">Quản lý</span><strong>Chưa đăng nhập</strong></div></header>
+        <main class="content"><section aria-labelledby="pageTitle">
+            <div class="section-heading"><div><p class="eyebrow">Danh sách nội bộ</p><h2 id="pageTitle">Quản lý nhân viên</h2></div><button class="primary-action" data-feedback="Biểu mẫu thêm nhân viên sẽ mở sau khi kết nối dữ liệu.">Thêm nhân viên</button></div>
+            <div class="management-summary"><article class="summary-tile"><span>Tổng nhân viên</span><strong>0</strong></article><article class="summary-tile"><span>Đang làm việc</span><strong>0</strong></article><article class="summary-tile"><span>Trong ca</span><strong>0</strong></article><article class="summary-tile"><span>Tạm khóa</span><strong>0</strong></article></div>
+            <section class="panel management-toolbar" aria-label="Bộ lọc nhân viên"><label class="field"><span class="field-label">Tìm nhân viên</span><input data-filter-input type="search" placeholder="Tên, số điện thoại hoặc mã nhân viên"></label><label class="field"><span class="field-label">Vai trò</span><select data-filter-input><option>Tất cả vai trò</option><option>Quản lý</option><option>Phục vụ</option><option>Bếp</option><option>Kho</option><option>Thu ngân</option></select></label><label class="field"><span class="field-label">Trạng thái</span><select data-filter-input><option>Tất cả trạng thái</option><option>Đang làm việc</option><option>Tạm khóa</option></select></label></section>
+            <div class="management-grid"><section class="panel management-list"><div class="panel-header"><h3>Danh sách nhân viên</h3><span>0 người</span></div><div class="empty-workspace"><div><strong>Chưa có dữ liệu nhân viên</strong><span>Nhân viên sẽ hiển thị ở đây sau khi kết nối nguồn dữ liệu.</span></div></div></section><aside class="panel"><div class="panel-header"><h3>Thao tác nhanh</h3></div><div class="quick-actions"><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Gán vai trò</button><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Đổi trạng thái</button><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Đặt lại mật khẩu</button></div><p id="uiMessage" class="ui-message" role="status"></p></aside></div>
+        </section></main>
+    </div>
+</div><script src="../js/common/navigation.js"></script><script src="../js/common/management.js"></script></body></html>

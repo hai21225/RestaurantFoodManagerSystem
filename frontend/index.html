@@ -21,12 +21,18 @@
             </div>
 
             <nav class="main-nav">
-                <button class="nav-item is-active" type="button" data-screen="dashboard">Tổng quan</button>
-                <button class="nav-item" type="button" data-screen="tables" onclick="window.location.href='pages/tables.html'">Bàn ăn</button>
-                <button class="nav-item" type="button" data-screen="orders" onclick="window.location.href='pages/order.html'">Đặt món</button>
-                <button class="nav-item" type="button" data-screen="kitchen" onclick="window.location.href='pages/kitchen.html'">Bếp</button>
-                <button class="nav-item" type="button" data-screen="payment" onclick="window.location.href='pages/payment.html'">Thanh toán</button>
-                <button class="nav-item" type="button" data-screen="foods" onclick="window.location.href='pages/foods.html'">Món ăn</button>
+                <button class="nav-item is-active" type="button">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="pages/tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="pages/order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="pages/kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="pages/payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="pages/foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="pages/employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="pages/roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="pages/inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="pages/purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="pages/reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="pages/account.html">Tài khoản</button>
             </nav>
         </aside>
 
@@ -83,8 +89,8 @@
         </div>
     </div>
 
-    <script src="js/data/dashboard.data.js"></script>
     <script src="js/common/navigation.js"></script>
+    <script src="js/data/dashboard.data.js"></script>
     <script src="js/pages/dashboard.js"></script>
 </body>
 </html>

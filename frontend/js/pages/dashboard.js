@@ -11,6 +11,7 @@
     const orderList = document.querySelector("#orderList");
     const queueCount = document.querySelector("#queueCount");
     const filterButtons = document.querySelectorAll(".filter-button");
+    const navButtons = document.querySelectorAll("[data-page]");
 
     function renderMetrics() {
         if (!metricGrid) {
@@ -95,6 +96,12 @@
             filterButtons.forEach((item) => item.classList.remove("is-active"));
             button.classList.add("is-active");
             renderOrders(button.dataset.filter);
+        });
+    });
+
+    navButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            window.location.href = button.dataset.page;
         });
     });
 

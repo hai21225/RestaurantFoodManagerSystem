@@ -22,6 +22,10 @@
     color: #ffffff;
     background: #163238;
     overflow-x: hidden;
+    max-height: 100vh;
+    overflow-y: auto;
+    position: sticky;
+    top: 0;
 }
 
 .brand {
@@ -66,6 +70,56 @@
     gap: 6px;
     min-width: 0;
     max-width: 100%;
+}
+
+.nav-group {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.nav-group-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 42px;
+    padding: 0 12px;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+    color: #dce9ec;
+    background: transparent;
+    text-align: left;
+}
+
+.nav-group-toggle:hover,
+.nav-group-toggle:focus-visible,
+.nav-group.is-open > .nav-group-toggle {
+    color: #ffffff;
+    outline: none;
+}
+
+.nav-group-chevron {
+    transition: transform 140ms ease;
+}
+
+.nav-group.is-open .nav-group-chevron {
+    transform: rotate(180deg);
+}
+
+.nav-submenu {
+    display: none;
+    gap: 4px;
+    padding-left: 10px;
+}
+
+.nav-group.is-open .nav-submenu {
+    display: grid;
+}
+
+.nav-submenu .nav-item {
+    min-height: 38px;
+    font-size: 14px;
 }
 
 .nav-item {
@@ -151,6 +205,8 @@
         width: 100%;
         max-width: 100vw;
         padding: 0;
+        max-height: none;
+        overflow-y: hidden;
         border-top: 1px solid rgba(255, 255, 255, 0.14);
     }
 
@@ -167,6 +223,45 @@
         overflow-x: auto;
         padding: 6px;
         scrollbar-width: none;
+    }
+
+    .nav-group {
+        display: flex;
+        flex: 0 0 auto;
+    }
+
+    .nav-group-toggle {
+        width: auto;
+        min-width: 86px;
+        min-height: 44px;
+        padding: 0 10px;
+        border-top: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.14);
+        border-radius: 6px;
+    }
+
+    .nav-group-chevron {
+        margin-left: 7px;
+    }
+
+    .nav-submenu {
+        position: fixed;
+        right: 8px;
+        bottom: 62px;
+        left: 8px;
+        z-index: 12;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        padding: 8px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #163238;
+        box-shadow: var(--shadow);
+    }
+
+    .nav-submenu .nav-item {
+        min-height: 42px;
+        text-align: center;
     }
 
     .nav-item {
@@ -198,8 +293,8 @@
 
 @media (max-width: 420px) {
     .sidebar {
-        gap: 12px;
-        padding: 12px;
+        gap: 0;
+        padding: 0;
     }
 
     .brand-mark {
