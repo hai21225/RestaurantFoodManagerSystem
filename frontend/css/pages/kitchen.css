@@ -2,10 +2,6 @@
     padding-bottom: 0;
 }
 
-.kitchen-page .app-shell {
-    grid-template-columns: minmax(0, 1fr);
-}
-
 .kitchen-announcement {
     position: absolute;
     width: 1px;
@@ -13,6 +9,17 @@
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+}
+
+.kitchen-access-note {
+    margin: 6px 0 0;
+    color: var(--muted);
+}
+
+.ticket-action:disabled,
+.ticket-item-check input:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
 }
 
 .kitchen-summary {
