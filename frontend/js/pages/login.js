@@ -19,11 +19,6 @@
     const forgotButton = document.querySelector("#forgotPassword");
     const forgotDialog = document.querySelector("#forgotDialog");
 
-    // UI only: ?result=error previews rejection; otherwise preview success.
-    // Remember me is a visual control. No credentials or login state are stored.
-    const simulateError = new URLSearchParams(window.location.search).get("result") === "error";
-    let pendingTimer = null;
-
     function setState(state) {
         form.dataset.state = state;
         const loading = state === "loading";
@@ -34,6 +29,25 @@
         submitLabel.textContent = loading ? "Đang đăng nhập…" : "Đăng nhập";
         statusMessage.textContent = loading ? "Đang xử lý…" : "";
         errorMessage.hidden = state !== "error";
+    }
+
+    async function checkInitialSetup() {
+        fields.disabled = true;
+        submit.disabled = true;
+        statusMessage.textContent = "Đang kiểm tra cấu hình hệ thống...";
+
+        try {
+            const status = await window.restaurantApi.get("/setup/status");
+            if (status.requiresSetup) {
+                window.location.replace("setup.html");
+                return;
+            }
+
+            setState("default");
+        } catch (error) {
+            setState("default");
+            statusMessage.textContent = "Chưa kết nối được máy chủ. Bạn vẫn có thể thử đăng nhập.";
+        }
     }
 
     function showPassword(show) {
@@ -90,7 +104,7 @@
 
     togglePassword.addEventListener("click", () => showPassword(password.type === "password"));
 
-    form.addEventListener("submit", (event) => {
+    form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         if (form.dataset.state === "loading" || form.dataset.state === "success") {
@@ -110,26 +124,31 @@
         showPassword(false);
         setState("loading");
 
-        pendingTimer = window.setTimeout(() => {
-            pendingTimer = null;
-
-            if (simulateError) {
-                errorMessage.textContent = "Tên đăng nhập hoặc mật khẩu không đúng.";
-                setState("error");
-                password.focus();
-                password.select();
-                return;
-            }
-
+        try {
+            const result = await window.restaurantApi.post("/auth/login", {
+                userName: username.value.trim(),
+                password: password.value
+            });
+            window.sessionStorage.setItem("restaurant.currentUser", JSON.stringify(result.data));
             setState("success");
             password.value = "";
             formView.hidden = true;
             success.hidden = false;
+            restart.textContent = "Vào hệ thống";
             restart.focus();
-        }, 1200);
+        } catch (error) {
+            errorMessage.textContent = error.message;
+            setState("error");
+            password.focus();
+            password.select();
+        }
     });
 
     restart.addEventListener("click", () => {
+        if (form.dataset.state === "success") {
+            window.location.href = "../index.html";
+            return;
+        }
         form.reset();
         usernameError.textContent = "";
         passwordError.textContent = "";
@@ -147,8 +166,6 @@
     forgotDialog.addEventListener("close", () => forgotButton.focus());
 
     window.addEventListener("pagehide", () => {
-        window.clearTimeout(pendingTimer);
-        pendingTimer = null;
         password.value = "";
         showPassword(false);
 
@@ -157,5 +174,5 @@
         }
     });
 
-    setState("default");
+    checkInitialSetup();
 })();
