@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chọn bàn - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261001">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/pages/tables.css">
 </head>
@@ -55,7 +55,10 @@
                             <p class="eyebrow">Sơ đồ bàn</p>
                             <h2 id="tables-title">Bàn đang phục vụ</h2>
                         </div>
-                        <button class="primary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                        <div class="heading-actions">
+                            <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                            <button class="primary-action" type="button" id="addTableButton">Thêm bàn</button>
+                        </div>
                     </div>
 
                     <div class="tables-summary" id="tablesSummary" aria-label="Thống kê trạng thái bàn"></div>
@@ -98,7 +101,54 @@
         </div>
     </div>
 
-    <script src="../js/common/navigation.js"></script>
+    <dialog id="tableDialog" class="form-dialog" aria-labelledby="tableDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="tableDialogTitle">Thêm bàn ăn</h2>
+                <p>Bàn mới sẽ ở trạng thái trống và sẵn sàng phục vụ.</p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-table-dialog aria-label="Đóng">×</button>
+        </div>
+        <form id="tableForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field">
+                    <span>Số hoặc tên bàn</span>
+                    <input name="tableNumber" type="text" maxlength="20" placeholder="Ví dụ: 01 hoặc VIP-01" required>
+                </label>
+                <label class="form-field">
+                    <span>Sức chứa</span>
+                    <input name="capacity" type="number" inputmode="numeric" min="1" max="100" value="4" required>
+                </label>
+            </div>
+            <p id="tableFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-table-dialog>Hủy</button>
+                <button id="tableSubmit" class="primary-action" type="submit">Tạo bàn</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="tableLifecycleDialog" class="form-dialog" aria-labelledby="tableLifecycleTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="tableLifecycleTitle">Xóa bàn khỏi danh sách sử dụng</h2>
+                <p id="tableLifecycleName"></p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-table-lifecycle aria-label="Đóng">×</button>
+        </div>
+        <div class="dialog-form">
+            <p id="tableLifecycleNotice" class="lifecycle-notice"></p>
+            <p id="tableLifecycleMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-table-lifecycle>Hủy</button>
+                <button id="tableLifecycleConfirm" class="danger-action" type="button">Xóa bàn</button>
+            </div>
+        </div>
+    </dialog>
+
+    <script src="../js/common/navigation.js?v=20261001"></script>
+    <script src="../js/common/api.js"></script>
+    <script src="../js/common/dialogs.js"></script>
     <script src="../js/data/tables.data.js"></script>
     <script src="../js/pages/tables.js"></script>
 </body>

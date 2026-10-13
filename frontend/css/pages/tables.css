@@ -91,7 +91,18 @@
 }
 
 .restaurant-map .empty-state {
+    display: grid;
     grid-column: 1 / -1;
+    gap: 6px;
+    padding: 14px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    color: var(--muted);
+    background: var(--surface);
+}
+
+.restaurant-map .empty-state strong {
+    color: var(--text);
 }
 
 .restaurant-table-card {
@@ -120,6 +131,16 @@
 
 .restaurant-table-card.status-payment {
     background: #fff1f0;
+}
+
+.restaurant-table-card.status-inactive {
+    background: #f8fafc;
+    opacity: 0.78;
+}
+
+.status-inactive {
+    color: var(--muted);
+    background: #e5e7eb;
 }
 
 .restaurant-table-card:hover,
@@ -226,6 +247,14 @@
     color: var(--muted);
 }
 
+.table-action-hint,
+.lifecycle-notice {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
 @media (max-width: 1180px) {
     .restaurant-map,
     .tables-summary {
@@ -240,7 +269,7 @@
 @media (max-width: 760px) {
     .tables-screen .section-heading {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr);
         align-items: end;
         gap: 10px;
         margin-bottom: 10px;
@@ -253,6 +282,20 @@
     .tables-screen .section-heading .primary-action {
         min-height: 38px;
         padding: 0 12px;
+        white-space: nowrap;
+    }
+
+    .tables-screen .heading-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+        overflow: visible;
+    }
+
+    .tables-screen .heading-actions button {
+        width: 100%;
+        min-height: 38px;
+        padding: 0 10px;
         white-space: nowrap;
     }
 

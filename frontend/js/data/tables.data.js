@@ -10,7 +10,8 @@ window.tablesData = {
         { value: "empty", label: "Trống" },
         { value: "serving", label: "Đang phục vụ" },
         { value: "waiting", label: "Chờ món" },
-        { value: "payment", label: "Chờ thanh toán" }
+        { value: "payment", label: "Chờ thanh toán" },
+        { value: "inactive", label: "Ngừng sử dụng" }
     ],
     tables: []
 };
