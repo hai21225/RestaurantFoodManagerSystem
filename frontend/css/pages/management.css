@@ -75,6 +75,32 @@
     min-height: 310px;
 }
 
+.management-rows {
+    display: grid;
+    gap: 8px;
+}
+
+.management-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 140px 140px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-strong);
+}
+
+.management-row > div {
+    display: grid;
+    gap: 4px;
+}
+
+.management-row span {
+    color: var(--muted);
+    font-size: 12px;
+}
+
 .empty-workspace {
     display: grid;
     min-height: 230px;
@@ -220,6 +246,38 @@
     font-size: 13px;
 }
 
+.role-guide {
+    display: grid;
+    gap: 12px;
+}
+
+.role-guide p {
+    display: grid;
+    gap: 4px;
+    margin: 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.role-guide p:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.role-guide span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.employee-status {
+    color: var(--success);
+    font-size: 13px;
+}
+
+.employee-status.is-locked {
+    color: var(--danger);
+}
+
 @media (max-width: 1050px) {
     .management-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -261,8 +319,20 @@
         flex-basis: auto;
     }
 
+    .management-toolbar .field:first-child {
+        flex-basis: auto;
+    }
+
     .management-grid {
         gap: 10px;
+    }
+
+    .management-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .management-row > div:last-child {
+        grid-column: 1 / -1;
     }
 
     .report-options {

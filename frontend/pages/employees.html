@@ -4,20 +4,168 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhân viên - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css">
-    <link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/management.css">
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261001">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/management.css">
 </head>
-<body><div class="app-shell">
-    <aside class="sidebar" aria-label="Điều hướng chính"><div class="brand"><span class="brand-mark">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
-        <nav class="main-nav">
-            <button class="nav-item" data-page="../index.html">Tổng quan</button><button class="nav-item" data-page="tables.html">Bàn ăn</button><button class="nav-item" data-page="order.html">Đặt món</button><button class="nav-item" data-page="kitchen.html">Bếp</button><button class="nav-item" data-page="payment.html">Thanh toán</button><button class="nav-item" data-page="foods.html">Món ăn</button><button class="nav-item is-active" data-page="employees.html">Nhân viên</button><button class="nav-item" data-page="roles.html">Phân quyền</button><button class="nav-item" data-page="inventory.html">Kho hàng</button><button class="nav-item" data-page="purchases.html">Nhập hàng</button><button class="nav-item" data-page="reports.html">Báo cáo</button><button class="nav-item" data-page="account.html">Tài khoản</button>
-        </nav></aside>
-    <div class="workspace"><header class="topbar"><div><p class="eyebrow">Quản trị nhân sự</p><h1>Nhân viên</h1></div><div class="operator"><span class="operator-role">Quản lý</span><strong>Chưa đăng nhập</strong></div></header>
-        <main class="content"><section aria-labelledby="pageTitle">
-            <div class="section-heading"><div><p class="eyebrow">Danh sách nội bộ</p><h2 id="pageTitle">Quản lý nhân viên</h2></div><button class="primary-action" data-feedback="Biểu mẫu thêm nhân viên sẽ mở sau khi kết nối dữ liệu.">Thêm nhân viên</button></div>
-            <div class="management-summary"><article class="summary-tile"><span>Tổng nhân viên</span><strong>0</strong></article><article class="summary-tile"><span>Đang làm việc</span><strong>0</strong></article><article class="summary-tile"><span>Trong ca</span><strong>0</strong></article><article class="summary-tile"><span>Tạm khóa</span><strong>0</strong></article></div>
-            <section class="panel management-toolbar" aria-label="Bộ lọc nhân viên"><label class="field"><span class="field-label">Tìm nhân viên</span><input data-filter-input type="search" placeholder="Tên, số điện thoại hoặc mã nhân viên"></label><label class="field"><span class="field-label">Vai trò</span><select data-filter-input><option>Tất cả vai trò</option><option>Quản lý</option><option>Phục vụ</option><option>Bếp</option><option>Kho</option><option>Thu ngân</option></select></label><label class="field"><span class="field-label">Trạng thái</span><select data-filter-input><option>Tất cả trạng thái</option><option>Đang làm việc</option><option>Tạm khóa</option></select></label></section>
-            <div class="management-grid"><section class="panel management-list"><div class="panel-header"><h3>Danh sách nhân viên</h3><span>0 người</span></div><div class="empty-workspace"><div><strong>Chưa có dữ liệu nhân viên</strong><span>Nhân viên sẽ hiển thị ở đây sau khi kết nối nguồn dữ liệu.</span></div></div></section><aside class="panel"><div class="panel-header"><h3>Thao tác nhanh</h3></div><div class="quick-actions"><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Gán vai trò</button><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Đổi trạng thái</button><button class="secondary-action" data-feedback="Chưa có nhân viên được chọn.">Đặt lại mật khẩu</button></div><p id="uiMessage" class="ui-message" role="status"></p></aside></div>
-        </section></main>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div><strong>Restaurant</strong><span>POS nội bộ</span></div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item is-active" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div><p class="eyebrow">Quản trị nhân sự</p><h1>Nhân viên</h1></div>
+                <div class="operator"><span class="operator-role">Quản lý</span><strong>Chưa đăng nhập</strong></div>
+            </header>
+
+            <main class="content">
+                <section aria-labelledby="pageTitle">
+                    <div class="section-heading">
+                        <div><p class="eyebrow">Danh sách nội bộ</p><h2 id="pageTitle">Quản lý nhân viên</h2></div>
+                        <button id="addEmployeeButton" class="primary-action" type="button">Thêm nhân viên</button>
+                    </div>
+
+                    <div class="management-summary" aria-label="Thống kê nhân viên">
+                        <article class="summary-tile"><span>Tổng nhân viên</span><strong id="employeeTotal">0</strong></article>
+                        <article class="summary-tile"><span>Đang hoạt động</span><strong id="employeeActive">0</strong></article>
+                        <article class="summary-tile"><span>Quản trị viên</span><strong id="employeeAdmins">0</strong></article>
+                        <article class="summary-tile"><span>Tạm khóa</span><strong id="employeeLocked">0</strong></article>
+                    </div>
+
+                    <section class="panel management-toolbar" aria-label="Bộ lọc nhân viên">
+                        <label class="field">
+                            <span class="field-label">Tìm nhân viên</span>
+                            <input id="employeeSearch" type="search" placeholder="Tên, email hoặc số điện thoại">
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Vai trò</span>
+                            <select id="employeeRoleFilter">
+                                <option value="all">Tất cả vai trò</option>
+                                <option value="Admin">Quản trị</option>
+                                <option value="Waiter">Phục vụ</option>
+                                <option value="Chef">Bếp</option>
+                                <option value="Cashier">Thu ngân</option>
+                                <option value="WarehouseManager">Kho</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Trạng thái</span>
+                            <select id="employeeStatusFilter">
+                                <option value="all">Tất cả trạng thái</option>
+                                <option value="active">Đang hoạt động</option>
+                                <option value="locked">Tạm khóa</option>
+                            </select>
+                        </label>
+                    </section>
+
+                    <div class="management-grid">
+                        <section class="panel management-list" aria-labelledby="employeeListTitle">
+                            <div class="panel-header">
+                                <h3 id="employeeListTitle">Danh sách nhân viên</h3>
+                                <span id="employeeCount">0 người</span>
+                            </div>
+                            <div id="employeeList" class="management-rows"></div>
+                        </section>
+
+                        <aside class="panel" aria-labelledby="roleGuideTitle">
+                            <div class="panel-header"><h3 id="roleGuideTitle">Vai trò sử dụng</h3></div>
+                            <div class="role-guide">
+                                <p><strong>Phục vụ</strong><span>Chọn bàn, đặt món và theo dõi món.</span></p>
+                                <p><strong>Bếp</strong><span>Cập nhật tiến độ chế biến.</span></p>
+                                <p><strong>Thu ngân</strong><span>Kiểm tra và thanh toán hóa đơn.</span></p>
+                                <p><strong>Kho</strong><span>Tồn kho, nhập hàng và lịch sử kho.</span></p>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
     </div>
-</div><script src="../js/common/navigation.js"></script><script src="../js/common/management.js"></script></body></html>
+
+    <dialog id="employeeDialog" class="form-dialog" aria-labelledby="employeeDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="employeeDialogTitle">Thêm nhân viên</h2>
+                <p>Tạo tài khoản đăng nhập và gán vai trò làm việc.</p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-dialog aria-label="Đóng">×</button>
+        </div>
+        <form id="employeeForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field">
+                    <span>Họ và tên</span>
+                    <input name="fullName" type="text" autocomplete="name" maxlength="150" required>
+                </label>
+                <label class="form-field">
+                    <span>Vai trò</span>
+                    <select name="roleName" required>
+                        <option value="">Chọn vai trò</option>
+                        <option value="Waiter">Phục vụ</option>
+                        <option value="Chef">Bếp</option>
+                        <option value="Cashier">Thu ngân</option>
+                        <option value="WarehouseManager">Kho</option>
+                        <option value="Admin">Quản trị</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span>Tên đăng nhập</span>
+                    <input name="userName" type="text" autocomplete="off" autocapitalize="none"
+                        spellcheck="false" maxlength="100" required>
+                </label>
+                <label class="form-field">
+                    <span>Email</span>
+                    <input name="email" type="email" autocomplete="off" maxlength="150" required>
+                </label>
+                <label class="form-field">
+                    <span>Số điện thoại</span>
+                    <input name="phone" type="tel" autocomplete="off" maxlength="20">
+                </label>
+                <label class="form-field">
+                    <span>Mật khẩu tạm</span>
+                    <input id="employeePassword" name="password" type="password" autocomplete="new-password"
+                        minlength="6" maxlength="128" required>
+                </label>
+                <label class="form-field">
+                    <span>Xác nhận mật khẩu</span>
+                    <input id="employeeConfirmPassword" name="confirmPassword" type="password"
+                        autocomplete="new-password" minlength="6" maxlength="128" required>
+                </label>
+            </div>
+            <label class="checkbox-field">
+                <input id="showEmployeePassword" type="checkbox">
+                <span>Hiện mật khẩu</span>
+            </label>
+            <p id="employeeFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-dialog>Hủy</button>
+                <button id="employeeSubmit" class="primary-action" type="submit">Tạo nhân viên</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/common/navigation.js?v=20261001"></script>
+    <script src="../js/common/api.js"></script>
+    <script src="../js/common/dialogs.js"></script>
+    <script src="../js/pages/employees.js"></script>
+</body>
+</html>
