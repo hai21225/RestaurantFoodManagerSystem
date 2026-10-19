@@ -301,7 +301,7 @@
 @media (max-width: 820px) {
     .foods-screen .section-heading {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr);
         align-items: end;
         gap: 10px;
         margin-bottom: 10px;
@@ -315,6 +315,21 @@
         min-height: 38px;
         padding: 0 12px;
         white-space: nowrap;
+    }
+
+    .foods-screen .heading-actions {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        overflow: visible;
+    }
+
+    .foods-screen .heading-actions button {
+        width: 100%;
+        min-height: 38px;
+        padding: 0 7px;
+        font-size: 12px;
+        white-space: normal;
     }
 
     .detail-grid {
@@ -505,4 +520,9 @@
     .detail-actions {
         width: 100%;
     }
+}
+.lifecycle-notice {
+    margin: 0;
+    color: var(--muted);
+    line-height: 1.55;
 }

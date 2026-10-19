@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thiết lập Admin - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/login.css">
+    <link rel="stylesheet" href="../css/pages/setup.css">
+    <script src="../js/common/api.js" defer></script>
+    <script src="../js/pages/setup.js" defer></script>
+</head>
+<body class="login-page setup-page">
+    <header class="login-topbar">
+        <div class="login-brand" aria-label="Restaurant - Hệ thống quản lý nhà hàng">
+            <span class="login-brand-mark" aria-hidden="true">RF</span>
+            <div class="login-brand-name">
+                <strong>Restaurant</strong>
+                <span>Quản lý nhà hàng</span>
+            </div>
+        </div>
+        <span class="login-staff-label">Thiết lập lần đầu</span>
+    </header>
+
+    <main class="login-main setup-main">
+        <section class="panel login-card setup-card" aria-labelledby="setupTitle">
+            <div id="setupChecking" class="setup-checking" role="status">
+                <strong>Đang kiểm tra hệ thống</strong>
+                <span>Vui lòng chờ trong giây lát.</span>
+                <button id="setupRetry" class="secondary-action" type="button" hidden>Thử lại</button>
+            </div>
+
+            <div id="setupFormView" hidden>
+                <div class="login-heading setup-heading">
+                    <p class="eyebrow">Thiết lập lần đầu</p>
+                    <h1 id="setupTitle">Tạo tài khoản Admin</h1>
+                    <p>Tài khoản này dùng để tạo nhân viên và cấu hình dữ liệu nhà hàng.</p>
+                </div>
+
+                <form id="setupForm" class="setup-form" novalidate>
+                    <fieldset id="setupFields" class="login-fields">
+                        <legend class="login-visually-hidden">Thông tin tài khoản Admin</legend>
+                        <div class="setup-grid">
+                            <label class="login-field">
+                                <span>Họ và tên</span>
+                                <input id="setupFullName" name="fullName" type="text" autocomplete="name"
+                                    maxlength="150" placeholder="Nguyễn Văn An" required>
+                            </label>
+
+                            <label class="login-field">
+                                <span>Tên đăng nhập</span>
+                                <input id="setupUsername" name="userName" type="text" autocomplete="username"
+                                    autocapitalize="none" spellcheck="false" maxlength="100"
+                                    placeholder="admin" required>
+                            </label>
+
+                            <label class="login-field">
+                                <span>Email</span>
+                                <input id="setupEmail" name="email" type="email" autocomplete="email"
+                                    maxlength="150" placeholder="admin@nhahang.vn" required>
+                            </label>
+
+                            <label class="login-field">
+                                <span>Số điện thoại</span>
+                                <input id="setupPhone" name="phone" type="tel" autocomplete="tel"
+                                    maxlength="20" placeholder="Có thể để trống">
+                            </label>
+
+                            <label class="login-field">
+                                <span>Mật khẩu</span>
+                                <span class="login-password-field">
+                                    <input id="setupPassword" name="password" type="password"
+                                        autocomplete="new-password" minlength="6" maxlength="128"
+                                        placeholder="Tối thiểu 6 ký tự" required>
+                                    <button class="login-password-toggle" type="button"
+                                        data-password-toggle="setupPassword" aria-label="Hiện mật khẩu"
+                                        aria-pressed="false" title="Hiện mật khẩu">Hiện</button>
+                                </span>
+                            </label>
+
+                            <label class="login-field">
+                                <span>Xác nhận mật khẩu</span>
+                                <span class="login-password-field">
+                                    <input id="setupConfirmPassword" name="confirmPassword" type="password"
+                                        autocomplete="new-password" minlength="6" maxlength="128"
+                                        placeholder="Nhập lại mật khẩu" required>
+                                    <button class="login-password-toggle" type="button"
+                                        data-password-toggle="setupConfirmPassword" aria-label="Hiện mật khẩu"
+                                        aria-pressed="false" title="Hiện mật khẩu">Hiện</button>
+                                </span>
+                            </label>
+                        </div>
+
+                        <p id="setupMessage" class="setup-message" role="alert"></p>
+                        <button id="setupSubmit" class="primary-action login-submit" type="submit">
+                            <span class="login-spinner" aria-hidden="true" hidden></span>
+                            <span id="setupSubmitLabel">Tạo tài khoản Admin</span>
+                        </button>
+                    </fieldset>
+                </form>
+            </div>
+
+            <div id="setupSuccess" class="login-success" role="status" hidden>
+                <h1>Thiết lập hoàn tất</h1>
+                <p>Tài khoản Admin đã sẵn sàng. Hãy đăng nhập để tiếp tục cấu hình nhà hàng.</p>
+                <button id="goToLogin" class="primary-action login-submit" type="button">Đến trang đăng nhập</button>
+            </div>
+        </section>
+    </main>
+
+    <footer class="login-footer">
+        <span>Restaurant Food Manager</span>
+        <span>Dành cho hệ thống nội bộ</span>
+    </footer>
+</body>
+</html>

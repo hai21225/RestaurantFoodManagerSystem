@@ -9,7 +9,10 @@
         categoryId: "all",
         searchTerm: "",
         cart: [],
-        selectedTable: getSelectedTable()
+        selectedTable: getSelectedTable(),
+        sizeFoodId: null,
+        weightFoodId: null,
+        weightSizeId: null
     };
 
     const orderTitle = document.querySelector("#order-title");
@@ -32,7 +35,67 @@
     const chooseTableButton = document.querySelector("#chooseTableButton");
     const clearOrderButton = document.querySelector("#clearOrderButton");
     const sendKitchenButton = document.querySelector("#sendKitchenButton");
+    const sizeDialog = document.querySelector("#sizeDialog");
+    const sizeDialogTitle = document.querySelector("#sizeDialogTitle");
+    const sizeDialogDescription = document.querySelector("#sizeDialogDescription");
+    const sizeOptions = document.querySelector("#sizeOptions");
+    const sizeDialogMessage = document.querySelector("#sizeDialogMessage");
+    const closeSizeDialog = document.querySelector("#closeSizeDialog");
+    const cancelSizeButton = document.querySelector("#cancelSizeButton");
+    const weightDialog = document.querySelector("#weightDialog");
+    const weightForm = document.querySelector("#weightForm");
+    const weightDialogTitle = document.querySelector("#weightDialogTitle");
+    const weightDialogDescription = document.querySelector("#weightDialogDescription");
+    const weightQuantity = document.querySelector("#weightQuantity");
+    const weightPreviewTotal = document.querySelector("#weightPreviewTotal");
+    const weightFormMessage = document.querySelector("#weightFormMessage");
+    const closeWeightDialog = document.querySelector("#closeWeightDialog");
+    const cancelWeightButton = document.querySelector("#cancelWeightButton");
     const navButtons = document.querySelectorAll("[data-page]");
+
+    async function loadMenu() {
+        foodGrid.innerHTML = '<div class="empty-state"><strong>Đang tải thực đơn...</strong></div>';
+        try {
+            const menu = await window.restaurantApi.get("/menu");
+            orderData.categories = [{ id: "all", name: "Tất cả" }, ...menu.map((category) => ({
+                id: String(category.categoryId),
+                name: category.categoryName
+            }))];
+            orderData.foods = menu.flatMap((category) => category.foods.map((food) => {
+                const supportedSizes = window.foodSizes.sort(
+                    food.sizes.filter((size) => window.foodSizes.isSupported(size.sizeName))
+                );
+                const sizes = supportedSizes.map((size) => ({
+                    id: size.sizeId,
+                    name: window.foodSizes.normalize(size.sizeName) || size.sizeName,
+                    price: Number(size.sizePrice) || 0,
+                    isDefault: Boolean(size.isDefault)
+                }));
+                const defaultSize = sizes.find((size) => size.isDefault) || sizes[0];
+                return {
+                    id: food.foodId,
+                    sizeId: defaultSize?.id || null,
+                    sizes,
+                    categoryId: String(category.categoryId),
+                    name: food.foodName,
+                    description: food.foodDescription || "Chưa có mô tả",
+                    price: Number(defaultSize?.price ?? food.foodPrice) || 0,
+                    unit: window.foodUnits.normalize(food.saleUnit),
+                    allowsFractionalQuantity: Boolean(food.allowsFractionalQuantity)
+                        || window.foodUnits.allowsFractionalQuantity(food.saleUnit),
+                    prepTime: 0,
+                    status: defaultSize ? "available" : "out"
+                };
+            }));
+            renderCategories();
+            renderFoods();
+            renderCart();
+        } catch (error) {
+            orderData.foods = [];
+            renderCategories();
+            foodGrid.innerHTML = `<div class="empty-state"><strong>Không tải được thực đơn</strong><span>${error.message}</span></div>`;
+        }
+    }
 
     function getSelectedTable() {
         const params = new URLSearchParams(window.location.search);
@@ -72,6 +135,10 @@
         return `${value.toLocaleString("vi-VN")}đ`;
     }
 
+    function roundQuantity(value) {
+        return Math.round((Number(value) + Number.EPSILON) * 1000) / 1000;
+    }
+
     function escapeHtml(value) {
         return String(value)
             .replace(/&/g, "&amp;")
@@ -82,6 +149,14 @@
 
     function getFoodById(foodId) {
         return orderData.foods.find((food) => food.id === foodId);
+    }
+
+    function getFoodSize(food, sizeId) {
+        return food?.sizes.find((size) => size.id === sizeId) || null;
+    }
+
+    function getCartItem(foodId, sizeId) {
+        return state.cart.find((item) => item.foodId === foodId && item.sizeId === sizeId);
     }
 
     function getFilteredFoods() {
@@ -139,6 +214,14 @@
 
         foodGrid.innerHTML = filteredFoods.map((food) => {
             const isDisabled = food.status !== "available" || !state.selectedTable;
+            const minimumPrice = food.sizes.length
+                ? Math.min(...food.sizes.map((size) => size.price))
+                : 0;
+            const priceLabel = food.sizes.length > 1
+                ? `Từ ${formatCurrency(minimumPrice)}`
+                : food.sizes.length === 1
+                    ? `${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}`
+                    : "Chưa có kích cỡ";
 
             return `
                 <button
@@ -148,12 +231,12 @@
                     ${isDisabled ? "disabled" : ""}
                 >
                     <div class="food-card-top">
-                        <h4>${food.name}</h4>
-                        <span class="food-price">${formatCurrency(food.price)}</span>
+                        <h4>${escapeHtml(food.name)}</h4>
+                        <span class="food-price">${priceLabel}</span>
                     </div>
-                    <p>${food.description}</p>
+                    <p>${escapeHtml(food.description)}</p>
                     <div class="food-meta">
-                        <span>${food.prepTime} phút</span>
+                        <span class="food-size-count">${food.sizes.length} kích cỡ</span>
                         <span>${!state.selectedTable ? "Chọn bàn trước" : food.status !== "available" ? "Tạm hết" : "Đang bán"}</span>
                     </div>
                 </button>
@@ -172,39 +255,123 @@
             return;
         }
 
-        const existingItem = state.cart.find((item) => item.foodId === foodId);
+        if (food.sizes.length > 1) {
+            openSizeSelection(food);
+            return;
+        }
+
+        const size = food.sizes[0];
+        if (size) {
+            addFoodSizeToCart(food, size);
+        }
+    }
+
+    function openSizeSelection(food) {
+        state.sizeFoodId = food.id;
+        sizeDialogTitle.textContent = food.name;
+        sizeDialogDescription.textContent = "Chọn kích cỡ và giá bán.";
+        sizeDialogMessage.textContent = "";
+        sizeOptions.innerHTML = food.sizes.map((size) => `
+            <button class="size-option" type="button" data-select-size-id="${size.id}">
+                <strong>${escapeHtml(size.name)}</strong>
+                <span>${formatCurrency(size.price)}</span>
+            </button>
+        `).join("");
+        sizeDialog.showModal();
+        sizeOptions.querySelector("[data-select-size-id]")?.focus();
+    }
+
+    function closeSizeSelection() {
+        state.sizeFoodId = null;
+        if (sizeDialog.open) {
+            sizeDialog.close();
+        }
+    }
+
+    function addFoodSizeToCart(food, size) {
+        if (food.allowsFractionalQuantity) {
+            if (sizeDialog.open) {
+                closeSizeSelection();
+            }
+            openWeightDialog(food.id, size.id);
+            return;
+        }
+
+        const existingItem = getCartItem(food.id, size.id);
 
         if (existingItem) {
             existingItem.quantity += 1;
         } else {
             state.cart.push({
-                foodId,
+                foodId: food.id,
+                sizeId: size.id,
                 quantity: 1,
                 note: ""
             });
         }
 
+        if (sizeDialog.open) {
+            closeSizeSelection();
+        }
         renderCart();
     }
 
-    function updateQuantity(foodId, amount) {
-        const item = state.cart.find((cartItem) => cartItem.foodId === foodId);
+    function updateQuantity(foodId, sizeId, amount) {
+        const item = getCartItem(foodId, sizeId);
 
         if (!item) {
             return;
         }
 
-        item.quantity += amount;
+        item.quantity = roundQuantity(item.quantity + amount);
 
         if (item.quantity <= 0) {
-            state.cart = state.cart.filter((cartItem) => cartItem.foodId !== foodId);
+            state.cart = state.cart.filter((cartItem) => (
+                cartItem.foodId !== foodId || cartItem.sizeId !== sizeId
+            ));
         }
 
         renderCart();
     }
 
-    function updateItemNote(foodId, value) {
-        const item = state.cart.find((cartItem) => cartItem.foodId === foodId);
+    function updateWeightPreview() {
+        const food = getFoodById(state.weightFoodId);
+        const size = getFoodSize(food, state.weightSizeId);
+        const quantity = roundQuantity(Number(String(weightQuantity.value).replace(",", ".")));
+        const isValid = food && size && quantity >= 0.001;
+
+        weightPreviewTotal.textContent = formatCurrency(isValid ? size.price * quantity : 0);
+        weightFormMessage.textContent = isValid ? "" : "Khối lượng phải lớn hơn 0 kg.";
+        weightFormMessage.className = isValid ? "form-message" : "form-message is-error";
+    }
+
+    function openWeightDialog(foodId, sizeId) {
+        const food = getFoodById(foodId);
+        const size = getFoodSize(food, sizeId);
+        if (!food || !size) return;
+
+        const existingItem = getCartItem(foodId, sizeId);
+        state.weightFoodId = foodId;
+        state.weightSizeId = sizeId;
+        weightDialogTitle.textContent = food.name;
+        weightDialogDescription.textContent = `${size.name} · ${formatCurrency(size.price)} / ${window.foodUnits.getShortLabel(food.unit)}`;
+        weightQuantity.value = existingItem?.quantity || 1;
+        updateWeightPreview();
+        weightDialog.showModal();
+        weightQuantity.focus();
+        weightQuantity.select();
+    }
+
+    function closeWeightEntry() {
+        state.weightFoodId = null;
+        state.weightSizeId = null;
+        if (weightDialog.open) {
+            weightDialog.close();
+        }
+    }
+
+    function updateItemNote(foodId, sizeId, value) {
+        const item = getCartItem(foodId, sizeId);
 
         if (item) {
             item.note = value;
@@ -214,12 +381,13 @@
     function getSubtotal() {
         return state.cart.reduce((sum, item) => {
             const food = getFoodById(item.foodId);
-            return sum + (food ? food.price * item.quantity : 0);
+            const size = getFoodSize(food, item.sizeId);
+            return sum + (size ? size.price * item.quantity : 0);
         }, 0);
     }
 
     function renderCart() {
-        const totalQuantity = state.cart.reduce((sum, item) => sum + item.quantity, 0);
+        const totalQuantity = state.cart.length;
 
         cartItemCount.textContent = `${totalQuantity} món`;
         cartDockCount.textContent = `${totalQuantity} món`;
@@ -229,8 +397,9 @@
         } else {
             cartList.innerHTML = state.cart.map((item) => {
                 const food = getFoodById(item.foodId);
+                const size = getFoodSize(food, item.sizeId);
 
-                if (!food) {
+                if (!food || !size) {
                     return "";
                 }
 
@@ -238,16 +407,18 @@
                     <article class="cart-item">
                         <div class="cart-item-top">
                             <div class="cart-item-name">
-                                <strong>${food.name}</strong>
-                                <span>${formatCurrency(food.price)} / phần</span>
+                                <strong>${escapeHtml(food.name)}</strong>
+                                <span class="cart-item-size">${escapeHtml(size.name)} · ${formatCurrency(size.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
                             </div>
-                            <strong>${formatCurrency(food.price * item.quantity)}</strong>
+                            <strong>${formatCurrency(size.price * item.quantity)}</strong>
                         </div>
 
                         <div class="quantity-control">
-                            <button class="quantity-button" type="button" data-action="decrease" data-food-id="${food.id}">-</button>
-                            <strong>${item.quantity}</strong>
-                            <button class="quantity-button" type="button" data-action="increase" data-food-id="${food.id}">+</button>
+                            <button class="quantity-button" type="button" data-quantity-change="-${food.allowsFractionalQuantity ? "0.1" : "1"}" data-food-id="${food.id}" data-size-id="${size.id}" aria-label="Giảm số lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">-</button>
+                            ${food.allowsFractionalQuantity
+                                ? `<button class="quantity-value" type="button" data-edit-weight="${food.id}" data-size-id="${size.id}" aria-label="Sửa khối lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">${window.foodUnits.formatQuantity(item.quantity, food.unit)}</button>`
+                                : `<strong>${window.foodUnits.formatQuantity(item.quantity, food.unit)}</strong>`}
+                            <button class="quantity-button" type="button" data-quantity-change="${food.allowsFractionalQuantity ? "0.1" : "1"}" data-food-id="${food.id}" data-size-id="${size.id}" aria-label="Tăng số lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">+</button>
                         </div>
 
                         <input
@@ -256,19 +427,34 @@
                             value="${escapeHtml(item.note)}"
                             placeholder="Ghi chú riêng cho món"
                             data-note-food-id="${food.id}"
+                            data-note-size-id="${size.id}"
                         >
                     </article>
                 `;
             }).join("");
         }
 
-        cartList.querySelectorAll("[data-action]").forEach((button) => {
-            const amount = button.dataset.action === "increase" ? 1 : -1;
-            button.addEventListener("click", () => updateQuantity(Number(button.dataset.foodId), amount));
+        cartList.querySelectorAll("[data-quantity-change]").forEach((button) => {
+            button.addEventListener("click", () => updateQuantity(
+                Number(button.dataset.foodId),
+                Number(button.dataset.sizeId),
+                Number(button.dataset.quantityChange)
+            ));
+        });
+
+        cartList.querySelectorAll("[data-edit-weight]").forEach((button) => {
+            button.addEventListener("click", () => openWeightDialog(
+                Number(button.dataset.editWeight),
+                Number(button.dataset.sizeId)
+            ));
         });
 
         cartList.querySelectorAll("[data-note-food-id]").forEach((input) => {
-            input.addEventListener("input", () => updateItemNote(Number(input.dataset.noteFoodId), input.value));
+            input.addEventListener("input", () => updateItemNote(
+                Number(input.dataset.noteFoodId),
+                Number(input.dataset.noteSizeId),
+                input.value
+            ));
         });
 
         renderTotals();
@@ -278,7 +464,7 @@
 
     function renderTotals() {
         const subtotal = getSubtotal();
-        const service = subtotal > 0 ? Math.round(subtotal * 0.05) : 0;
+        const service = 0;
         const total = subtotal + service;
 
         subtotalAmount.textContent = formatCurrency(subtotal);
@@ -335,15 +521,100 @@
         cartPanel.classList.remove("is-open");
     });
 
-    sendKitchenButton.addEventListener("click", () => {
+    sizeOptions.addEventListener("click", (event) => {
+        const button = event.target.closest("[data-select-size-id]");
+        if (!button) return;
+
+        const food = getFoodById(state.sizeFoodId);
+        const size = getFoodSize(food, Number(button.dataset.selectSizeId));
+        if (food && size) {
+            addFoodSizeToCart(food, size);
+        }
+    });
+
+    closeSizeDialog.addEventListener("click", closeSizeSelection);
+    cancelSizeButton.addEventListener("click", closeSizeSelection);
+    sizeDialog.addEventListener("close", () => {
+        state.sizeFoodId = null;
+    });
+
+    weightQuantity.addEventListener("input", updateWeightPreview);
+
+    document.querySelectorAll("[data-weight-value]").forEach((button) => {
+        button.addEventListener("click", () => {
+            weightQuantity.value = button.dataset.weightValue;
+            updateWeightPreview();
+            weightQuantity.focus();
+        });
+    });
+
+    closeWeightDialog.addEventListener("click", closeWeightEntry);
+    cancelWeightButton.addEventListener("click", closeWeightEntry);
+    weightDialog.addEventListener("close", () => {
+        state.weightFoodId = null;
+        state.weightSizeId = null;
+    });
+
+    weightForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const food = getFoodById(state.weightFoodId);
+        const size = getFoodSize(food, state.weightSizeId);
+        const quantity = roundQuantity(Number(String(weightQuantity.value).replace(",", ".")));
+
+        if (!food || !size || quantity < 0.001 || quantity > 999999999) {
+            weightFormMessage.textContent = "Nhập khối lượng hợp lệ lớn hơn 0 kg.";
+            weightFormMessage.className = "form-message is-error";
+            weightQuantity.focus();
+            return;
+        }
+
+        const existingItem = getCartItem(food.id, size.id);
+        if (existingItem) {
+            existingItem.quantity = quantity;
+        } else {
+            state.cart.push({ foodId: food.id, sizeId: size.id, quantity, note: "" });
+        }
+
+        closeWeightEntry();
+        renderCart();
+    });
+
+    sendKitchenButton.addEventListener("click", async () => {
         if (state.cart.length === 0) {
             return;
         }
 
-        sendKitchenButton.textContent = "Đã gửi bếp";
-        window.setTimeout(() => {
-            sendKitchenButton.textContent = "Gửi bếp";
-        }, 1400);
+        const user = JSON.parse(window.sessionStorage.getItem("restaurant.currentUser") || "null");
+        if (!user?.userId) {
+            window.alert("Bạn cần đăng nhập trước khi gửi đơn.");
+            return;
+        }
+
+        sendKitchenButton.disabled = true;
+        sendKitchenButton.textContent = "Đang gửi...";
+        try {
+            const order = await window.restaurantApi.post("/orders", {
+                tableId: Number(state.selectedTable.id),
+                createdBy: user.userId,
+                items: state.cart.map((item) => ({
+                    sizeId: item.sizeId,
+                    quantity: item.quantity,
+                    note: item.note,
+                    toppings: []
+                }))
+            });
+            window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(order));
+            state.cart = [];
+            renderCart();
+            sendKitchenButton.textContent = "Đã gửi bếp";
+        } catch (error) {
+            window.alert(error.message);
+        } finally {
+            window.setTimeout(() => {
+                sendKitchenButton.disabled = state.cart.length === 0;
+                sendKitchenButton.textContent = "Gửi bếp";
+            }, 900);
+        }
     });
 
     setupNavigation();
@@ -351,4 +622,5 @@
     renderCategories();
     renderFoods();
     renderCart();
+    loadMenu();
 })();

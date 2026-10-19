@@ -200,6 +200,11 @@
     font-size: 12px;
 }
 
+.food-size-count {
+    color: var(--primary);
+    font-weight: 700;
+}
+
 .cart-list {
     max-height: 360px;
     overflow: auto;
@@ -238,6 +243,11 @@
 .cart-item-name span {
     color: var(--muted);
     font-size: 12px;
+}
+
+.cart-item-size {
+    color: var(--primary);
+    font-weight: 700;
 }
 
 .quantity-control {
@@ -291,6 +301,108 @@
 
 .cart-summary span {
     color: var(--muted);
+}
+
+.size-dialog,
+.weight-dialog {
+    width: min(430px, calc(100% - 24px));
+}
+
+.size-options {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.size-option {
+    display: grid;
+    gap: 5px;
+    min-height: 76px;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--surface-strong);
+    text-align: left;
+}
+
+.size-option:hover,
+.size-option:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.size-option strong {
+    font-size: 15px;
+}
+
+.size-option span {
+    color: var(--primary);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.weight-presets {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.weight-presets button {
+    min-height: 38px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--surface);
+    font-weight: 700;
+}
+
+.weight-presets button:hover,
+.weight-presets button:focus-visible {
+    border-color: var(--primary);
+    color: var(--primary);
+    outline: none;
+}
+
+.weight-preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-strong);
+}
+
+.weight-preview span {
+    color: var(--muted);
+}
+
+.weight-preview strong {
+    color: var(--primary);
+    font-size: 18px;
+}
+
+.quantity-value {
+    min-width: 74px;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 6px;
+    color: var(--text);
+    background: transparent;
+    font-weight: 700;
+}
+
+.quantity-value:hover,
+.quantity-value:focus-visible {
+    color: var(--primary);
+    background: var(--surface);
+    outline: 1px solid var(--primary);
 }
 
 .total-row {
@@ -586,6 +698,19 @@
 
     .cart-list {
         max-height: none;
+    }
+
+    .weight-presets {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .size-options {
+        gap: 6px;
+    }
+
+    .size-option {
+        min-height: 68px;
+        padding: 8px;
     }
 }
 

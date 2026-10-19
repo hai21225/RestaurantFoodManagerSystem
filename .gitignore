@@ -291,6 +291,18 @@ FakesAssemblies/
 .ntvs_analysis.dat
 node_modules/
 
+# Frontend build output and tool caches
+dist/
+.cache/
+.parcel-cache/
+.vite/
+coverage/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
 # Visual Studio 6 build log
 *.plg
 

@@ -38,6 +38,62 @@
     const kitchenRoleLabel = document.querySelector("#kitchenRoleLabel");
     const navButtons = document.querySelectorAll("[data-page]");
 
+    function normalizeKitchenStatus(status) {
+        const value = String(status || "").toLowerCase();
+        if (value === "ready" || value === "completed") return "ready";
+        if (value === "accepted" || value === "preparing") return "preparing";
+        return "pending";
+    }
+
+    async function loadKitchen() {
+        refreshKitchenButton.disabled = true;
+        refreshKitchenButton.textContent = "Đang tải...";
+        try {
+            const orders = await window.restaurantApi.get("/management/kitchen/orders");
+            state.tickets = await Promise.all(orders.map(async (ticket) => {
+                const [items, order] = await Promise.all([
+                    window.restaurantApi.get(`/management/kitchen/orders/${ticket.kitchenOrderId}/items`),
+                    window.restaurantApi.get(`/orders/${ticket.orderId}`)
+                ]);
+                let table = null;
+                if (order?.tableId) {
+                    try { table = await window.restaurantApi.get(`/restaurant-tables/${order.tableId}`); } catch (error) { table = null; }
+                }
+                const priority = Number(ticket.priority) > 0 ? "high" : "normal";
+                return {
+                    id: ticket.kitchenOrderId,
+                    code: `BEP-${ticket.kitchenOrderId}`,
+                    orderCode: `ORD-${ticket.orderId}`,
+                    tableName: table ? `Bàn ${table.tableNumber}` : `Bàn ${order?.tableId || "?"}`,
+                    station: "hot",
+                    stationLabel: "Khu vực bếp",
+                    priority,
+                    priorityLabel: priority === "high" ? "Cao" : "Thường",
+                    sentAt: new Date(ticket.sentAt).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" }),
+                    status: normalizeKitchenStatus(ticket.status),
+                    note: "",
+                    items: items.map((item) => ({
+                        apiId: item.id,
+                        name: item.foodName || `Món #${item.orderItemId}`,
+                        sizeName: item.sizeName || "",
+                        quantity: Number(item.quantity) || 0,
+                        unit: window.foodUnits.normalize(item.saleUnit),
+                        note: item.note || "",
+                        completed: ["ready", "completed"].includes(String(item.status).toLowerCase())
+                    }))
+                };
+            }));
+            render();
+        } catch (error) {
+            state.tickets = [];
+            render();
+            kitchenAnnouncement.textContent = error.message;
+        } finally {
+            refreshKitchenButton.disabled = false;
+            refreshKitchenButton.textContent = "Làm mới";
+        }
+    }
+
     function escapeHtml(value) {
         return String(value)
             .replace(/&/g, "&amp;")
@@ -155,16 +211,17 @@
                                     type="checkbox"
                                     data-ticket-id="${escapeHtml(ticket.id)}"
                                     data-item-index="${index}"
-                                    aria-label="Hoàn thành ${escapeHtml(item.name)}, ${escapeHtml(item.quantity)} phần, ${escapeHtml(ticket.tableName)}"
+                                    aria-label="Hoàn thành ${escapeHtml(item.name)}, ${escapeHtml(window.foodUnits.formatQuantity(item.quantity, item.unit))}, ${escapeHtml(ticket.tableName)}"
                                     ${item.completed ? "checked" : ""}
                                     ${disableCompletion ? "disabled" : ""}
                                 >
                                 <span class="ticket-item-content">
                                     <strong>${escapeHtml(item.name)}</strong>
+                                    ${item.sizeName ? `<span>${escapeHtml(item.sizeName)}</span>` : ""}
                                     ${item.note ? `<span>${escapeHtml(item.note)}</span>` : ""}
                                     ${item.completed ? '<span class="ticket-item-status">Đã xong</span>' : ""}
                                 </span>
-                                <strong class="ticket-item-quantity">x${escapeHtml(item.quantity)}</strong>
+                                <strong class="ticket-item-quantity">${escapeHtml(window.foodUnits.formatQuantity(item.quantity, item.unit))}</strong>
                             </label>
                         </li>
                     `).join("")}
@@ -219,7 +276,7 @@
         });
     }
 
-    function startTicket(ticketId) {
+    async function startTicket(ticketId) {
         if (!canUpdateKitchen) {
             kitchenAnnouncement.textContent = "Bạn chỉ có quyền xem phiếu bếp.";
             return;
@@ -231,14 +288,19 @@
             return;
         }
 
-        ticket.status = "preparing";
-        state.status = "preparing";
-        render();
-        kitchenAnnouncement.textContent = `${ticket.code} đang chế biến.`;
-        restoreItemFocus(ticketId, 0);
+        try {
+            await window.restaurantApi.patch(`/management/kitchen/orders/${ticketId}/status`, { status: "Preparing" });
+            ticket.status = "preparing";
+            state.status = "preparing";
+            render();
+            kitchenAnnouncement.textContent = `${ticket.code} đang chế biến.`;
+            restoreItemFocus(ticketId, 0);
+        } catch (error) {
+            kitchenAnnouncement.textContent = error.message;
+        }
     }
 
-    function updateItemCompletion(ticketId, itemIndex, completed) {
+    async function updateItemCompletion(ticketId, itemIndex, completed) {
         if (!canUpdateKitchen) {
             kitchenAnnouncement.textContent = "Chỉ nhân viên bếp mới được tích món hoàn thành.";
             render();
@@ -252,13 +314,21 @@
             return;
         }
 
-        item.completed = completed;
-        ticket.status = ticket.items.every((dish) => dish.completed) ? "ready" : "preparing";
-        render();
-        kitchenAnnouncement.textContent = ticket.status === "ready"
-            ? `${ticket.code}, ${ticket.tableName}: tất cả món đã xong.`
-            : `${item.name}, ${ticket.tableName}: ${completed ? "đã xong" : "đang chế biến"}.`;
-        restoreItemFocus(ticketId, itemIndex);
+        try {
+            await window.restaurantApi.patch(`/management/kitchen/items/${item.apiId}/status`, {
+                status: completed ? "Completed" : "Preparing"
+            });
+            item.completed = completed;
+            ticket.status = ticket.items.every((dish) => dish.completed) ? "ready" : "preparing";
+            render();
+            kitchenAnnouncement.textContent = ticket.status === "ready"
+                ? `${ticket.code}, ${ticket.tableName}: tất cả món đã xong.`
+                : `${item.name}, ${ticket.tableName}: ${completed ? "đã xong" : "đang chế biến"}.`;
+            restoreItemFocus(ticketId, itemIndex);
+        } catch (error) {
+            kitchenAnnouncement.textContent = error.message;
+            render();
+        }
     }
 
     function restoreItemFocus(ticketId, itemIndex) {
@@ -296,8 +366,9 @@
         renderBoard();
     }
 
-    refreshKitchenButton.addEventListener("click", render);
+    refreshKitchenButton.addEventListener("click", loadKitchen);
 
     setupNavigation();
     render();
+    loadKitchen();
 })();

@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/layout.css">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/order.css">
+    <link rel="stylesheet" href="../css/pages/order.css?v=20261001">
 </head>
 <body>
     <div class="app-shell">
@@ -130,8 +130,62 @@
         </div>
     </div>
 
-    <script src="../js/common/navigation.js"></script>
+    <dialog id="sizeDialog" class="form-dialog size-dialog" aria-labelledby="sizeDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="sizeDialogTitle">Chọn kích cỡ</h2>
+                <p id="sizeDialogDescription">Chọn kích cỡ trước khi thêm món vào đơn.</p>
+            </div>
+            <button class="dialog-close-button" type="button" id="closeSizeDialog" aria-label="Đóng">×</button>
+        </div>
+        <div class="dialog-form">
+            <div id="sizeOptions" class="size-options" aria-label="Các kích cỡ đang bán"></div>
+            <p id="sizeDialogMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" id="cancelSizeButton">Hủy</button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="weightDialog" class="form-dialog weight-dialog" aria-labelledby="weightDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="weightDialogTitle">Nhập khối lượng</h2>
+                <p id="weightDialogDescription">Giá món được tính theo kilôgam.</p>
+            </div>
+            <button class="dialog-close-button" type="button" id="closeWeightDialog" aria-label="Đóng">×</button>
+        </div>
+        <form id="weightForm" class="dialog-form">
+            <label class="form-field">
+                <span>Khối lượng (kg)</span>
+                <input id="weightQuantity" name="quantity" type="number" inputmode="decimal"
+                    min="0.001" max="999999999" step="0.001" value="1" required>
+                <small class="field-hint">Có thể nhập tối đa 3 chữ số thập phân, ví dụ 0,5 hoặc 1,25.</small>
+            </label>
+            <div class="weight-presets" aria-label="Khối lượng chọn nhanh">
+                <button type="button" data-weight-value="0.5">0,5 kg</button>
+                <button type="button" data-weight-value="1">1 kg</button>
+                <button type="button" data-weight-value="1.5">1,5 kg</button>
+                <button type="button" data-weight-value="2">2 kg</button>
+            </div>
+            <div class="weight-preview" aria-live="polite">
+                <span>Tạm tính</span>
+                <strong id="weightPreviewTotal">0đ</strong>
+            </div>
+            <p id="weightFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" id="cancelWeightButton">Hủy</button>
+                <button class="primary-action" type="submit">Thêm vào đơn</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/common/navigation.js?v=20261001"></script>
+    <script src="../js/common/api.js"></script>
+    <script src="../js/common/dialogs.js"></script>
+    <script src="../js/common/food-units.js"></script>
+    <script src="../js/common/food-sizes.js"></script>
     <script src="../js/data/order.data.js"></script>
-    <script src="../js/pages/order.js"></script>
+    <script src="../js/pages/order.js?v=20261001"></script>
 </body>
 </html>

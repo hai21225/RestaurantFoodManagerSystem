@@ -55,7 +55,12 @@
                             <p class="eyebrow">Danh sách món</p>
                             <h2 id="foods-title">Thực đơn đang bán</h2>
                         </div>
-                        <button class="primary-action" type="button" id="addFoodButton">Thêm món</button>
+                        <div class="heading-actions">
+                            <button class="secondary-action" type="button" data-page="recipes.html">Công thức</button>
+                            <button class="secondary-action" type="button" id="addCategoryButton">Thêm danh mục</button>
+                            <button class="secondary-action" type="button" id="addSizeButton">Thêm kích cỡ</button>
+                            <button class="primary-action" type="button" id="addFoodButton">Thêm món</button>
+                        </div>
                     </div>
 
                     <div class="foods-summary" id="foodsSummary" aria-label="Thống kê món ăn"></div>
@@ -104,7 +109,139 @@
         </div>
     </div>
 
+    <dialog id="categoryDialog" class="form-dialog" aria-labelledby="categoryDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="categoryDialogTitle">Thêm danh mục</h2>
+                <p>Nhóm món giúp nhân viên tìm thực đơn nhanh hơn.</p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-food-dialog="categoryDialog" aria-label="Đóng">×</button>
+        </div>
+        <form id="categoryForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field is-full">
+                    <span>Tên danh mục</span>
+                    <input name="name" type="text" maxlength="100" placeholder="Ví dụ: Món chính" required>
+                </label>
+                <label class="form-field is-full">
+                    <span>Mô tả</span>
+                    <textarea name="description" maxlength="500" placeholder="Mô tả ngắn, có thể để trống"></textarea>
+                </label>
+            </div>
+            <p id="categoryFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-food-dialog="categoryDialog">Hủy</button>
+                <button id="categorySubmit" class="primary-action" type="submit">Tạo danh mục</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="foodDialog" class="form-dialog" aria-labelledby="foodDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="foodDialogTitle">Thêm món ăn</h2>
+                <p id="foodDialogDescription">Nhập thông tin cơ bản; kích cỡ có thể thêm sau.</p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-food-dialog="foodDialog" aria-label="Đóng">×</button>
+        </div>
+        <form id="foodForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field">
+                    <span>Tên món</span>
+                    <input name="foodName" type="text" maxlength="150" required>
+                </label>
+                <label class="form-field">
+                    <span>Danh mục</span>
+                    <select id="foodCategorySelect" name="categoryId" required></select>
+                </label>
+                <label class="form-field">
+                    <span>Giá bán cơ bản</span>
+                    <input name="foodPrice" type="number" inputmode="decimal" min="0" step="1000" required>
+                </label>
+                <label class="form-field">
+                    <span>Đường dẫn ảnh</span>
+                    <input name="foodImageUrl" type="url" maxlength="500" placeholder="Có thể để trống">
+                </label>
+                <label class="form-field is-full">
+                    <span>Mô tả món</span>
+                    <textarea name="foodDescription" maxlength="1000" placeholder="Thành phần hoặc mô tả ngắn"></textarea>
+                </label>
+            </div>
+            <label class="checkbox-field">
+                <input name="isAvailable" type="checkbox" checked>
+                <span>Cho phép bán ngay</span>
+            </label>
+            <p id="foodFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-food-dialog="foodDialog">Hủy</button>
+                <button id="foodSubmit" class="primary-action" type="submit">Tạo món</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="sizeDialog" class="form-dialog" aria-labelledby="sizeDialogTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="sizeDialogTitle">Thêm kích cỡ</h2>
+                <p>Gắn kích cỡ và giá bán cụ thể cho một món.</p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-food-dialog="sizeDialog" aria-label="Đóng">×</button>
+        </div>
+        <form id="sizeForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field is-full">
+                    <span>Món ăn</span>
+                    <select id="sizeFoodSelect" name="foodId" required></select>
+                </label>
+                <label class="form-field">
+                    <span>Tên kích cỡ</span>
+                    <select name="sizeName" required>
+                        <option value="">Chọn kích cỡ</option>
+                        <option value="Nhỏ">Nhỏ</option>
+                        <option value="Vừa">Vừa</option>
+                        <option value="Lớn">Lớn</option>
+                    </select>
+                </label>
+                <label class="form-field">
+                    <span id="sizePriceLabel">Giá bán</span>
+                    <input name="sizePrice" type="number" inputmode="decimal" min="0" step="1000" required>
+                </label>
+            </div>
+            <label class="checkbox-field">
+                <input name="isDefault" type="checkbox">
+                <span>Đặt làm kích cỡ mặc định</span>
+            </label>
+            <p id="sizeFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-food-dialog="sizeDialog">Hủy</button>
+                <button id="sizeSubmit" class="primary-action" type="submit">Tạo kích cỡ</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="foodLifecycleDialog" class="form-dialog food-lifecycle-dialog" aria-labelledby="foodLifecycleTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="foodLifecycleTitle">Xóa món khỏi thực đơn</h2>
+                <p id="foodLifecycleDescription"></p>
+            </div>
+            <button class="dialog-close-button" type="button" data-close-food-dialog="foodLifecycleDialog" aria-label="Đóng">×</button>
+        </div>
+        <div class="dialog-form">
+            <p id="foodLifecycleNotice" class="lifecycle-notice"></p>
+            <p id="foodLifecycleMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-food-dialog="foodLifecycleDialog">Hủy</button>
+                <button id="foodLifecycleConfirm" class="danger-action" type="button">Xóa khỏi thực đơn</button>
+            </div>
+        </div>
+    </dialog>
+
     <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/api.js"></script>
+    <script src="../js/common/dialogs.js"></script>
+    <script src="../js/common/food-units.js"></script>
+    <script src="../js/common/food-sizes.js"></script>
     <script src="../js/data/foods.data.js"></script>
     <script src="../js/pages/foods.js"></script>
 </body>
