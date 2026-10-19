@@ -31,7 +31,7 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 | 6.1 — defect nghiệp vụ (Nhóm B) | ✅ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7** (`62f5d44`) |
 | 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**.
 
 ---
 
@@ -56,7 +56,7 @@ Entity **không có navigation property** (không `ICollection<OrderItem>`), nê
 | Cổng | Kết quả | Baseline trong docs |
 |---|---|---|
 | `dotnet build --no-incremental` | **14 warning / 0 error** | 14 / 0 ✅ |
-| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **199/199**)* | 156/156 ✅ |
+| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **206/206**)* | 156/156 ✅ |
 | `has-pending-model-changes` | **No changes** *(vẫn "No changes" sau migration Nhóm B `62f5d44`)* | No changes ✅ |
 
 Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy. Vẫn là test **tầng service + DbContext** (SQLite in-memory), **chưa có test tầng HTTP**.
@@ -326,7 +326,7 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 ### Nhóm D — không đổi hành vi (an toàn, làm bất cứ lúc nào)
 
-- D1. **GĐ8**: tách seed/`Migrate()` khỏi `Program.cs` → mở đường test HTTP (điều kiện cho 6e).
+- D1. ✅ **GĐ8**: tách seed/`Migrate()` khỏi `Program.cs` → `DatabaseInitializer` + cờ `Database:*`; host test `WebApplicationFactory` (SQLite in-memory) đã chạy ⇒ mở đường cho 6e.
 - D2. Xoá `ManagementService` + `UserRoleService.GetUserRoleByIdAsync`/`GetAllUserRolesAsync` (dead code) — **nhưng** phải chuyển 2 test `InventoryFlowTests.cs:475-481` sang `KitchenService` (đổi test).
 - D3. Thêm `CancellationToken` cho 9 service còn thiếu.
 - D4. N+1 trong `MenuService` + N+1 HTTP ở frontend (sửa frontend cần duyệt riêng).
@@ -336,7 +336,7 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 ## 9. Điều tôi CHƯA xác minh (cần bạn hoặc cần runtime)
 
-1. **CORS/HTTPS thực tế**: frontend hiện có thực sự gọi được `localhost:5225` không, và bằng cách nào? (chưa chạy app vì `Program.cs` tự `Migrate()` vào SQL Server thật).
+1. **CORS/HTTPS thực tế**: frontend hiện có thực sự gọi được `localhost:5225` không, và bằng cách nào? (audit chưa chạy app vì `Program.cs` tự `Migrate()` vào SQL Server thật; **GĐ8 đã tách migrate/seed và có host test SQLite**, nhưng vẫn chưa chạy app thật + frontend).
 2. Toàn bộ kết luận `[P]` về **đồng thời** (double payment, tồn kho âm) — đúng theo code nhưng chưa test bằng request song song.
 3. Có phải SQL Server `HAI2\SQLEXPRESS` đang sẵn dùng? (connection string trong `appsettings.json`).
 4. `promotion_foods` đúng là `SizeId` hay `FoodId` (2 spec mâu thuẫn).

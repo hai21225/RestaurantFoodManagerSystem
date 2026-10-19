@@ -12,13 +12,13 @@ Tài liệu liên quan:
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln --no-incremental   # hiện: 14 warning, 0 error
-dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 199/199 pass
+dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 206/206 pass
 dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj
 ```
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **199/199** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **206/206** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema + 5 GĐ8 initializer + 2 GĐ8 host). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -39,6 +39,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ7-C | Bù **field hiển thị thiếu** frontend đọc (chỉ **bổ sung**, không xoá field): `GET /orders/{id}` thêm `items[]` (foodName/sizeName/quantity/unitPrice/note/status); `GET /management/kitchen/orders/{id}/items` thêm `foodName`/`sizeName`/`quantity` (giữ `quanlity` cũ); `GET /management/recipes` thêm `ingredientCount`; `GET /management/recipes/{id}` thêm `foodName`/`sizeName`; +2 test | `46a18e9` | Có (thêm field JSON; **không** đổi route/schema) |
 | GĐ7-B | Sửa lỗi nghiệp vụ **không đổi schema**: B1 ánh xạ trạng thái bếp (`Cancelled`→`Cancelled`, không còn mở lại đơn); B2 allow-list + chặn sửa trạng thái cuối cho order status (controller trả 400/409); B4 transaction cho `PaymentService`/`IngredientService.CreateAsync`/`PurchaseOrderService.CreateAsync`; B8 chặn `Items=null`, `.Trim()` null-safe, `DateTime.Now`→`UtcNow`; chặn thanh toán đơn `Cancelled`; thêm hằng `OrderStatuses`; +7 test (2 test baseline được cập nhật chủ ý) | `29c01d1` | **Có** (thêm validate + transaction) |
 | Nhóm B schema | Hoàn tất **B3/B5/B6/B7** (đổi schema, đã duyệt): unique index lọc `payments.OrderId` (`Status='Paid'`) + chặn `TotalAmount<=0`; unique index lọc `recipes.SizeId` (`IsActive=1`) + chặn trùng công thức active; `HasFilter(IsActive=1)` cho `categories.CategoryName`, `food_sizes(FoodId,SizeName)`, `toppings.ToppingName`, `ingredients.Name`, `restaurant_tables.TableNumber` (**users giữ unique toàn cục**); `RowVersion` (`rowversion`) cho `orders`/`inventory`/`restaurant_tables` + map xung đột ghi → 409; migration `20261019090127_NhomB_DataIntegrity` đã áp xuống DB thật; +14 test | `62f5d44` | **Có** (schema + 409 mới) |
+| GĐ8 | Tách migrate + seed khỏi `Program.cs` → `Infrastructure/Persistence/DatabaseInitializer.cs`; thêm `DatabaseInitializationOptions` (`MigrateOnStartup`/`SeedOnStartup`, mặc định `true`); `public partial class Program` cho `WebApplicationFactory`; thêm package test `Microsoft.AspNetCore.Mvc.Testing` 8.0.32 + factory SQLite in-memory; +7 test (5 initializer + 2 host) | `1f93733` | Không (mặc định giữ nguyên migrate + seed lúc khởi động) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -128,7 +129,7 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 | 6b ✅ | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
 | 6c ✅ | Actor lấy từ claim, bỏ qua field body | Không |
 | 6d ⏸ | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
-| 6e ⏸ | Test HTTP-level 401/403 — **phụ thuộc GĐ8** (tách `Migrate()`+seed khỏi `Program.cs`) | Không |
+| 6e ⏸ | Test HTTP-level 401/403 — hạ tầng `WebApplicationFactory` đã sẵn từ **GĐ8** | Không |
 
 **GĐ6 tạm chốt ở 6c** theo quyết định của chủ dự án. 6d/6e chuyển sang mục 5 (deferred).
 
@@ -158,9 +159,9 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
   `Recipe.ingredientCount` + `foodName/sizeName`) — **chỉ bổ sung**, frontend cũ không vỡ.
   Còn lại: **DTO hoá** response để bỏ trả entity thô (mục tiếp theo).
 - GĐ7: DTO hoá response, bỏ trả entity EF ở orders/payments/`/api/management/*` — **đổi hợp đồng JSON**, phải phối hợp frontend.
-- GĐ8: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi ⇒ an toàn để làm tiếp.**
+- GĐ8 ✅: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi** (cờ `Database:MigrateOnStartup`/`SeedOnStartup` mặc định `true`).
 - GĐ6d: siết `register` (đã gắn `AdminOnly` ở 6b), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema — **đổi hành vi khi enforce**.
-- GĐ6e: test HTTP-level 401/403 — phụ thuộc GĐ8.
+- GĐ6e: test HTTP-level 401/403 — hạ tầng `RestaurantApiFactory` (GĐ8) đã cho phép; chỉ còn viết test.
 - Sửa quirk GET-all-bàn-không-ghi-DB (đổi hành vi).
 - `Category.DisplayOrder` bool → int (đổi schema, cần migration).
 - Refresh token / revocation, rate-limit login, audit log, đổi/quên mật khẩu.
@@ -169,8 +170,8 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 199 test.
-2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1); GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** (không đổi hành vi, mở đường cho 6e), rồi **DTO hoá GĐ7** (phần còn lại).
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 206 test.
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1); GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7; GĐ8 tách migrate/seed khỏi `Program.cs` (host test `WebApplicationFactory` đã chạy).** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ6e** (test 401/403 ở mức HTTP — hạ tầng đã sẵn), rồi **DTO hoá GĐ7** (phần còn lại).
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa). **Frontend hiện vẫn chưa gửi token** (`frontend/js/common/api.js` không set header `Authorization`) — đây là việc phía frontend, xem `backend-frontend-audit.md` mục 5.
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
@@ -189,6 +190,22 @@ Chi tiết 6c (bước 1) đã triển khai:
 - 4 service nhận `ICurrentUser` + `ILogger<T>`: `OrderService`, `PaymentService`, `PurchaseOrderService`, `InventoryService`.
 - `Program.cs`: `AddHttpContextAccessor()` + `AddScoped<ICurrentUser, HttpContextCurrentUser>()`.
 - **Chưa** xoá field actor khỏi DTO (đó là bước 2).
+
+Chi tiết GĐ8 đã triển khai:
+
+- `Infrastructure/Persistence/DatabaseInitializer.cs`: `InitializeAsync(IServiceProvider, options, ct)` tự mở scope
+  riêng, migrate nếu bật rồi gọi `SeedRolesAsync` (idempotent, chỉ seed khi `Roles` rỗng); `DefaultRoles` là nguồn
+  role dùng chung cho seed + test.
+- `DatabaseInitializationOptions` đọc từ section `Database` (`MigrateOnStartup`, `SeedOnStartup`, **mặc định `true`**
+  ⇒ production không đổi hành vi).
+- `Program.cs` chỉ còn `await DatabaseInitializer.InitializeAsync(...)`; thêm `public partial class Program { }`
+  cho `WebApplicationFactory<Program>`.
+- Test: `DatabaseInitializerTests` (5) + `ApiHostSmokeTests` (2, dùng `RestaurantApiFactory`: SQLite in-memory,
+  `MigrateOnStartup=false` vì migration viết cho SQL Server, `SeedOnStartup=true` để chạy đúng đường khởi động).
+  Đây là hạ tầng để làm **GĐ6e** (401/403 mức HTTP) mà không cần SQL Server.
+- Đã chạy app thật (`dotnet run --launch-profile http`) trên `HAI2\SQLEXPRESS`: log
+  `No migrations were applied. The database is already up to date.`; seed bỏ qua vì bảng `roles` đã có;
+  `GET /api/setup/status` → `200 {"requiresSetup":false}`.
 
 Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
 `Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.

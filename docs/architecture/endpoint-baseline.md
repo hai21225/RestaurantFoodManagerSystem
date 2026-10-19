@@ -8,7 +8,7 @@ Mọi giai đoạn sau (GĐ1–GĐ8) phải giữ nguyên các hợp đồng dư
 - Solution: `RestaurantFoodManagerSystem.sln` (1 project web + 1 project test)
 - Build baseline: `Build succeeded` — **16 warnings CS8618, 0 errors**
   (toàn bộ là non-nullable property trong entity/DTO, không phải lỗi)
-- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **199/199** sau Nhóm B `62f5d44`)*
+- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **206/206**, sau GĐ8)*
 
 ## Cách chạy lưới an toàn
 
@@ -26,7 +26,7 @@ Test dùng **SQLite in-memory** (`EnsureCreated`, không dùng migrations) nên:
 SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementService` mở transaction tường minh
 (InMemory provider không hỗ trợ transaction).
 
-## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 199)
+## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 206)
 
 | Nhóm | File | Nội dung được khóa |
 |---|---|---|
@@ -38,6 +38,7 @@ SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementSe
 | Inventory | `InventoryFlowTests.cs` | ingredient/inventory/supplier/purchase/promotion/recipe, adjustment âm, receive purchase |
 | Tables | `RestaurantTableTests.cs` | trùng số bàn, tính trạng thái occupied, side-effect đọc, maintenance, soft delete |
 | Menu | `MenuTests.cs` | lọc category/food/size/topping, thứ tự category |
+| Khởi động/host | `DatabaseInitializerTests.cs`, `ApiHostSmokeTests.cs` | seed 5 role idempotent, cờ `Database:MigrateOnStartup`/`SeedOnStartup`, host dựng bằng `WebApplicationFactory` trên SQLite in-memory |
 
 ---
 
@@ -192,7 +193,8 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 12. **`Category.DisplayOrder` là `bool`** (entity + DTO) → không thể biểu diễn thứ tự hiển thị thật.
     Đổi sang `int` là **thay đổi schema**, cần phê duyệt riêng.
 13. **`GET /api/menu` trả anonymous types** (`Task<object>`), không có DTO.
-14. **Khởi động app tự `Migrate()` + seed Roles** (Admin, WarehouseManager, Chef, Cashier, Waiter).
+14. **Khởi động app tự `Migrate()` + seed Roles** (Admin, WarehouseManager, Chef, Cashier, Waiter) — GĐ8 đã tách
+    sang `DatabaseInitializer`; hành vi mặc định không đổi (`Database:MigrateOnStartup`/`SeedOnStartup` = `true`).
 15. **`RoleEnum`** (Admin/Manager/Staff/Customer) là dead code và **lệch** với role seed thật.
 
 ### Thay đổi hành vi có chủ ý (Nhóm B, `29c01d1`) — KHÔNG còn là baseline cũ
@@ -222,15 +224,15 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 Với mỗi giai đoạn:
 
 1. Chạy `dotnet build` → không được tăng số warning/error.
-2. Chạy `dotnet test` → **199/199 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
+2. Chạy `dotnet test` → **206/206 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
 3. Với thay đổi có chạm controller/response shape: so sánh route + verb + status code + JSON
    với bảng ở mục 1 (baseline này).
 4. Với thay đổi có chạm schema: **dừng lại**, xin phê duyệt (xem mục 2, điểm 12).
 
 ## Giới hạn đã biết của lưới an toàn hiện tại
 
-- Test chạy ở **tầng service + DbContext**, chưa phải tầng HTTP
-  (`WebApplicationFactory` chưa dùng vì `Program.cs` gọi `Database.Migrate()` vào SQL Server thật
-  ngay khi host được build).
-- Vì vậy **status code HTTP và error body shape** được khóa bằng tài liệu (mục 1), chưa tự động hóa.
-- Việc bổ sung test HTTP-level cần một host test riêng (tách seed/migrate khỏi `Program.cs`) → đề xuất ở GĐ8.
+- Test phần lớn chạy ở **tầng service + DbContext**. Từ **GĐ8** đã có thêm host test
+  (`WebApplicationFactory` + `RestaurantApiFactory`, SQLite in-memory) — hạ tầng cho test HTTP-level/401/403 (GĐ6e).
+- **Status code HTTP và error body shape** vẫn được khóa chủ yếu bằng tài liệu (mục 1); mới có 1 smoke test
+  (`GET /api/setup/status` → 200) ở tầng HTTP.
+- Muốn mở rộng test HTTP: dùng `RestaurantApiFactory` (đặt `Database:MigrateOnStartup=false`) rồi `CreateClient()`.
