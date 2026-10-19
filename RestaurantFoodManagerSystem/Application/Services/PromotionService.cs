@@ -16,9 +16,9 @@ public sealed class PromotionService
 
         var x = new Promotion
         {
-            Name = r.Name.Trim(),
-            Description = r.Description.Trim(),
-            DiscountType = r.DiscountType.Trim(),
+            Name = (r.Name ?? string.Empty).Trim(),
+            Description = (r.Description ?? string.Empty).Trim(),
+            DiscountType = (r.DiscountType ?? string.Empty).Trim(),
             DiscountValue = r.DiscountValue,
             StartAt = r.StartAt,
             EndAt = r.EndAt,
@@ -37,9 +37,9 @@ public sealed class PromotionService
         if (x is null) return false;
         if (r.EndAt <= r.StartAt) throw new ArgumentException("EndAt must be after StartAt");
 
-        x.Name = r.Name.Trim();
-        x.Description = r.Description.Trim();
-        x.DiscountType = r.DiscountType.Trim();
+        x.Name = (r.Name ?? string.Empty).Trim();
+        x.Description = (r.Description ?? string.Empty).Trim();
+        x.DiscountType = (r.DiscountType ?? string.Empty).Trim();
         x.DiscountValue = r.DiscountValue;
         x.StartAt = r.StartAt;
         x.EndAt = r.EndAt;

@@ -12,6 +12,9 @@ public sealed class IngredientService
 
     public async Task<Ingredient> CreateAsync(IngredientRequest r, CancellationToken ct)
     {
+        // Nhóm B4: ingredient + dòng tồn kho phải là nguyên tử.
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
         var x = new Ingredient
         {
             Name = r.Name.Trim(),
@@ -30,6 +33,7 @@ public sealed class IngredientService
         });
         await _db.SaveChangesAsync(ct);
 
+        await tx.CommitAsync(ct);
         return x;
     }
 

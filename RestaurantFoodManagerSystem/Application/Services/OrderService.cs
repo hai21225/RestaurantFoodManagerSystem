@@ -61,6 +61,9 @@ public sealed class OrderService
     {
         if (!await _db.RestaurantTables.AnyAsync(x => x.TableId == request.TableId && x.IsActive, ct)) throw new KeyNotFoundException("Table not found");
 
+        // Nhóm B8: JSON `null` cho Items lọt qua [MinLength] ⇒ chặn sớm thay vì NRE.
+        if (request.Items is null || request.Items.Count == 0) throw new ArgumentException("Order must contain at least one item");
+
         // Calculate all ingredient requirements before creating the order.
         // One order can contain the same size more than once, so quantities are aggregated.
         var requiredIngredients = new Dictionary<int, decimal>();
@@ -184,10 +187,26 @@ public sealed class OrderService
         return order;
     }
 
+    /// <summary>
+    /// Cập nhật trạng thái đơn (Nhóm B2): chỉ nhận allow-list, từ chối chuỗi rỗng/không hợp lệ,
+    /// và không cho đổi khỏi trạng thái cuối (<c>Paid</c>/<c>Cancelled</c>).
+    /// </summary>
     public async Task<bool> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken ct)
     {
-        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == id, ct); if (order is null) return false;
-        var old = order.Status; order.Status = request.Status.Trim(); order.UpdatedAt = DateTime.UtcNow;
+        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == id, ct);
+        if (order is null) return false;
+
+        var status = request.Status?.Trim() ?? string.Empty;
+        if (status.Length == 0)
+            throw new ArgumentException("Order status is required");
+        if (!OrderStatuses.IsUpdatable(status))
+            throw new ArgumentException("Invalid order status");
+        if (OrderStatuses.IsTerminal(order.Status))
+            throw new InvalidOperationException($"Order is {order.Status} and can no longer change status");
+
+        var old = order.Status;
+        order.Status = status;
+        order.UpdatedAt = DateTime.UtcNow;
         var changedBy = _currentUser.ResolveActorId(request.ChangedBy, _logger, nameof(request.ChangedBy));
         _db.OrderStatusHistories.Add(new OrderStatusHistory { OrderId = id, OldStatus = old, NewStatus = order.Status, ChangedBy = changedBy, Note = request.Note, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync(ct); return true;

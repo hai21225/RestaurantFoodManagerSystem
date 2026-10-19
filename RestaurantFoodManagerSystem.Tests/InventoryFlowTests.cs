@@ -298,6 +298,24 @@ public sealed class InventoryFlowTests : TestBase
     }
 
     [Fact]
+    public async Task CreatePromotion_WithNullOptionalFields_DoesNotThrow()
+    {
+        // Nhóm B8: Description không bắt buộc → JSON null không được gây NRE.
+        var promotion = await Promotions.CreateAsync(new PromotionRequest
+        {
+            Name = "  Tet  ",
+            Description = null!,
+            DiscountType = "Percent",
+            DiscountValue = 10m,
+            StartAt = DateTime.UtcNow,
+            EndAt = DateTime.UtcNow.AddDays(1)
+        }, CancellationToken.None);
+
+        Assert.Equal("Tet", promotion.Name);
+        Assert.Equal(string.Empty, promotion.Description);
+    }
+
+    [Fact]
     public async Task Promotion_Lifecycle()
     {
         var promotion = await Promotions.CreateAsync(new PromotionRequest
@@ -367,6 +385,27 @@ public sealed class InventoryFlowTests : TestBase
             SizeId = size.SizeId,
             Name = "r"
         }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CreateRecipe_WithNullVersion_DefaultsToOne()
+    {
+        // Nhóm B8: Version không bắt buộc → JSON null phải mặc định "1" thay vì NRE.
+        var category = SeedCategory();
+        var food = SeedFood(category.CategoryId);
+        var size = SeedSize(food.FoodId, 10m);
+        var ingredient = SeedIngredient(10m);
+
+        var recipe = await Recipes.CreateAsync(new RecipeRequest
+        {
+            SizeId = size.SizeId,
+            Name = "  Pho  ",
+            Version = null!,
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+        }, CancellationToken.None);
+
+        Assert.Equal("Pho", recipe.Name);
+        Assert.Equal("1", recipe.Version);
     }
 
     [Fact]

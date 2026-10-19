@@ -73,6 +73,20 @@ public sealed class PaymentsFlowTests : TestBase
     }
 
     [Fact]
+    public async Task Create_Throws_WhenOrderIsCancelled()
+    {
+        // Nhóm B: đơn đã huỷ không được thanh toán.
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: "Cancelled");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(
+            new CreatePaymentRequest { OrderId = order.OrderId, PaymentMethod = "Cash", CreatedBy = s.Staff.Id },
+            CancellationToken.None));
+
+        Assert.Equal("Cannot pay a cancelled order", ex.Message);
+    }
+
+    [Fact]
     public async Task GetByOrder_ReturnsOnlyPaymentsOfThatOrder()
     {
         var s = SeedOrderScenario();

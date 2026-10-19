@@ -61,8 +61,8 @@ public class AuthService
             FullName = userDto.FullName,
             Phone = userDto.Phone,
             IsActive = true,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
         return await _userService.AddUserAsync(userdto);

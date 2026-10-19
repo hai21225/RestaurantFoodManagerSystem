@@ -47,7 +47,7 @@ public sealed class ActorFromTokenTests : TestBase
 
         var updated = await Orders.UpdateStatusAsync(order.OrderId, new UpdateOrderStatusRequest
         {
-            Status = "Cooking",
+            Status = "Preparing",
             ChangedBy = bodyActor.Id,
             Note = "token test"
         }, CancellationToken.None);

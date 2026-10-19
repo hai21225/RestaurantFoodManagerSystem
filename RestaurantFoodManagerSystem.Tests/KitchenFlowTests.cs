@@ -167,6 +167,18 @@ public sealed class KitchenFlowTests : TestBase
     }
 
     [Fact]
+    public async Task UpdateOrderStatus_Cancelled_CancelsOrder()
+    {
+        // Nhóm B1: trước đây "Cancelled" bị ánh xạ về "SentToKitchen" → huỷ phiếu bếp lại mở lại đơn.
+        var scenario = SeedKitchen();
+
+        await Kitchen.UpdateOrderStatusAsync(scenario.KitchenOrder.KitchenOrderId, new KitchenStatusRequest { Status = "Cancelled" }, CancellationToken.None);
+
+        Assert.Equal("Cancelled", Db.KitchenOrders.Single(x => x.KitchenOrderId == scenario.KitchenOrder.KitchenOrderId).Status);
+        Assert.Equal("Cancelled", Db.Orders.Single(x => x.OrderId == scenario.Order.OrderId).Status);
+    }
+
+    [Fact]
     public async Task UpdateOrderStatus_TrimsIncomingStatus()
     {
         var scenario = SeedKitchen();

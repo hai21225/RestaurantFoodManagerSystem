@@ -239,20 +239,47 @@ public sealed class OrdersFlowTests : TestBase
     }
 
     [Fact]
-    public async Task UpdateStatus_AcceptsAnyStatusString_CurrentlyUnvalidated()
+    public async Task UpdateStatus_RejectsStatusOutsideAllowList()
     {
-        // Baseline: no allow-list is enforced for order status transitions.
+        // Nhóm B2: nay có allow-list (trước đây nhận mọi chuỗi).
         var s = SeedOrderScenario();
         var order = SeedOrder(s.Table.TableId, s.Staff.Id);
 
-        var result = await Orders.UpdateStatusAsync(order.OrderId, new UpdateOrderStatusRequest
-        {
-            Status = "TotallyInvalid",
-            ChangedBy = s.Staff.Id
-        }, CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Orders.UpdateStatusAsync(order.OrderId,
+            new UpdateOrderStatusRequest { Status = "TotallyInvalid", ChangedBy = s.Staff.Id }, CancellationToken.None));
 
-        Assert.True(result);
-        Assert.Equal("TotallyInvalid", Db.Orders.Single(x => x.OrderId == order.OrderId).Status);
+        Assert.Equal("Invalid order status", ex.Message);
+        Assert.Equal("Pending", Db.Orders.Single(x => x.OrderId == order.OrderId).Status);
+    }
+
+    [Fact]
+    public async Task UpdateStatus_RejectsBlankStatus()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Orders.UpdateStatusAsync(order.OrderId,
+            new UpdateOrderStatusRequest { Status = "   ", ChangedBy = s.Staff.Id }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateStatus_RejectsChangeFromTerminalState()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: "Paid");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.UpdateStatusAsync(order.OrderId,
+            new UpdateOrderStatusRequest { Status = "Ready", ChangedBy = s.Staff.Id }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Create_Throws_WhenItemsIsNull()
+    {
+        // Nhóm B8: JSON `null` cho Items lọt qua [MinLength] → phải báo lỗi rõ thay vì NRE.
+        var s = SeedOrderScenario();
+        var request = new CreateOrderRequest { TableId = s.Table.TableId, CreatedBy = s.Staff.Id, Items = null! };
+
+        await Assert.ThrowsAsync<ArgumentException>(() => Orders.CreateAsync(request, CancellationToken.None));
     }
 
     [Fact]

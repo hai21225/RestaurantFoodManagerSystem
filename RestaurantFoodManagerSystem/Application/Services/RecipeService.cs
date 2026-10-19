@@ -42,8 +42,8 @@ public sealed class RecipeService
         var x = new Recipe
         {
             SizeId = r.SizeId,
-            Name = r.Name.Trim(),
-            Version = r.Version.Trim(),
+            Name = (r.Name ?? string.Empty).Trim(),
+            Version = string.IsNullOrWhiteSpace(r.Version) ? "1" : r.Version.Trim(),
             IsActive = true
         };
         _db.Recipes.Add(x);

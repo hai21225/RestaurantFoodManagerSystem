@@ -22,6 +22,9 @@ public sealed class PurchaseOrderService
         if (!await _db.Suppliers.AnyAsync(x => x.SupplierId == r.SupplierId && x.IsActive, ct))
             throw new KeyNotFoundException("Supplier not found");
 
+        // Nhóm B4: purchase order + các dòng phải là nguyên tử.
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
         var p = new PurchaseOrder
         {
             SupplierId = r.SupplierId,
@@ -53,6 +56,7 @@ public sealed class PurchaseOrderService
         }
         await _db.SaveChangesAsync(ct);
 
+        await tx.CommitAsync(ct);
         return p;
     }
 

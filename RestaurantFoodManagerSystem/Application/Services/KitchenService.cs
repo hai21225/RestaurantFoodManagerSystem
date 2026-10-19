@@ -51,9 +51,7 @@ public sealed class KitchenService
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
         if (order is not null)
         {
-            order.Status = status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ? "Ready" :
-                status.Equals("Ready", StringComparison.OrdinalIgnoreCase) ? "Ready" :
-                status.Equals("Preparing", StringComparison.OrdinalIgnoreCase) ? "Preparing" : "SentToKitchen";
+            order.Status = MapOrderStatus(status);
             order.UpdatedAt = DateTime.UtcNow;
         }
 
@@ -84,12 +82,25 @@ public sealed class KitchenService
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
         if (order is not null)
         {
-            order.Status = kitchenOrder.Status == "Ready" ? "Ready" :
-                kitchenOrder.Status == "Preparing" ? "Preparing" : "SentToKitchen";
+            order.Status = MapOrderStatus(kitchenOrder.Status);
             order.UpdatedAt = DateTime.UtcNow;
         }
 
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>
+    /// Ánh xạ trạng thái phiếu bếp → trạng thái đơn hàng (Nhóm B1).
+    /// Trước đây mọi trạng thái ngoài Ready/Preparing — kể cả <c>Cancelled</c> — đều bị đưa về
+    /// <c>SentToKitchen</c>, tức là huỷ phiếu bếp lại vô tình "mở lại" đơn.
+    /// </summary>
+    private static string MapOrderStatus(string kitchenStatus) => kitchenStatus.Trim().ToLowerInvariant() switch
+    {
+        "preparing" => OrderStatuses.Preparing,
+        "ready" => OrderStatuses.Ready,
+        "completed" => OrderStatuses.Ready,
+        "cancelled" => OrderStatuses.Cancelled,
+        _ => OrderStatuses.SentToKitchen // Pending, Accepted
+    };
 }

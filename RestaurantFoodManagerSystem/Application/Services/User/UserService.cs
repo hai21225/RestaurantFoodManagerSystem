@@ -12,7 +12,7 @@ public class UserService
 
     public async Task<UserDto?> FindUserByUsernameAsync(string username)
     {
-        var normalizedUsername = username.Trim();
+        var normalizedUsername = username?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(normalizedUsername))
         {
             return null;
@@ -103,8 +103,8 @@ public class UserService
             UserEmail = email,
             UserPhone = userdto.Phone??"",
             IsActive = true,
-            CreatedAt = DateTime.Now,
-            UpdatedAt = DateTime.Now
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
         await _db.Users.AddAsync(user);
         return await _db.SaveChangesAsync()>0;
