@@ -18,15 +18,17 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 
 **Nhóm A (6 endpoint thiếu + CORS) đã được xử lý ở commit `afa4664`** — xem mục 3.1 và mục 5.
 
+**Nhóm C (field hiển thị thiếu) đã được bổ sung ở commit `46a18e9`** — chỉ **thêm** field, không xoá; xem mục 4.
+
 | Mục trong tài liệu này | Trạng thái |
 |---|---|
 | 3.1 — 6 endpoint frontend gọi mà backend thiếu | ✅ **Đã bù** (`afa4664`) |
 | 5.1 — CORS `FrontendPolicy` vô hiệu | ✅ **Đã bật `app.UseCors`** (`afa4664`) |
-| 4 — field hiển thị thiếu (Nhóm C/GĐ7) | ⏳ Chưa làm |
+| 4 — field hiển thị thiếu (Nhóm C/GĐ7) | ✅ **Đã bổ sung 4/4** (`46a18e9`), trừ #5 (dormant, xem 4.1) |
 | 5 — frontend không gửi `Authorization` | ⏳ Chưa (việc phía frontend) |
 | 6 — defect nghiệp vụ (Nhóm B) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176 test**, sau `46a18e9` là **178 test**.
 
 ---
 
@@ -135,6 +137,11 @@ Lưu ý #5: `POST /api/auth/register` **có** tồn tại (AdminOnly) nhưng **k
 | 3 | `recipe.ingredientCount` | `recipes.js:207` | `Recipe` entity không có field này | Chi tiết hiện **"undefined nguyên liệu"** |
 | 4 | `details.foodName`, `details.sizeName` | `recipes.js:213` | `RecipeResponse` chỉ có `sizeId`, không join tên | Tiêu đề chi tiết công thức hiện **"undefined"** |
 | 5 | `food.saleUnit`, `food.allowsFractionalQuantity` | `order.js:83-85`, `foods.js:85` | Không tồn tại trong entity `Food` | **Hiện KHÔNG gây lỗi** (xem 4.1) |
+
+> **Trạng thái sau `46a18e9` (Nhóm C/GĐ7):** #1–#4 ✅ **đã bổ sung** (chỉ thêm field, không xoá):
+> `GET /orders/{id}` → `OrderDetailResponse.items[]`; kitchen items → `KitchenItemResponse` (`foodName`/`sizeName`/`quantity`, giữ `quanlity`);
+> `GET /management/recipes` → `RecipeSummaryResponse.ingredientCount`; `GET /management/recipes/{id}` → `RecipeResponse.foodName`/`sizeName`.
+> #5 vẫn **dormant** (không sửa, không phải lỗi đang hoạt động).
 
 ### 4.1 Vì sao #5 hiện vô hại (đã kiểm chứng)
 
@@ -298,10 +305,10 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 ### Nhóm C — đổi hợp đồng JSON (cần phối hợp frontend) = GĐ7
 
-- C1. `Order.items[]` (kèm tên món/cỡ) cho `GET /orders/{id}` và hoá đơn.
-- C2. `KitchenOrderItem`: trả `foodName`/`sizeName`/`quantity` (đúng chính tả) thay `quanlity`.
-- C3. `Recipe` list: thêm `ingredientCount`; detail: thêm `foodName`/`sizeName`.
-- C4. Bỏ trả entity thô (`Ingredient`, `Supplier`, `Inventory`, `PurchaseOrder`, `Promotion`, `Recipe`, `KitchenOrder*`) → DTO.
+- C1. ✅ `Order.items[]` (kèm tên món/cỡ) cho `GET /orders/{id}` và hoá đơn. (`46a18e9`)
+- C2. ✅ `KitchenOrderItem`: trả `foodName`/`sizeName`/`quantity` (đúng chính tả) **thêm** bên cạnh `quanlity` cũ. (`46a18e9`)
+- C3. ✅ `Recipe` list: thêm `ingredientCount`; detail: thêm `foodName`/`sizeName`. (`46a18e9`)
+- C4. ⏳ Bỏ trả entity thô (`Ingredient`, `Supplier`, `Inventory`, `PurchaseOrder`, `Promotion`, `Recipe`, `KitchenOrder*`) → DTO hoàn toàn.
 
 ### Nhóm D — không đổi hành vi (an toàn, làm bất cứ lúc nào)
 

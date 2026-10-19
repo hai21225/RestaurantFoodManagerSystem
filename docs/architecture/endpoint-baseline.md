@@ -116,7 +116,7 @@ Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) �
 
 | Verb | Route | Request | Success | Lỗi |
 |---|---|---|---|---|
-| GET | `/api/orders/{id:int}` | – | `200` **`Order` entity** | `404` (body rỗng) |
+| GET | `/api/orders/{id:int}` | – | `200` **`OrderDetailResponse`** (mọi field `Order` cũ + `items[]`: `foodName`/`sizeName`/`quantity`/`unitPrice`/`note`/`status`) | `404` (body rỗng) |
 | POST | `/api/orders` | `CreateOrderRequest` | `200` **`Order` entity** | `400` `"..."` (KeyNotFound), `409` `"..."` (InvalidOperation) |
 | PATCH | `/api/orders/{id:int}/status` | `UpdateOrderStatusRequest` | `204` | `404` (body rỗng) |
 | PATCH | `/api/orders/{id:int}/promotion/{promotionId:int}` | – | `204` | `400` `"Order or promotion is invalid"` |
@@ -148,13 +148,13 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 | PUT | `/api/management/promotions/{id:int}` | `PromotionRequest` | `204` | `404` |
 | PATCH | `/api/management/promotions/{id:int}/active?active` | – | `204` | `404` |
 | DELETE | `/api/management/promotions/{id:int}` | – | `204` | `404` |
-| GET | `/api/management/recipes` | – | `200` **`Recipe[]` entity** | – |
-| GET | `/api/management/recipes/{id:int}` | – | `200` `RecipeResponse` | `404` |
+| GET | `/api/management/recipes` | – | `200` **`RecipeSummaryResponse[]`** (mọi field `Recipe` cũ + `ingredientCount`) | – |
+| GET | `/api/management/recipes/{id:int}` | – | `200` `RecipeResponse` (thêm `foodName`/`sizeName`) | `404` |
 | POST | `/api/management/recipes` | `RecipeRequest` | `200` **`Recipe` entity** | `400` `"..."` |
 | PUT | `/api/management/recipes/{id:int}` | `RecipeRequest` | `204` | `404`, `400` `"..."` |
 | DELETE | `/api/management/recipes/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/kitchen/orders` | – | `200` **`KitchenOrder[]` entity** | – |
-| GET | `/api/management/kitchen/orders/{id:int}/items` | – | `200` **`KitchenOrderItem[]` entity** | – |
+| GET | `/api/management/kitchen/orders/{id:int}/items` | – | `200` **`KitchenItemResponse[]`** (mọi field `KitchenOrderItem` cũ kể cả `quanlity` + `foodName`/`sizeName`/`quantity`) | – |
 | PATCH | `/api/management/kitchen/orders/{id:int}/status` | `KitchenStatusRequest` | `204` | `404`, `400` `"..."` |
 | PATCH | `/api/management/kitchen/items/{id:int}/status` | `KitchenItemStatusRequest` | `204` | `404`, `400` `"..."` |
 
@@ -173,7 +173,9 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.
 5. **Hai kiểu trả lỗi**: `{message}` (controller cũ) và JSON string trần (controller mới).
 6. **Hai kiểu inject**: constructor (8 controller) và `[FromServices]` (4 controller).
-7. **Trả entity trực tiếp**: orders, payments, toàn bộ `/api/management/*` (trừ recipe details).
+7. **Trả entity trực tiếp**: payments và phần lớn `/api/management/*`. **Đã DTO hoá (chỉ bổ sung field, GĐ7-C `46a18e9`)**:
+   `GET /orders/{id}` → `OrderDetailResponse` (thêm `items[]`), `GET /management/recipes` → `RecipeSummaryResponse` (thêm `ingredientCount`),
+   `GET /management/recipes/{id}` → `RecipeResponse` (thêm `foodName`/`sizeName`), `GET /management/kitchen/orders/{id}/items` → `KitchenItemResponse` (thêm `foodName`/`sizeName`/`quantity`, giữ `quanlity`).
 8. **Order status không validate**: `PATCH /api/orders/{id}/status` nhận mọi chuỗi.
    (Đã pin bằng test `UpdateStatus_AcceptsAnyStatusString_CurrentlyUnvalidated`.)
 9. **Kitchen status có validate** (allow-list) ở `KitchenService`, nhưng
