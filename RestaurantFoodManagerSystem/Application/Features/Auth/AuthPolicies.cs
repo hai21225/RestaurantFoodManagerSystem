@@ -37,4 +37,11 @@ public static class AuthPolicies
 
     /// <summary>Admin + Waiter + Cashier — cho endpoint đọc mà cả POS lẫn thu ngân đều cần.</summary>
     public const string PosOrCashier = "PosOrCashier";
+
+    /// <summary>
+    /// Admin + Waiter + Cashier + Chef — đọc đơn/bàn cho POS, thu ngân và bếp.
+    /// Bếp cần đọc <c>GET /orders/{id}</c> và <c>GET /restaurant-tables/{id}</c> để hiển thị
+    /// mã đơn + số bàn trên phiếu bếp, nhưng không được sửa đơn/bàn.
+    /// </summary>
+    public const string PosKitchenRead = "PosKitchenRead";
 }

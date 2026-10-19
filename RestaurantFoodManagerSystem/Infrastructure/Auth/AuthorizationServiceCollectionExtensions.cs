@@ -39,6 +39,13 @@ public static class AuthorizationServiceCollectionExtensions
                     AuthPolicies.Roles.Admin,
                     AuthPolicies.Roles.Waiter,
                     AuthPolicies.Roles.Cashier));
+
+            options.AddPolicy(AuthPolicies.PosKitchenRead,
+                p => p.RequireRole(
+                    AuthPolicies.Roles.Admin,
+                    AuthPolicies.Roles.Waiter,
+                    AuthPolicies.Roles.Cashier,
+                    AuthPolicies.Roles.Chef));
         });
 
         // Đăng ký sau AddAuthorization để ghi đè DefaultAuthorizationPolicyProvider.

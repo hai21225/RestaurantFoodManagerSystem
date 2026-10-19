@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Data;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class FoodSizeService
@@ -60,6 +61,10 @@ public class FoodSizeService
         CreateFoodSizeRequest request,
         CancellationToken ct = default)
     {
+        // Defect #32: serialize thao tác "clear default + set default" để hai request đồng thời
+        // không cùng tạo ra hai size default cho một món.
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
@@ -110,6 +115,7 @@ public class FoodSizeService
             throw new Exception("Failed to create food size");
         }
 
+        await tx.CommitAsync(ct);
         return MapToDto(size);
     }
 
@@ -120,8 +126,11 @@ public class FoodSizeService
         UpdateFoodSizeRequest request,
         CancellationToken ct = default)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        // Defect #31: dùng entity đang tracked thay vì AsNoTracking + Update(), để EF chỉ
+        // UPDATE các cột thực sự thay đổi và không ghi đè thay đổi đồng thời của request khác.
         var size = await _db.FoodSizes
-            .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
@@ -161,9 +170,8 @@ public class FoodSizeService
         size.IsDefault = request.IsDefault;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _db.FoodSizes.Update(size);
-
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
 
         return MapToDto(size);
     }
@@ -174,8 +182,9 @@ public class FoodSizeService
         int sizeId,
         CancellationToken ct = default)
     {
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var size = await _db.FoodSizes
-            .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
@@ -195,9 +204,9 @@ public class FoodSizeService
         size.IsDefault = true;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _db.FoodSizes.Update(size);
-
-        return await _db.SaveChangesAsync(ct) > 0;
+        var saved = await _db.SaveChangesAsync(ct) > 0;
+        await tx.CommitAsync(ct);
+        return saved;
     }
 
 
@@ -207,7 +216,6 @@ public class FoodSizeService
         CancellationToken ct = default)
     {
         var size = await _db.FoodSizes
-            .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
@@ -222,8 +230,6 @@ public class FoodSizeService
         size.IsDefault = false;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _db.FoodSizes.Update(size);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
@@ -234,7 +240,6 @@ public class FoodSizeService
         CancellationToken ct = default)
     {
         var defaults = await _db.FoodSizes
-            .AsNoTracking()
             .Where(x =>
                 x.FoodId == foodId &&
                 x.IsDefault &&
@@ -247,8 +252,6 @@ public class FoodSizeService
         {
             size.IsDefault = false;
             size.UpdatedAt = DateTime.UtcNow;
-
-            _db.FoodSizes.Update(size);
         }
     }
 

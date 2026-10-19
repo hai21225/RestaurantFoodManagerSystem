@@ -66,6 +66,12 @@ public sealed class AuthorizationPolicyTests
     [InlineData(AuthPolicies.PosOrCashier, AuthPolicies.Roles.Cashier, true)]
     [InlineData(AuthPolicies.PosOrCashier, AuthPolicies.Roles.Chef, false)]
     [InlineData(AuthPolicies.PosOrCashier, AuthPolicies.Roles.WarehouseManager, false)]
+    // PosKitchenRead = Admin + Waiter + Cashier + Chef (bếp đọc đơn/bàn)
+    [InlineData(AuthPolicies.PosKitchenRead, AuthPolicies.Roles.Admin, true)]
+    [InlineData(AuthPolicies.PosKitchenRead, AuthPolicies.Roles.Waiter, true)]
+    [InlineData(AuthPolicies.PosKitchenRead, AuthPolicies.Roles.Cashier, true)]
+    [InlineData(AuthPolicies.PosKitchenRead, AuthPolicies.Roles.Chef, true)]
+    [InlineData(AuthPolicies.PosKitchenRead, AuthPolicies.Roles.WarehouseManager, false)]
     public async Task Enforced_PolicyMatrix(string policy, string role, bool expected)
     {
         var authorization = BuildAuthorizationService(enforce: true);
@@ -112,6 +118,7 @@ public sealed class AuthorizationPolicyTests
     [InlineData(AuthPolicies.KitchenDesk)]
     [InlineData(AuthPolicies.WarehouseDesk)]
     [InlineData(AuthPolicies.PosOrCashier)]
+    [InlineData(AuthPolicies.PosKitchenRead)]
     [InlineData(AuthPolicies.Authenticated)]
     public async Task Disabled_AllowsAnonymous_ForAnyNamedPolicy(string policy)
     {

@@ -1,4 +1,8 @@
+using System.Collections.Concurrent;
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
 namespace RestaurantFoodManagerSystem.Tests;
@@ -26,6 +30,29 @@ public sealed class OrdersFlowTests : TestBase
         return request;
     }
 
+    private static UpdateOrderItemsRequest UpdateRequest(
+        int changedBy,
+        int sizeId,
+        int quantity = 2,
+        int? toppingId = null,
+        int toppingQuanlity = 1)
+    {
+        var item = new CreateOrderItemRequest
+        {
+            SizeId = sizeId,
+            Quanlity = quantity,
+            Note = "updated"
+        };
+        if (toppingId.HasValue)
+        {
+            item.Toppings.Add(new CreateOrderToppingRequest { ToppingId = toppingId.Value, Quanlity = toppingQuanlity });
+        }
+
+        var request = new UpdateOrderItemsRequest { ChangedBy = changedBy };
+        request.Items.Add(item);
+        return request;
+    }
+
     [Fact]
     public async Task Create_SnapshotsPrice_CreatesKitchenTicket_AndDeductsStock()
     {
@@ -45,6 +72,9 @@ public sealed class OrdersFlowTests : TestBase
         var item = Db.OrderItems.Single(x => x.OrderId == order.OrderId);
         Assert.Equal(55m, item.UnitPrice); // 50 base + 5 topping, snapshot at creation time
         Assert.Equal(2, item.Quanlity);
+        // Defect #21: UnitPrice là đơn giá cuối cùng (đã gồm topping) và Subtotal phải
+        // khớp chính xác với UnitPrice * quantity, không cộng topping thêm lần nữa.
+        Assert.Equal(order.Subtotal, item.UnitPrice * item.Quanlity);
         Assert.Equal("Pending", item.Status);
         Assert.Equal("no onion", item.Note);
 
@@ -206,6 +236,25 @@ public sealed class OrdersFlowTests : TestBase
         Assert.Equal(50m, item.UnitPrice);
         Assert.Equal("no onion", item.Note);
         Assert.Equal("Pending", item.Status);
+    }
+
+    [Fact]
+    public async Task Get_IncludesToppings_WithNameAndQuantity()
+    {
+        var s = SeedOrderScenario(sizePrice: 50m, toppingPrice: 5m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2, toppingId: s.Topping.ToppingId, toppingQuanlity: 3),
+            CancellationToken.None);
+
+        var detail = await Orders.GetAsync(order.OrderId, CancellationToken.None);
+
+        Assert.NotNull(detail);
+        var item = Assert.Single(detail!.Items);
+        var topping = Assert.Single(item.Toppings);
+        Assert.Equal(s.Topping.ToppingId, topping.ToppingId);
+        Assert.Equal(s.Topping.ToppingName, topping.ToppingName);
+        Assert.Equal(3, topping.Quanlity);
+        Assert.Equal(5m, topping.UnitPrice);
     }
 
     [Fact]
@@ -388,5 +437,402 @@ public sealed class OrdersFlowTests : TestBase
 
         Assert.False(await Orders.ApplyPromotionAsync(999999, 1, CancellationToken.None));
         Assert.False(await Orders.ApplyPromotionAsync(order.OrderId, 999999, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task ApplyPromotion_PercentDiscount_RoundsToTwoDecimalsBeforeSave()
+    {
+        // Defect #18: 12.5% của 100.05 = 12.50625; DB decimal(18,2) phải nhận 12.51
+        // và TotalAmount phải tính từ chính giá trị đã làm tròn.
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 100.05m);
+        Db.Promotions.Add(new Promotion
+        {
+            Name = "12.5%",
+            Description = "rounding",
+            DiscountType = "Percent",
+            DiscountValue = 12.5m,
+            MinimumOrderAmount = 0m,
+            MaxDiscountAmount = 0m,
+            StartAt = DateTime.UtcNow.AddDays(-1),
+            EndAt = DateTime.UtcNow.AddDays(1),
+            IsActive = true
+        });
+        Db.SaveChanges();
+
+        Assert.True(await Orders.ApplyPromotionAsync(order.OrderId, Db.Promotions.Single().Id, CancellationToken.None));
+
+        var updated = Db.Orders.Single(x => x.OrderId == order.OrderId);
+        Assert.Equal(12.51m, updated.DiscountAmount);
+        Assert.Equal(87.54m, updated.TotalAmount);
+    }
+
+    [Fact]
+    public async Task Create_Throws_WhenToppingIsNotAssignedToFood()
+    {
+        // Defect #19: topping active/available nhưng không có dòng FoodToppings cho món này.
+        var s = SeedOrderScenario();
+        var unrelatedTopping = SeedTopping(3m);
+        Db.SaveChanges();
+
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, toppingId: unrelatedTopping.ToppingId),
+            CancellationToken.None));
+
+        Assert.Contains("not available for this food", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_Throws_WhenTableAlreadyHasAnOpenOrder()
+    {
+        // Defect #20: không cho mở thêm đơn thứ hai trên cùng bàn khi đơn trước chưa đóng.
+        var s = SeedOrderScenario();
+        await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
+            CancellationToken.None);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
+            CancellationToken.None));
+
+        Assert.Equal("Table already has an open order", ex.Message);
+    }
+
+    [Fact]
+    public async Task Create_Throws_WhenTableIsUnderMaintenance()
+    {
+        // Defect #20: trạng thái Maintenance phải bị chặn kể cả khi IsActive bị đặt sai.
+        var s = SeedOrderScenario();
+        s.Table.Status = "Maintenance";
+        Db.SaveChanges();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
+            CancellationToken.None));
+
+        Assert.Equal("Table is under maintenance", ex.Message);
+    }
+
+    [Fact]
+    public async Task CreateIdempotent_SameKeyAndPayload_ReturnsExistingOrder_AndDeductsStockOnce()
+    {
+        var s = SeedOrderScenario(sizePrice: 10m, stock: 100m);
+        var request = Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2);
+
+        var first = await Orders.CreateIdempotentAsync(request, "retry-key", CancellationToken.None);
+        var replay = Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2);
+        var second = await Orders.CreateIdempotentAsync(replay, "retry-key", CancellationToken.None);
+
+        Assert.Equal(first.OrderId, second.OrderId);
+        Assert.Equal(first.TotalAmount, second.TotalAmount);
+
+        using var fresh = NewContext();
+        Assert.Single(fresh.Orders);
+        // Recipe dùng 2 đơn vị/nguyên liệu cho mỗi món × 2 món = 4, chỉ trừ một lần.
+        Assert.Equal(96m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
+    }
+
+    [Fact]
+    public async Task CreateIdempotent_SameKeyDifferentPayload_ThrowsConflict()
+    {
+        var s = SeedOrderScenario(sizePrice: 10m, stock: 100m);
+        var first = Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2);
+        await Orders.CreateIdempotentAsync(first, "retry-key", CancellationToken.None);
+
+        var different = Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 3);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Orders.CreateIdempotentAsync(different, "retry-key", CancellationToken.None));
+
+        Assert.Contains("different order payload", ex.Message);
+        using var fresh = NewContext();
+        Assert.Single(fresh.Orders);
+        Assert.Equal(96m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
+    }
+
+    [Fact]
+    public async Task OrderIdempotencyStore_ConcurrentSameKey_CreatesOnce()
+    {
+        var store = new InMemoryOrderIdempotencyStore();
+        var calls = 0;
+        var created = new OrderCreatedResponse { OrderId = 123, Status = "SentToKitchen", TotalAmount = 10m };
+
+        var tasks = Enumerable.Range(0, 16)
+            .Select(_ => store.ExecuteAsync(
+                "actor:key",
+                "fingerprint",
+                async _ =>
+                {
+                    Interlocked.Increment(ref calls);
+                    await Task.Delay(25);
+                    return created;
+                },
+                CancellationToken.None))
+            .ToList();
+
+        var results = await Task.WhenAll(tasks);
+
+        Assert.Equal(1, calls);
+        Assert.All(results, x => Assert.Equal(123, x.OrderId));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => store.ExecuteAsync(
+            "actor:key",
+            "other-fingerprint",
+            _ => Task.FromResult(created),
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateItems_ReplacesItems_AndAdjustsStockAndKitchenTicket()
+    {
+        var s = SeedOrderScenario(sizePrice: 50m, toppingPrice: 5m, stock: 100m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2, toppingId: s.Topping.ToppingId),
+            CancellationToken.None);
+
+        var updated = await Orders.UpdateItemsAsync(
+            order.OrderId,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 3, toppingId: s.Topping.ToppingId),
+            CancellationToken.None);
+
+        Assert.True(updated);
+        var detail = await Orders.GetAsync(order.OrderId, CancellationToken.None);
+        Assert.NotNull(detail);
+        var item = Assert.Single(detail!.Items);
+        Assert.Equal(3, item.Quanlity);
+        Assert.Equal(55m, item.UnitPrice); // 50 size + 5 topping
+        Assert.Equal("updated", item.Note);
+        Assert.Single(item.Toppings);
+
+        Assert.Equal(165m, detail.Subtotal);
+        Assert.Equal(0m, detail.DiscountAmount);
+        Assert.Equal(165m, detail.TotalAmount);
+
+        var kitchenOrder = Db.KitchenOrders.Single(x => x.OrderId == order.OrderId);
+        var kitchenItems = Db.KitchenOrderItems.Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId).ToList();
+        var kitchenItem = Assert.Single(kitchenItems);
+        Assert.Equal(3, kitchenItem.Quanlity);
+        Assert.Equal(item.Id, kitchenItem.OrderItemId);
+
+        using var fresh = NewContext();
+        Assert.Equal(94m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
+        var transactions = await fresh.InventoryTransactions.OrderBy(x => x.Id).ToListAsync();
+        Assert.Equal(2, transactions.Count);
+        Assert.Equal(4m, transactions[0].Quanlity);
+        Assert.Equal(2m, transactions[1].Quanlity);
+        Assert.All(transactions, x => Assert.Equal("Sale", x.Type));
+    }
+
+    [Fact]
+    public async Task UpdateItems_DecreaseQuantity_ReturnsStockAndWritesAdjustmentIn()
+    {
+        var s = SeedOrderScenario(sizePrice: 10m, stock: 100m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 3),
+            CancellationToken.None);
+
+        Assert.True(await Orders.UpdateItemsAsync(
+            order.OrderId,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 1),
+            CancellationToken.None));
+
+        using var fresh = NewContext();
+        Assert.Equal(98m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
+        var transactions = await fresh.InventoryTransactions.OrderBy(x => x.Id).ToListAsync();
+        Assert.Equal(2, transactions.Count);
+        Assert.Equal("Sale", transactions[0].Type);
+        Assert.Equal(6m, transactions[0].Quanlity);
+        Assert.Equal("AdjustmentIn", transactions[1].Type);
+        Assert.Equal(4m, transactions[1].Quanlity);
+        Assert.Equal(94m, transactions[1].QuanlityBefore);
+        Assert.Equal(98m, transactions[1].QuanlityAfter);
+    }
+
+    [Fact]
+    public async Task UpdateItems_RejectsWhenKitchenHasStarted()
+    {
+        var s = SeedOrderScenario(sizePrice: 10m, stock: 100m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2),
+            CancellationToken.None);
+
+        var kitchenOrder = Db.KitchenOrders.Single(x => x.OrderId == order.OrderId);
+        var kitchenItem = Db.KitchenOrderItems.Single(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId);
+        kitchenItem.Status = "Preparing";
+        Db.SaveChanges();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.UpdateItemsAsync(
+            order.OrderId,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 3),
+            CancellationToken.None));
+
+        Assert.Equal("Kitchen has already started this order", ex.Message);
+        using var fresh = NewContext();
+        Assert.Equal(20m, fresh.Orders.Single(x => x.OrderId == order.OrderId).Subtotal);
+        Assert.Equal(96m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
+        Assert.Single(fresh.OrderItems.Where(x => x.OrderId == order.OrderId));
+    }
+
+    [Fact]
+    public async Task UpdateItems_ResetsAppliedDiscount()
+    {
+        var s = SeedOrderScenario(sizePrice: 10m, stock: 100m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2),
+            CancellationToken.None);
+
+        Db.Promotions.Add(new Promotion
+        {
+            Name = "edit-reset",
+            Description = "d",
+            DiscountType = "Fixed",
+            DiscountValue = 5m,
+            MinimumOrderAmount = 0m,
+            StartAt = DateTime.UtcNow.AddDays(-1),
+            EndAt = DateTime.UtcNow.AddDays(1),
+            IsActive = true
+        });
+        Db.SaveChanges();
+        Assert.True(await Orders.ApplyPromotionAsync(order.OrderId, Db.Promotions.Single().Id, CancellationToken.None));
+        Assert.Equal(5m, Db.Orders.Single(x => x.OrderId == order.OrderId).DiscountAmount);
+
+        Assert.True(await Orders.UpdateItemsAsync(
+            order.OrderId,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 4),
+            CancellationToken.None));
+
+        var updated = await Orders.GetAsync(order.OrderId, CancellationToken.None);
+        Assert.NotNull(updated);
+        Assert.Equal(40m, updated!.Subtotal);
+        Assert.Equal(0m, updated.DiscountAmount);
+        Assert.Equal(40m, updated.TotalAmount);
+    }
+
+    [Fact]
+    public async Task UpdateItems_RejectsTerminalOrder()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: "Paid");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.UpdateItemsAsync(
+            order.OrderId,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 1),
+            CancellationToken.None));
+
+        Assert.Contains("can no longer be edited", ex.Message);
+    }
+
+    [Fact]
+    public async Task UpdateItems_ReturnsFalse_WhenOrderMissing()
+    {
+        var s = SeedOrderScenario();
+
+        Assert.False(await Orders.UpdateItemsAsync(
+            999999,
+            UpdateRequest(s.Staff.Id, s.Size.SizeId, quantity: 1),
+            CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Create_StartsTransaction_BeforeReadingInventory()
+    {
+        // Defect #3: kiểm tra tồn kho phải nằm trong transaction, không được đọc trước
+        // rồi mới mở transaction (khoảng trống cho hai đơn cùng vượt check).
+        var s = SeedOrderScenario(stock: 1m);
+        var state = new InterceptorState();
+        using var db = NewContext(
+            new TransactionWatchInterceptor(state),
+            new CommandWatchInterceptor(state));
+        var service = new OrderService(
+            db,
+            new RestaurantTableService(db),
+            CurrentUser,
+            NullLogger<OrderService>.Instance,
+            OrderIdempotency);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
+            CancellationToken.None));
+
+        Assert.True(state.TransactionStartedAt >= 0);
+        Assert.True(
+            state.InventoryReadAt > state.TransactionStartedAt,
+            string.Join("\n---\n", state.Commands));
+    }
+
+    private sealed class InterceptorState
+    {
+        public int Sequence;
+        public int TransactionStartedAt = -1;
+        public int InventoryReadAt = -1;
+        public ConcurrentQueue<string> Commands { get; } = new();
+
+        public void MarkTransaction()
+        {
+            if (TransactionStartedAt < 0)
+            {
+                TransactionStartedAt = Interlocked.Increment(ref Sequence);
+            }
+        }
+
+        public void MarkCommand(DbCommand command)
+        {
+            Commands.Enqueue(command.CommandText);
+            if (command.CommandText.Contains("FROM \"inventory\"", StringComparison.OrdinalIgnoreCase))
+            {
+                InventoryReadAt = Interlocked.Increment(ref Sequence);
+            }
+        }
+    }
+
+    private sealed class TransactionWatchInterceptor : DbTransactionInterceptor
+    {
+        private readonly InterceptorState _state;
+
+        public TransactionWatchInterceptor(InterceptorState state) => _state = state;
+
+        public override DbTransaction TransactionStarted(
+            DbConnection connection,
+            TransactionEndEventData eventData,
+            DbTransaction transaction)
+        {
+            _state.MarkTransaction();
+            return base.TransactionStarted(connection, eventData, transaction);
+        }
+
+        public override ValueTask<DbTransaction> TransactionStartedAsync(
+            DbConnection connection,
+            TransactionEndEventData eventData,
+            DbTransaction transaction,
+            CancellationToken cancellationToken = default)
+        {
+            _state.MarkTransaction();
+            return base.TransactionStartedAsync(connection, eventData, transaction, cancellationToken);
+        }
+    }
+
+    private sealed class CommandWatchInterceptor : DbCommandInterceptor
+    {
+        private readonly InterceptorState _state;
+
+        public CommandWatchInterceptor(InterceptorState state) => _state = state;
+
+        public override InterceptionResult<DbDataReader> ReaderExecuting(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result)
+        {
+            _state.MarkCommand(command);
+            return base.ReaderExecuting(command, eventData, result);
+        }
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command,
+            CommandEventData eventData,
+            InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            _state.MarkCommand(command);
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
     }
 }

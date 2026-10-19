@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -45,6 +46,16 @@ public abstract class TestBase : IDisposable
         return new AppDbContext(options);
     }
 
+    /// <summary>Context có interceptor, dùng để kiểm chứng thứ tự transaction/command.</summary>
+    protected AppDbContext NewContext(params IInterceptor[] interceptors)
+    {
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(_connection)
+            .AddInterceptors(interceptors)
+            .Options;
+        return new AppDbContext(options);
+    }
+
     public void Dispose()
     {
         Db.Dispose();
@@ -81,7 +92,10 @@ public abstract class TestBase : IDisposable
     protected FoodToppingService FoodToppings => new(Db);
     protected RestaurantTableService Tables => new(Db);
 
-    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance);
+    /// <summary>Dùng chung một store để test retry/idempotency qua nhiều lần gọi service.</summary>
+    protected IOrderIdempotencyStore OrderIdempotency { get; } = new InMemoryOrderIdempotencyStore();
+
+    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance, OrderIdempotency);
     protected PaymentService Payments => new(Db, Tables, CurrentUser, NullLogger<PaymentService>.Instance);
     protected KitchenService Kitchen => new(Db);
     protected MenuService Menu => new(Db);
@@ -92,6 +106,7 @@ public abstract class TestBase : IDisposable
     protected PromotionService Promotions => new(Db);
     protected RecipeService Recipes => new(Db);
     protected InventoryService InventorySvc => new(Db, CurrentUser, NullLogger<InventoryService>.Instance);
+    protected ReportService Reports => new(Db);
 
     // ==========================================================
     // Seeding helpers

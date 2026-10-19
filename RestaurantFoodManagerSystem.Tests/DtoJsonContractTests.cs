@@ -48,4 +48,59 @@ public sealed class DtoJsonContractTests
         Assert.NotNull(item);
         Assert.Equal(2.5m, item!.Quanlity);
     }
+
+    [Fact]
+    public void OrderCreatedResponse_CoversEveryOrderField_ExceptRowVersion()
+    {
+        var expected = typeof(Order).GetProperties()
+            .Select(p => p.Name)
+            .Where(name => name != nameof(Order.RowVersion))
+            .ToList();
+
+        var json = JsonSerializer.Serialize(new OrderCreatedResponse(), Web);
+        using var doc = JsonDocument.Parse(json);
+
+        foreach (var name in expected)
+        {
+            var camel = char.ToLowerInvariant(name[0]) + name[1..];
+            Assert.True(doc.RootElement.TryGetProperty(camel, out _), $"Thiếu field '{camel}' so với entity Order.");
+        }
+
+        Assert.False(doc.RootElement.TryGetProperty("rowVersion", out _));
+    }
+
+    [Fact]
+    public void UserProfileResponse_NeverSerializesPassword()
+    {
+        var json = JsonSerializer.Serialize(new UserProfileResponse
+        {
+            UserId = 7,
+            UserName = "profile-user",
+            FullName = "Profile User",
+            Email = "profile@example.test",
+            Roles = [AuthPolicies.Roles.Waiter]
+        }, Web);
+
+        using var doc = JsonDocument.Parse(json);
+        Assert.Equal(7, doc.RootElement.GetProperty("userId").GetInt32());
+        Assert.Equal("profile-user", doc.RootElement.GetProperty("userName").GetString());
+        Assert.Equal(AuthPolicies.Roles.Waiter, doc.RootElement.GetProperty("roles")[0].GetString());
+        Assert.False(doc.RootElement.TryGetProperty("password", out _));
+        Assert.False(doc.RootElement.TryGetProperty("userPassword", out _));
+    }
+
+    [Fact]
+    public void PaymentResponse_CoversEveryPaymentField()
+    {
+        var expected = typeof(Payment).GetProperties().Select(p => p.Name);
+
+        var json = JsonSerializer.Serialize(new PaymentResponse(), Web);
+        using var doc = JsonDocument.Parse(json);
+
+        foreach (var name in expected)
+        {
+            var camel = char.ToLowerInvariant(name[0]) + name[1..];
+            Assert.True(doc.RootElement.TryGetProperty(camel, out _), $"Thiếu field '{camel}' so với entity Payment.");
+        }
+    }
 }

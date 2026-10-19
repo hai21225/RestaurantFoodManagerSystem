@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Xunit;
 
 namespace RestaurantFoodManagerSystem.Tests;
@@ -206,6 +207,37 @@ public sealed class KitchenFlowTests : TestBase
     public async Task UpdateItemStatus_ReturnsFalse_WhenItemMissing()
     {
         Assert.False(await Kitchen.UpdateItemStatusAsync(999999, new KitchenItemStatusRequest { Status = "Ready" }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task UpdateItemStatus_ReturnsFalse_WhenParentKitchenOrderIsMissing()
+    {
+        // Defect #25: item mồ côi (không có kitchen order cha) phải trả false, không ném 500.
+        var connection = Db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+        }
+
+        int orphanId;
+        await using (var command = connection.CreateCommand())
+        {
+            command.CommandText = "PRAGMA foreign_keys=OFF;";
+            await command.ExecuteNonQueryAsync();
+
+            command.CommandText =
+                "INSERT INTO kitchen_order_items (KitchenOrderId, OrderItemId, Quanlity, Status) " +
+                "VALUES (999999, 999999, 1, 'Pending'); SELECT last_insert_rowid();";
+            orphanId = Convert.ToInt32(await command.ExecuteScalarAsync());
+
+            command.CommandText = "PRAGMA foreign_keys=ON;";
+            await command.ExecuteNonQueryAsync();
+        }
+
+        Assert.False(await Kitchen.UpdateItemStatusAsync(
+            orphanId,
+            new KitchenItemStatusRequest { Status = "Ready" },
+            CancellationToken.None));
     }
 
     [Fact]

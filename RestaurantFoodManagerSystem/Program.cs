@@ -91,6 +91,7 @@ builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<MenuService>();
+builder.Services.AddSingleton<IOrderIdempotencyStore, InMemoryOrderIdempotencyStore>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<IngredientService>();
@@ -100,6 +101,7 @@ builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<PromotionService>();
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<KitchenService>();
+builder.Services.AddScoped<ReportService>();
 
 
 

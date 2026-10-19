@@ -8,11 +8,13 @@ public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
     private readonly TokenService _tokenService;
+    private readonly ICurrentUser _currentUser;
 
-    public AuthController(AuthService authService, TokenService tokenService)
+    public AuthController(AuthService authService, TokenService tokenService, ICurrentUser currentUser)
     {
         _authService = authService;
         _tokenService = tokenService;
+        _currentUser = currentUser;
     }
 
     // POST: /api/auth/login  (public)
@@ -53,6 +55,38 @@ public class AuthController : ControllerBase
             message = "Login successful",
             data = response
         });
+    }
+
+
+    // POST: /api/auth/change-password  (P4) — tự đổi mật khẩu, mọi role đã đăng nhập.
+    [Authorize(Policy = AuthPolicies.Authenticated)]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken ct = default)
+    {
+        if (_currentUser.UserId is not int userId)
+        {
+            return Unauthorized(new { message = "Not authenticated" });
+        }
+
+        try
+        {
+            await _authService.ChangePasswordAsync(userId, request, ct);
+            return Ok(new { message = "Password changed successfully" });
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
 

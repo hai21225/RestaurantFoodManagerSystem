@@ -62,16 +62,21 @@ public sealed class KitchenService
     {
         var item = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (item is null) return false;
-        var status = request.Status.Trim();
+
+        var status = request.Status?.Trim() ?? string.Empty;
         var allowed = new[] { "Pending", "Preparing", "Ready", "Completed", "Cancelled" };
         if (!allowed.Contains(status, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Invalid kitchen item status");
+
+        // Defect #25: kiểm phiếu bếp cha trước khi sửa item; thiếu cha ⇒ trả false (404)
+        // thay vì FirstAsync ném lỗi 500.
+        var kitchenOrder = await _db.KitchenOrders.FirstOrDefaultAsync(x => x.KitchenOrderId == item.KitchenOrderId, ct);
+        if (kitchenOrder is null) return false;
 
         item.Status = status;
         var orderItem = await _db.OrderItems.FirstOrDefaultAsync(x => x.Id == item.OrderItemId, ct);
         if (orderItem is not null) orderItem.Status = status;
 
-        var kitchenOrder = await _db.KitchenOrders.FirstAsync(x => x.KitchenOrderId == item.KitchenOrderId, ct);
         var allItems = await _db.KitchenOrderItems.Where(x => x.KitchenOrderId == item.KitchenOrderId).ToListAsync(ct);
         if (allItems.All(x => x.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) || x.Status.Equals("Ready", StringComparison.OrdinalIgnoreCase)))
             kitchenOrder.Status = "Ready";

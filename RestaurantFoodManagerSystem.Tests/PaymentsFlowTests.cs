@@ -120,4 +120,45 @@ public sealed class PaymentsFlowTests : TestBase
         Assert.Single(payments);
         Assert.Equal(10m, payments[0].Amount);
     }
+
+    [Theory]
+    [InlineData("cash", "Cash")]
+    [InlineData("CARD", "Card")]
+    [InlineData(" bank ", "Bank")]
+    [InlineData("eWallet", "EWallet")]
+    public async Task Create_NormalizesPaymentMethod_ToAllowListValue(string input, string expected)
+    {
+        // Defect #26: frontend gửi chữ thường, API cũ dùng chữ hoa; lưu tên chuẩn để lọc nhất quán.
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        var payment = await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = order.OrderId,
+            PaymentMethod = input,
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        Assert.Equal(expected, payment!.PaymentMethod);
+    }
+
+    [Fact]
+    public async Task Create_RejectsUnknownPaymentMethod()
+    {
+        // Defect #26: không nhận chuỗi tùy ý (trước đây chỉ Trim).
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Payments.CreateAsync(
+            new CreatePaymentRequest
+            {
+                OrderId = order.OrderId,
+                PaymentMethod = "Bitcoin",
+                CreatedBy = s.Staff.Id
+            },
+            CancellationToken.None));
+
+        Assert.Contains("Invalid payment method", ex.Message);
+        Assert.Empty(Db.Payments);
+    }
 }

@@ -219,7 +219,7 @@ public sealed class FoodCatalogTests : TestBase
         var food = SeedFood(category.CategoryId);
         var originalDefault = SeedSize(food.FoodId, 10m, isDefault: true, name: "M");
 
-        // Simulate a fresh request scope: the service reads with AsNoTracking and re-attaches.
+        // Simulate a fresh request scope: the service loads its own tracked entity.
         Db.ChangeTracker.Clear();
 
         var created = await FoodSizes.CreateAsync(food.FoodId, new CreateFoodSizeRequest
@@ -280,6 +280,50 @@ public sealed class FoodCatalogTests : TestBase
             SizePrice = 15m
         }));
         Assert.Equal("This size already exists for this food", ex.Message);
+    }
+
+    [Fact]
+    public async Task FoodSize_Update_DoesNotOverwriteFieldsNotChangedByRequest()
+    {
+        // Defect #31: bản cũ dùng AsNoTracking + Update() nên ghi đè cả các cột không đổi.
+        // Mô phỏng một request khác sửa CreatedAt ngay trước khi SaveChanges của request này.
+        var category = SeedCategory();
+        var food = SeedFood(category.CategoryId);
+        var size = SeedSize(food.FoodId, 10m, name: "M");
+        size.CreatedAt = new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        Db.SaveChanges();
+        Db.ChangeTracker.Clear();
+
+        var concurrentCreatedAt = new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        var applied = false;
+        Db.SavingChanges += (_, _) =>
+        {
+            if (applied)
+            {
+                return;
+            }
+
+            applied = true;
+            Db.Database.ExecuteSqlRaw(
+                "UPDATE food_sizes SET CreatedAt = {0} WHERE SizeId = {1}",
+                concurrentCreatedAt,
+                size.SizeId);
+        };
+
+        var updated = await FoodSizes.UpdateAsync(food.FoodId, size.SizeId, new UpdateFoodSizeRequest
+        {
+            SizeName = "M2",
+            SizePrice = 12m,
+            IsDefault = false
+        });
+
+        Assert.NotNull(updated);
+        Assert.Equal("M2", updated!.SizeName);
+
+        using var check = NewContext();
+        var reloaded = check.FoodSizes.AsNoTracking().Single(x => x.SizeId == size.SizeId);
+        Assert.Equal("M2", reloaded.SizeName);
+        Assert.Equal(concurrentCreatedAt, reloaded.CreatedAt);
     }
 
     [Fact]

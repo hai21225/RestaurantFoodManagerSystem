@@ -62,6 +62,14 @@ public sealed class ManagementController : ControllerBase
     }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpGet("inventory-transactions")]
+    public async Task<IActionResult> InventoryTransactions([FromQuery] InventoryTransactionQuery query, [FromServices] InventoryService s, CancellationToken ct)
+    {
+        try { return Ok(await s.GetTransactionsAsync(query, ct)); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+    }
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("purchase-orders")]
     public async Task<List<PurchaseOrderResponse>> Purchases([FromServices] PurchaseOrderService s, CancellationToken ct) =>
         (await s.GetAllAsync(ct)).Select(PurchaseOrderResponse.From).ToList();
@@ -75,11 +83,25 @@ public sealed class ManagementController : ControllerBase
     }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpGet("purchase-orders/{id:int}")]
+    public async Task<IActionResult> PurchaseDetails(int id, [FromServices] PurchaseOrderService s, CancellationToken ct) =>
+        (await s.GetByIdAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("purchase-orders/{id:int}/receive")]
     public async Task<IActionResult> Receive(int id, ReceivePurchaseRequest r, [FromServices] PurchaseOrderService s, CancellationToken ct)
     {
         try { return await s.ReceiveAsync(id, r, ct) ? NoContent() : NotFound(); }
         catch (ConcurrencyConflictException e) { return Conflict(e.Message); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
+    }
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPost("purchase-orders/{id:int}/cancel")]
+    public async Task<IActionResult> CancelPurchase(int id, [FromServices] PurchaseOrderService s, CancellationToken ct)
+    {
+        try { return await s.CancelAsync(id, ct) ? NoContent() : NotFound(); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
     }
 
     // --- Khuyến mãi => AdminOnly ---

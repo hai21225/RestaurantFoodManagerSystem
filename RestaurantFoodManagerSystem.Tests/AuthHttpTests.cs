@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.DependencyInjection;
 using RestaurantFoodManagerSystem.Infrastructure.Auth;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 using Xunit;
 
 namespace RestaurantFoodManagerSystem.Tests;
@@ -25,6 +26,9 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     private const string KitchenOrders = "/api/management/kitchen/orders";
     private const string AdminPromotions = "/api/management/promotions";
     private const string AdminUsers = "/api/users";
+    private const string AdminRoles = "/api/roles";
+    private const string MyProfile = "/api/users/me";
+    private const string AdminDashboard = "/api/reports/dashboard";
 
     private readonly EnforcedRestaurantApiFactory _factory;
 
@@ -44,7 +48,10 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [InlineData(WarehouseIngredients)]     // WarehouseDesk
     [InlineData(KitchenOrders)]            // KitchenDesk
     [InlineData(AdminPromotions)]          // AdminOnly
-    [InlineData(AdminUsers)]               // AdminOnly (cấp controller)
+    [InlineData(AdminUsers)]               // AdminOnly (cấp action)
+    [InlineData(AdminRoles)]               // AdminOnly (cấp controller)
+    [InlineData(MyProfile)]                // Authenticated
+    [InlineData(AdminDashboard)]           // AdminOnly
     public async Task ProtectedEndpoints_WithoutToken_Return401(string path)
     {
         using var client = _factory.CreateClient();
@@ -75,7 +82,9 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [InlineData(AuthPolicies.Roles.Chef, RestaurantTables)]                     // POS/thu ngân: Admin + Waiter + Cashier
     [InlineData(AuthPolicies.Roles.Cashier, KitchenOrders)]                     // bếp: Admin + Chef
     [InlineData(AuthPolicies.Roles.WarehouseManager, AdminPromotions)]          // AdminOnly
-    [InlineData(AuthPolicies.Roles.Waiter, AdminUsers)]                         // AdminOnly (cấp controller)
+    [InlineData(AuthPolicies.Roles.Waiter, AdminUsers)]                         // AdminOnly (cấp action)
+    [InlineData(AuthPolicies.Roles.Waiter, AdminRoles)]                         // AdminOnly (cấp controller)
+    [InlineData(AuthPolicies.Roles.Cashier, AdminDashboard)]                    // AdminOnly
     public async Task ProtectedEndpoint_WithWrongRole_Returns403(string role, string path)
     {
         using var client = CreateAuthenticatedClient(role);
@@ -98,6 +107,8 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [InlineData(AuthPolicies.Roles.WarehouseManager, WarehouseIngredients)] // WarehouseDesk
     [InlineData(AuthPolicies.Roles.Admin, AdminPromotions)]           // AdminOnly
     [InlineData(AuthPolicies.Roles.Admin, AdminUsers)]                // AdminOnly
+    [InlineData(AuthPolicies.Roles.Admin, AdminRoles)]                // AdminOnly
+    [InlineData(AuthPolicies.Roles.Admin, AdminDashboard)]            // AdminOnly
     public async Task ProtectedEndpoint_WithAllowedRole_Returns200(string role, string path)
     {
         using var client = CreateAuthenticatedClient(role);
@@ -105,6 +116,19 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
         var response = await client.GetAsync(path);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Chef_CanReadOrderAndTable_ForKitchenBoard()
+    {
+        var (orderId, tableId) = SeedOrderAndTable();
+        using var client = CreateAuthenticatedClient(AuthPolicies.Roles.Chef);
+
+        var order = await client.GetAsync($"/api/orders/{orderId}");
+        var table = await client.GetAsync($"/api/restaurant-tables/{tableId}");
+
+        Assert.Equal(HttpStatusCode.OK, order.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, table.StatusCode);
     }
 
     // ==========================================================
@@ -124,6 +148,51 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     // ==========================================================
     // Helpers
     // ==========================================================
+
+    private (int OrderId, int TableId) SeedOrderAndTable()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new Users
+        {
+            UserName = $"auth-chef-{suffix}",
+            UserPassword = "not-used",
+            UserFullName = "Chef Read Test",
+            UserEmail = $"auth-chef-{suffix}@test.local",
+            UserPhone = "0000000000",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
+
+        var table = new RestaurantTable
+        {
+            TableNumber = $"C{suffix}"[..12],
+            Capacity = 4,
+            Status = RestaurantTableStatuses.Available,
+            IsActive = true
+        };
+        db.RestaurantTables.Add(table);
+        db.SaveChanges();
+
+        var order = new Order
+        {
+            TableId = table.TableId,
+            CreatedBy = user.Id,
+            Status = OrderStatuses.SentToKitchen,
+            Subtotal = 10m,
+            TotalAmount = 10m,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Orders.Add(order);
+        db.SaveChanges();
+
+        return (order.OrderId, table.TableId);
+    }
 
     private HttpClient CreateAuthenticatedClient(string role)
     {

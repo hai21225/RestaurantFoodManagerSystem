@@ -163,6 +163,98 @@ public sealed class ManagementDtoHttpTests : IClassFixture<RestaurantApiFactory>
     }
 
     [Fact]
+    public async Task PurchaseOrderDetail_ReturnsItems_AndCancelBlocksReceive()
+    {
+        var suffix = Guid.NewGuid().ToString("N");
+        var orderId = 0;
+        var ingredientId = 0;
+        var userId = 0;
+
+        Seed(db =>
+        {
+            var user = NewUser($"dto-po-detail-{suffix}");
+            db.Users.Add(user);
+            db.SaveChanges();
+            userId = user.Id;
+
+            var supplier = new Supplier
+            {
+                Name = $"Detail supplier {suffix}",
+                Phone = "0900000000",
+                Email = "supplier@test.local",
+                Address = "Test",
+                IsActive = true
+            };
+            db.Suppliers.Add(supplier);
+
+            var ingredient = new Ingredient
+            {
+                Name = $"Detail ingredient {suffix}",
+                Unit = "kg",
+                MinimumStock = 0m,
+                IsActive = true
+            };
+            db.Ingredients.Add(ingredient);
+            db.SaveChanges();
+            ingredientId = ingredient.IngredientId;
+
+            db.Inventories.Add(new Inventory
+            {
+                IngredientId = ingredient.IngredientId,
+                Quanlity = 0m,
+                UpdatedAt = DateTime.UtcNow
+            });
+
+            var order = new PurchaseOrder
+            {
+                SupplierId = supplier.SupplierId,
+                Status = "Draft",
+                TotalAmount = 10m,
+                OrderedAt = DateTime.UtcNow,
+                CreatedBy = user.Id
+            };
+            db.PurchaseOrders.Add(order);
+            db.SaveChanges();
+            orderId = order.Id;
+
+            db.PurchaseOrderItems.Add(new PurchaseOrderItem
+            {
+                PurchaseOrderId = order.Id,
+                IngredientId = ingredient.IngredientId,
+                Quanlity = 4m,
+                UnitPrice = 2.5m,
+                TotalPrice = 10m
+            });
+        });
+
+        using var client = _factory.CreateClient();
+
+        var detail = await client.GetAsync($"/api/management/purchase-orders/{orderId}");
+        Assert.Equal(HttpStatusCode.OK, detail.StatusCode);
+
+        var body = await detail.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Draft", body.GetProperty("status").GetString());
+        Assert.Equal($"Detail supplier {suffix}", body.GetProperty("supplierName").GetString());
+
+        var item = Assert.Single(body.GetProperty("items").EnumerateArray());
+        Assert.Equal(ingredientId, item.GetProperty("ingredientId").GetInt32());
+        Assert.Equal($"Detail ingredient {suffix}", item.GetProperty("ingredientName").GetString());
+        Assert.Equal(4m, item.GetProperty("quantity").GetDecimal());
+        Assert.Equal(2.5m, item.GetProperty("unitPrice").GetDecimal());
+
+        var cancel = await client.PostAsync($"/api/management/purchase-orders/{orderId}/cancel", null);
+        Assert.Equal(HttpStatusCode.NoContent, cancel.StatusCode);
+
+        var cancelled = await client.GetFromJsonAsync<JsonElement>($"/api/management/purchase-orders/{orderId}");
+        Assert.Equal("Cancelled", cancelled.GetProperty("status").GetString());
+
+        var receive = await client.PostAsJsonAsync(
+            $"/api/management/purchase-orders/{orderId}/receive",
+            new { receivedBy = userId });
+        Assert.Equal(HttpStatusCode.Conflict, receive.StatusCode);
+    }
+
+    [Fact]
     public async Task GetPromotions_ReturnsDto()
     {
         var name = $"DTO promotion {Guid.NewGuid():N}";

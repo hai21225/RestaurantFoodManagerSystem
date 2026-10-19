@@ -25,7 +25,8 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // GET: /api/restaurant-tables/5
-    [Authorize(Policy = AuthPolicies.PosOrCashier)]
+    // Bếp cũng cần đọc số bàn trên phiếu; danh sách vẫn giới hạn cho POS/thu ngân.
+    [Authorize(Policy = AuthPolicies.PosKitchenRead)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {

@@ -41,4 +41,61 @@ public sealed class InventoryService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>
+    /// Danh sách biến động kho cho <c>GET /api/management/inventory-transactions</c> (P1),
+    /// mới nhất trước; lọc theo nguyên liệu/loại/tham chiếu/khoảng thời gian.
+    /// </summary>
+    public async Task<PagedResponse<InventoryTransactionResponse>> GetTransactionsAsync(InventoryTransactionQuery query, CancellationToken ct = default)
+    {
+        var skip = Paging.ResolveSkip(query.Page, query.PageSize);
+        var type = string.IsNullOrWhiteSpace(query.Type) ? null : query.Type.Trim().ToLowerInvariant();
+        var referenceType = string.IsNullOrWhiteSpace(query.ReferenceType) ? null : query.ReferenceType.Trim().ToLowerInvariant();
+        var ingredientId = query.IngredientId;
+        var referenceId = query.ReferenceId;
+        var fromDate = query.From;
+        var toDate = query.To;
+
+        var filtered =
+            from t in _db.InventoryTransactions.AsNoTracking()
+            join i in _db.Ingredients.AsNoTracking() on t.IngredientId equals i.IngredientId into ingredients
+            from i in ingredients.DefaultIfEmpty()
+            where (ingredientId == null || t.IngredientId == ingredientId)
+               && (type == null || t.Type.ToLower() == type)
+               && (referenceType == null || (t.ReferenceType != null && t.ReferenceType.ToLower() == referenceType))
+               && (referenceId == null || t.ReferenceId == referenceId)
+               && (fromDate == null || t.CreatedAt >= fromDate)
+               && (toDate == null || t.CreatedAt <= toDate)
+            select new InventoryTransactionResponse
+            {
+                Id = t.Id,
+                IngredientId = t.IngredientId,
+                IngredientName = i != null ? i.Name : null,
+                Type = t.Type,
+                Quanlity = t.Quanlity,
+                QuanlityBefore = t.QuanlityBefore,
+                QuanlityAfter = t.QuanlityAfter,
+                ReferenceType = t.ReferenceType,
+                ReferenceId = t.ReferenceId,
+                Note = t.Note,
+                CreatedAt = t.CreatedAt,
+                CreatedBy = t.CreatedBy
+            };
+
+        var total = await filtered.CountAsync(ct);
+        var items = await filtered
+            .OrderByDescending(x => x.CreatedAt)
+            .ThenByDescending(x => x.Id)
+            .Skip(skip)
+            .Take(query.PageSize)
+            .ToListAsync(ct);
+
+        return new PagedResponse<InventoryTransactionResponse>
+        {
+            Page = query.Page,
+            PageSize = query.PageSize,
+            Total = total,
+            Items = items
+        };
+    }
 }

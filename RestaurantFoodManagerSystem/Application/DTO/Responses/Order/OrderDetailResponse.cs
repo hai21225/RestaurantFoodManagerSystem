@@ -33,7 +33,33 @@ public sealed class OrderItemDetailResponse
     // C# dùng Quanlity theo quy ước project/DB; JSON vẫn là "quantity" cho frontend hiện tại.
     [JsonPropertyName("quantity")]
     public int Quanlity { get; set; }
+    /// <summary>
+    /// Đơn giá cuối cùng của một phần món tại thời điểm tạo đơn, <b>đã gồm topping</b>
+    /// (giá size + tổng topping/1 phần). Vì vậy <c>UnitPrice * quantity</c> đã là thành tiền
+    /// của dòng món; không cộng thêm <see cref="Toppings"/> lần nữa.
+    /// </summary>
     public decimal UnitPrice { get; set; }
     public string? Note { get; set; }
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Topping đã chọn cho dòng món (Batch A) — rỗng nếu món không có topping.
+    /// Đây là bản phân rã của phần topping đã nằm trong <see cref="UnitPrice"/>,
+    /// dùng để hiển thị, <b>không phải</b> khoản cộng thêm vào thành tiền.
+    /// </summary>
+    public List<OrderItemToppingDetailResponse> Toppings { get; set; } = [];
+}
+
+/// <summary>Một topping của dòng món, kèm tên để hoá đơn không phải tra thêm.</summary>
+public sealed class OrderItemToppingDetailResponse
+{
+    public int Id { get; set; }
+    public int ToppingId { get; set; }
+    public string ToppingName { get; set; } = string.Empty;
+
+    // JSON "quantity" theo hợp đồng frontend hiện tại.
+    [JsonPropertyName("quantity")]
+    public int Quanlity { get; set; }
+
+    public decimal UnitPrice { get; set; }
 }

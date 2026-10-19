@@ -279,6 +279,113 @@ public sealed class InventoryFlowTests : TestBase
         Assert.False(await Purchases.ReceiveAsync(999999, new ReceivePurchaseRequest { ReceivedBy = staff.Id }, CancellationToken.None));
     }
 
+    [Fact]
+    public async Task ReceivePurchase_ThrowsFriendly_WhenInventoryRowIsMissing()
+    {
+        // Defect #26: trước đây FirstAsync ném unhandled (500) khi nguyên liệu thiếu dòng tồn kho.
+        var supplier = await Suppliers.CreateAsync(new SupplierRequest { Name = "S", Phone = "1", Email = "a@b.test", Address = "A" }, CancellationToken.None);
+        var ingredient = SeedIngredient(0m);
+        var staff = SeedUser();
+        var purchase = await Purchases.CreateAsync(new PurchaseOrderRequest
+        {
+            SupplierId = supplier.SupplierId,
+            CreatedBy = staff.Id,
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
+        }, CancellationToken.None);
+
+        var inventoryRow = Db.Inventories.Single(x => x.IngredientId == ingredient.IngredientId);
+        Db.Inventories.Remove(inventoryRow);
+        Db.SaveChanges();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Purchases.ReceiveAsync(
+            purchase.Id,
+            new ReceivePurchaseRequest { ReceivedBy = staff.Id },
+            CancellationToken.None));
+
+        Assert.Contains("No inventory record exists", ex.Message);
+        Assert.Equal("Draft", Db.PurchaseOrders.Single(x => x.Id == purchase.Id).Status);
+    }
+
+    [Fact]
+    public async Task GetPurchaseDetail_ReturnsSupplierAndIngredientNames()
+    {
+        var supplier = await Suppliers.CreateAsync(new SupplierRequest { Name = "  Fresh Co  ", Phone = "1", Email = "a@b.test", Address = "A" }, CancellationToken.None);
+        var ingredient = SeedIngredient(0m);
+        var staff = SeedUser();
+        var purchase = await Purchases.CreateAsync(new PurchaseOrderRequest
+        {
+            SupplierId = supplier.SupplierId,
+            CreatedBy = staff.Id,
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 4m, UnitPrice = 2.5m } }
+        }, CancellationToken.None);
+
+        var detail = await Purchases.GetByIdAsync(purchase.Id, CancellationToken.None);
+
+        Assert.NotNull(detail);
+        Assert.Equal(supplier.SupplierId, detail!.SupplierId);
+        Assert.Equal("Fresh Co", detail.SupplierName);
+        Assert.Equal("Draft", detail.Status);
+        Assert.True(detail.TotalAmount > 0);
+
+        var item = Assert.Single(detail.Items);
+        Assert.Equal(ingredient.IngredientId, item.IngredientId);
+        Assert.Equal(ingredient.Name, item.IngredientName);
+        Assert.Equal(ingredient.Unit, item.Unit);
+        Assert.Equal(4m, item.Quanlity);
+        Assert.Equal(2.5m, item.UnitPrice);
+        Assert.Equal(10m, item.TotalPrice);
+
+        Assert.Null(await Purchases.GetByIdAsync(999999, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancelPurchase_IsIdempotent_AndPreventsReceive()
+    {
+        var supplier = await Suppliers.CreateAsync(new SupplierRequest { Name = "S", Phone = "1", Email = "a@b.test", Address = "A" }, CancellationToken.None);
+        var ingredient = SeedIngredient(0m);
+        var staff = SeedUser();
+        var purchase = await Purchases.CreateAsync(new PurchaseOrderRequest
+        {
+            SupplierId = supplier.SupplierId,
+            CreatedBy = staff.Id,
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
+        }, CancellationToken.None);
+
+        Assert.True(await Purchases.CancelAsync(purchase.Id, CancellationToken.None));
+        Assert.Equal("Cancelled", Db.PurchaseOrders.Single(x => x.Id == purchase.Id).Status);
+
+        // Gọi lại không đổi gì và vẫn trả true.
+        Assert.True(await Purchases.CancelAsync(purchase.Id, CancellationToken.None));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Purchases.ReceiveAsync(purchase.Id, new ReceivePurchaseRequest { ReceivedBy = staff.Id }, CancellationToken.None));
+        Assert.Equal("Cancelled purchase order cannot be received", ex.Message);
+        Assert.Empty(Db.InventoryTransactions.Where(x => x.ReferenceId == purchase.Id));
+
+        Assert.False(await Purchases.CancelAsync(999999, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task CancelPurchase_RejectsReceivedOrder()
+    {
+        var supplier = await Suppliers.CreateAsync(new SupplierRequest { Name = "S", Phone = "1", Email = "a@b.test", Address = "A" }, CancellationToken.None);
+        var ingredient = SeedIngredient(0m);
+        var staff = SeedUser();
+        var purchase = await Purchases.CreateAsync(new PurchaseOrderRequest
+        {
+            SupplierId = supplier.SupplierId,
+            CreatedBy = staff.Id,
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
+        }, CancellationToken.None);
+
+        Assert.True(await Purchases.ReceiveAsync(purchase.Id, new ReceivePurchaseRequest { ReceivedBy = staff.Id }, CancellationToken.None));
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Purchases.CancelAsync(purchase.Id, CancellationToken.None));
+        Assert.Equal("Received purchase order cannot be cancelled", ex.Message);
+        Assert.Equal("Received", Db.PurchaseOrders.Single(x => x.Id == purchase.Id).Status);
+    }
+
     // ============================ PROMOTIONS ============================
 
     [Fact]
