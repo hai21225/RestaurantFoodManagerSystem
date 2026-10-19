@@ -53,9 +53,18 @@ Quy ước cột:
 
 | Verb | Route | Request | Success | Lỗi |
 |---|---|---|---|---|
+| GET | `/api/setup/status` | – | `200` `{requiresSetup: bool}` | – |
+| POST | `/api/setup/first-admin` | `RegisterRequest` | `200` `{message}` | `409` `{message}` (đã khởi tạo), `400` `{message}` |
 | POST | `/api/auth/login` | `LoginRequest` | `200` `{message, data: LoginResponse}` | `401` `{message}` |
 | POST | `/api/auth/register` | `RegisterRequest` | `200` `{message:"Register successful"}` | `400` `{message}` (mismatch / `"Register failed"` / `ex.Message`) |
+| GET | `/api/users` | – | `200` `UserListItemResponse[]` | – |
+| POST | `/api/users` | `CreateUserRequest` | `200` `{message}` | `400` `{message}` |
 | POST | `/api/users/{userId:int}/roles` | `AssignRoleRequest` | `200` `{message}` | `400` `{message}` |
+
+Hai endpoint `/api/setup/*` và `GET/POST /api/users` được **thêm ở GĐ6-A (`afa4664`)**.
+`POST /api/setup/first-admin` là `[AllowAnonymous]` nhưng **chỉ thành công khi bảng `Users` rỗng**
+(trong transaction) ⇒ không thể tự phong Admin sau khi hệ thống đã có user.
+`POST /api/users` tạo user + gán `roleName` **trong một transaction** (`AuthService.CreateUserWithRoleAsync`).
 
 `LoginResponse` = `{UserId, UserName, Email, FullName, Roles, Token}`. Hai field `Roles`/`Token` được **thêm ở GĐ6 (lát 6a)** — chỉ thêm, không phá JSON cũ. `Token` có thể là `null` khi chưa cấu hình khóa ký (`Authentication:Jwt:Key`).
 Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) — tên class đã sửa ở GĐ1, giữ nguyên route.
@@ -69,6 +78,7 @@ Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) �
 | POST | `/api/foods` | `CreateFoodRequest` | `201` + `Location` + `FoodResponseDto` | `400` `{message}` |
 | PUT | `/api/foods/{id:int}` | `UpdateFoodRequest` | `200` `FoodResponseDto` | `404` `{message}`, `400` `{message}` |
 | PATCH | `/api/foods/{id:int}/availability` | `UpdateFoodAvailabilityRequest` | `200` `{message}` | `404` `{message}` |
+| PATCH | `/api/foods/{id:int}/active` | `UpdateFoodActiveRequest` | `200` `{message}` | `404` `{message}` |
 | DELETE | `/api/foods/{id:int}` | – | `200` `{message}` | `404` `{message}` |
 | GET | `/api/categories?name` | – | `200` `CategoryDTO[]` | – |
 | GET | `/api/categories/{id:int}` | – | `200` `CategoryDTO` | `404` `{message}` |
@@ -141,6 +151,7 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 | GET | `/api/management/recipes` | – | `200` **`Recipe[]` entity** | – |
 | GET | `/api/management/recipes/{id:int}` | – | `200` `RecipeResponse` | `404` |
 | POST | `/api/management/recipes` | `RecipeRequest` | `200` **`Recipe` entity** | `400` `"..."` |
+| PUT | `/api/management/recipes/{id:int}` | `RecipeRequest` | `204` | `404`, `400` `"..."` |
 | DELETE | `/api/management/recipes/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/kitchen/orders` | – | `200` **`KitchenOrder[]` entity** | – |
 | GET | `/api/management/kitchen/orders/{id:int}/items` | – | `200` **`KitchenOrderItem[]` entity** | – |
@@ -158,7 +169,7 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
    Nhưng `Auth:Enforce=false` (mặc định) ⇒ `EnforceableAuthorizationPolicyProvider` trả policy cho-qua
    nên **toàn bộ API vẫn anonymous**. Chỉ khi bật `Auth:Enforce=true` mới có 401/403 (thay đổi hành vi, đã duyệt).
 2. **Actor** (`CreatedBy`, `ChangedBy`, `ReceivedBy`): GĐ6c bước 1 — khi có token thì lấy từ claim `sub` (bỏ qua body, log cảnh báo nếu lệch); khi chưa xác thực (`Auth:Enforce=false`, dev) thì vẫn dùng giá trị body. Field vẫn còn trong DTO.
-3. **CORS**: policy `FrontendPolicy` được đăng ký nhưng **không** `app.UseCors(...)` → policy vô hiệu.
+3. **CORS**: policy `FrontendPolicy` **đã được áp** vào pipeline ở GĐ6-A (`afa4664`): `app.UseCors("FrontendPolicy")`, origin `http://localhost:5500` / `5501` / `3000`. Trước GĐ6-A policy đăng ký nhưng vô hiệu.
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.
 5. **Hai kiểu trả lỗi**: `{message}` (controller cũ) và JSON string trần (controller mới).
 6. **Hai kiểu inject**: constructor (8 controller) và `[FromServices]` (4 controller).

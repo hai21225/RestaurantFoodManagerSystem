@@ -1,23 +1,24 @@
 # Kế hoạch refactor backend — trạng thái & đầu việc tiếp theo
 
-Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`d20d788`** (local, chưa push)
+Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`afa4664`** (local, chưa push)
 
 Tài liệu liên quan:
 
 - `docs/architecture/endpoint-baseline.md` — hợp đồng API hiện tại (route/verb/status/body lỗi) + 15 hành vi phải giữ.
 - `docs/architecture/data-access.md` — quy tắc truy cập dữ liệu sau GĐ5 (bảng ánh xạ tracking).
+- `docs/architecture/backend-frontend-audit.md` — audit đối chiếu backend ↔ frontend (7 lời gọi thiếu, field thiếu, 32 defect, dead code).
 
 ## 1. Lưới an toàn (gate cho MỌI giai đoạn)
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln --no-incremental   # hiện: 14 warning, 0 error
-dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 105/105 pass
+dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 176/176 pass
 dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj
 ```
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **156/156** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **176/176** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -34,6 +35,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `e7d7ab6` | Không (chỉ thêm field) |
 | GĐ6b | `AddAuthentication`/`AddAuthorization` + 7 policy + `app.UseAuthentication()`; gắn `[Authorize]` theo ma trận mục 4.4; công tắc `Auth:Enforce` (dev mặc định `false`) qua `EnforceableAuthorizationPolicyProvider`; +33 test | `038007c` | Có, **chỉ khi** `Auth:Enforce=true` |
 | GĐ6c | Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`) lấy từ claim `sub` khi có token, fallback body khi chưa xác thực (`ICurrentUser` + `CurrentUserExtensions`); +11 test | `d20d788` | Không (giữ field body, chỉ đổi nguồn khi có token) |
+| GĐ6-A | Bù **6 endpoint** frontend cần + bật CORS: `GET /setup/status`, `POST /setup/first-admin`, `GET/POST /users`, `PUT /management/recipes/{id}`, `PATCH /foods/{id}/active`; `app.UseCors("FrontendPolicy")` (thêm origin 5500/5501/3000); +20 test | `afa4664` | **Có** (endpoint mới + CORS thật sự hoạt động) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -43,7 +45,7 @@ Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 
 1. Enforcement phân quyền **đang tắt** ở dev: GĐ6a sinh token, GĐ6b gắn `[Authorize]` + policy nhưng `Auth:Enforce=false` mặc định ⇒ API vẫn anonymous; bật `true` mới trả 401/403 (có duyệt).
 2. Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`): **GĐ6c bước 1 đã làm** — nếu có token thì luôn lấy claim `sub` (bỏ qua body, log cảnh báo nếu lệch); nếu chưa xác thực (dev, `Auth:Enforce=false`) thì vẫn dùng body. Bước 2 (xoá field khỏi DTO) để sau.
-3. CORS policy `FrontendPolicy` đăng ký nhưng **không** `UseCors` ⇒ vô hiệu.
+3. **CORS**: policy `FrontendPolicy` nay **đã được áp** vào pipeline (`app.UseCors` ở GĐ6-A `afa4664`), origin `http://localhost:5500` / `5501` / `3000`. Trước GĐ6-A policy này đăng ký nhưng vô hiệu.
 4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`.
 5. Hai kiểu body lỗi: `{message}` (controller cũ) và JSON string trần (`Orders`/`Payments`).
 6. Hai kiểu inject: constructor (8 controller) và `[FromServices]` (4 controller).
@@ -135,6 +137,18 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 ## 5. Chưa làm (deferred, cần duyệt riêng)
 
+> **GĐ6-A (`afa4664`) đã bù xong nhóm "endpoint thiếu" mà frontend gọi** (setup, users, recipe PUT,
+> foods/active) và bật CORS. Chi tiết đầy đủ + danh sách defect còn lại: `backend-frontend-audit.md`.
+
+Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
+
+- **Nhóm B — lỗ hổng nghiệp vụ (đổi hành vi/schema)**: ánh xạ trạng thái bếp (`KitchenService.cs:34-36`,
+  `Cancelled` bị đưa về `SentToKitchen`); chặn thanh toán trùng (thêm unique `Payment.OrderId`);
+  transaction cho `PaymentService`/`IngredientService`/`PurchaseOrderService.CreateAsync`;
+  allow-list + transition cho `OrderService.UpdateStatusAsync`; chặn nhiều recipe active/1 size;
+  `rowversion` cho `Inventory`/`RestaurantTable`/`Order`; `DateTime.Now` → `UtcNow`.
+- **Nhóm C — GĐ7 (đổi hợp đồng JSON)**: `order.items[]`, `KitchenOrderItem.foodName/sizeName/quantity`,
+  `Recipe.ingredientCount` + `foodName/sizeName`, bỏ trả entity thô.
 - GĐ7: DTO hoá response, bỏ trả entity EF ở orders/payments/`/api/management/*` — **đổi hợp đồng JSON**, phải phối hợp frontend.
 - GĐ8: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi ⇒ an toàn để làm tiếp.**
 - GĐ6d: siết `register` (đã gắn `AdminOnly` ở 6b), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema — **đổi hành vi khi enforce**.
@@ -148,8 +162,8 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 ## 6. Cách tiếp tục ở phiên sau
 
 1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 156 test.
-2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1).** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** trước (không đổi hành vi, mở đường cho 6e), rồi **GĐ7** (đổi JSON, cần phối hợp frontend).
-3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa).
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1), và GĐ6-A (`afa4664`) đã bù 6 endpoint + bật CORS.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** trước (không đổi hành vi, mở đường cho 6e), rồi **Nhóm B** (lỗ hổng nghiệp vụ), rồi **GĐ7** (đổi JSON, cần phối hợp frontend).
+3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa). **Frontend hiện vẫn chưa gửi token** (`frontend/js/common/api.js` không set header `Authorization`) — đây là việc phía frontend, xem `backend-frontend-audit.md` mục 5.
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
 Chi tiết 6b đã triển khai:
