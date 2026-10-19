@@ -1,0 +1,119 @@
+.purchase-dialog {
+    width: min(780px, calc(100% - 32px));
+}
+
+.purchase-supplier-line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: end;
+}
+
+.purchase-items-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 20px 0 10px;
+}
+
+.purchase-item-rows {
+    display: grid;
+    gap: 8px;
+}
+
+.purchase-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 112px 132px 38px;
+    gap: 8px;
+    align-items: end;
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--surface-strong);
+}
+
+.purchase-item-row small {
+    min-height: 16px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.purchase-remove-line {
+    width: 38px;
+    height: 42px;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--danger);
+    background: var(--surface);
+    font-size: 20px;
+}
+
+.purchase-remove-line:hover,
+.purchase-remove-line:focus-visible {
+    border-color: var(--danger);
+    outline: 2px solid rgba(185, 28, 28, 0.16);
+}
+
+.purchase-ingredient-link {
+    display: inline-block;
+    margin-top: 10px;
+    color: var(--primary);
+    font-size: 13px;
+}
+
+.purchase-ingredient-link[hidden] {
+    display: none;
+}
+
+.purchase-total {
+    margin: 14px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+    font-weight: 700;
+    text-align: right;
+}
+
+@media (max-width: 620px) {
+    .purchase-dialog {
+        width: min(100% - 20px, 780px);
+    }
+
+    .purchase-supplier-line {
+        grid-template-columns: 1fr;
+    }
+
+    .purchase-item-row {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 38px;
+    }
+
+    .purchase-item-row .purchase-ingredient-field {
+        grid-column: 1 / -1;
+    }
+
+    .purchase-item-row .purchase-price-field {
+        grid-column: 2;
+    }
+}
+
+@media (max-width: 380px) {
+    .purchase-items-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .purchase-item-row {
+        grid-template-columns: minmax(0, 1fr) 38px;
+    }
+
+    .purchase-item-row .purchase-quantity-field,
+    .purchase-item-row .purchase-price-field {
+        grid-column: 1;
+    }
+
+    .purchase-item-row .purchase-remove-line {
+        grid-column: 2;
+        grid-row: 2;
+    }
+}
