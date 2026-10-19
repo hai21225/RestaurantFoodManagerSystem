@@ -118,7 +118,7 @@ Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) �
 |---|---|---|---|---|
 | GET | `/api/orders/{id:int}` | – | `200` **`OrderDetailResponse`** (mọi field `Order` cũ + `items[]`: `foodName`/`sizeName`/`quantity`/`unitPrice`/`note`/`status`) | `404` (body rỗng) |
 | POST | `/api/orders` | `CreateOrderRequest` | `200` **`Order` entity** | `400` `"..."` (KeyNotFound), `409` `"..."` (InvalidOperation) |
-| PATCH | `/api/orders/{id:int}/status` | `UpdateOrderStatusRequest` | `204` | `404` (body rỗng) |
+| PATCH | `/api/orders/{id:int}/status` | `UpdateOrderStatusRequest` | `204` | `400` `"..."` (rỗng/không hợp lệ), `404`, `409` `"..."` (đã Paid/Cancelled) |
 | PATCH | `/api/orders/{id:int}/promotion/{promotionId:int}` | – | `204` | `400` `"Order or promotion is invalid"` |
 | POST | `/api/payments` | `CreatePaymentRequest` | `200` **`Payment` entity** | `404` (body rỗng), `409` `"..."` |
 | GET | `/api/payments/order/{orderId:int}` | – | `200` **`Payment[]` entity** | – |
@@ -176,8 +176,10 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 7. **Trả entity trực tiếp**: payments và phần lớn `/api/management/*`. **Đã DTO hoá (chỉ bổ sung field, GĐ7-C `46a18e9`)**:
    `GET /orders/{id}` → `OrderDetailResponse` (thêm `items[]`), `GET /management/recipes` → `RecipeSummaryResponse` (thêm `ingredientCount`),
    `GET /management/recipes/{id}` → `RecipeResponse` (thêm `foodName`/`sizeName`), `GET /management/kitchen/orders/{id}/items` → `KitchenItemResponse` (thêm `foodName`/`sizeName`/`quantity`, giữ `quanlity`).
-8. **Order status không validate**: `PATCH /api/orders/{id}/status` nhận mọi chuỗi.
-   (Đã pin bằng test `UpdateStatus_AcceptsAnyStatusString_CurrentlyUnvalidated`.)
+8. **Order status GIỜ ĐÃ validate** (Nhóm B2 `29c01d1`): `PATCH /api/orders/{id}/status` chỉ nhận
+   allow-list `Pending/SentToKitchen/Preparing/Ready/Completed/Cancelled` (không nhận `Paid`), từ chối
+   chuỗi rỗng/không hợp lệ (`400`) và không cho sửa khi đơn đã ở trạng thái cuối `Paid`/`Cancelled` (`409`).
+   (Đã pin bằng `UpdateStatus_RejectsStatusOutsideAllowList` / `_RejectsBlankStatus` / `_RejectsChangeFromTerminalState`.)
 9. **Kitchen status có validate** (allow-list) ở `KitchenService`, nhưng
    `ManagementService.UpdateKitchen` **không validate** → hai hành vi cho cùng nghiệp vụ.
    (Đã pin bằng test `ManagementKitchen_UpdateSetsTimestamps_ButDoesNotValidateStatus`.)
@@ -191,6 +193,14 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 13. **`GET /api/menu` trả anonymous types** (`Task<object>`), không có DTO.
 14. **Khởi động app tự `Migrate()` + seed Roles** (Admin, WarehouseManager, Chef, Cashier, Waiter).
 15. **`RoleEnum`** (Admin/Manager/Staff/Customer) là dead code và **lệch** với role seed thật.
+
+### Thay đổi hành vi có chủ ý (Nhóm B, `29c01d1`) — KHÔNG còn là baseline cũ
+
+16. **Ánh xạ trạng thái bếp (B1)**: `Completed`/`Ready` → order `Ready`; `Preparing` → `Preparing`;
+    `Pending`/`Accepted` → `SentToKitchen`; **`Cancelled` → order `Cancelled`** (trước đây `Cancelled` bị đưa về `SentToKitchen`).
+17. **Thanh toán (B4/B)**: không thanh toán đơn `Cancelled` (`409`); `payment` + cập nhật `order.Status` là **nguyên tử** (transaction).
+18. **Tạo ingredient / purchase order (B4)**: chèn header + dòng là **nguyên tử** (transaction).
+19. **Dọn dữ liệu (B8)**: `Order.Items` null → `400` (không NRE); `.Trim()` null-safe ở recipe/promotion; `UserService`/`AuthService` dùng `UtcNow`.
 
 ---
 

@@ -1,6 +1,6 @@
 # Kế hoạch refactor backend — trạng thái & đầu việc tiếp theo
 
-Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`46a18e9`** (local, chưa push)
+Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`29c01d1`** (local, chưa push)
 
 Tài liệu liên quan:
 
@@ -12,13 +12,13 @@ Tài liệu liên quan:
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln --no-incremental   # hiện: 14 warning, 0 error
-dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 178/178 pass
+dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 185/185 pass
 dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj
 ```
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **178/178** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **185/185** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -37,6 +37,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ6c | Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`) lấy từ claim `sub` khi có token, fallback body khi chưa xác thực (`ICurrentUser` + `CurrentUserExtensions`); +11 test | `d20d788` | Không (giữ field body, chỉ đổi nguồn khi có token) |
 | GĐ6-A | Bù **6 endpoint** frontend cần + bật CORS: `GET /setup/status`, `POST /setup/first-admin`, `GET/POST /users`, `PUT /management/recipes/{id}`, `PATCH /foods/{id}/active`; `app.UseCors("FrontendPolicy")` (thêm origin 5500/5501/3000); +20 test | `afa4664` | **Có** (endpoint mới + CORS thật sự hoạt động) |
 | GĐ7-C | Bù **field hiển thị thiếu** frontend đọc (chỉ **bổ sung**, không xoá field): `GET /orders/{id}` thêm `items[]` (foodName/sizeName/quantity/unitPrice/note/status); `GET /management/kitchen/orders/{id}/items` thêm `foodName`/`sizeName`/`quantity` (giữ `quanlity` cũ); `GET /management/recipes` thêm `ingredientCount`; `GET /management/recipes/{id}` thêm `foodName`/`sizeName`; +2 test | `46a18e9` | Có (thêm field JSON; **không** đổi route/schema) |
+| GĐ7-B | Sửa lỗi nghiệp vụ **không đổi schema**: B1 ánh xạ trạng thái bếp (`Cancelled`→`Cancelled`, không còn mở lại đơn); B2 allow-list + chặn sửa trạng thái cuối cho order status (controller trả 400/409); B4 transaction cho `PaymentService`/`IngredientService.CreateAsync`/`PurchaseOrderService.CreateAsync`; B8 chặn `Items=null`, `.Trim()` null-safe, `DateTime.Now`→`UtcNow`; chặn thanh toán đơn `Cancelled`; thêm hằng `OrderStatuses`; +7 test (2 test baseline được cập nhật chủ ý) | `29c01d1` | **Có** (thêm validate + transaction) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -47,11 +48,11 @@ Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 1. Enforcement phân quyền **đang tắt** ở dev: GĐ6a sinh token, GĐ6b gắn `[Authorize]` + policy nhưng `Auth:Enforce=false` mặc định ⇒ API vẫn anonymous; bật `true` mới trả 401/403 (có duyệt).
 2. Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`): **GĐ6c bước 1 đã làm** — nếu có token thì luôn lấy claim `sub` (bỏ qua body, log cảnh báo nếu lệch); nếu chưa xác thực (dev, `Auth:Enforce=false`) thì vẫn dùng body. Bước 2 (xoá field khỏi DTO) để sau.
 3. **CORS**: policy `FrontendPolicy` nay **đã được áp** vào pipeline (`app.UseCors` ở GĐ6-A `afa4664`), origin `http://localhost:5500` / `5501` / `3000`. Trước GĐ6-A policy này đăng ký nhưng vô hiệu.
-4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`.
+4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`. → **ĐÃ SỬA ở `29c01d1`** (B8: tất cả dùng `UtcNow`).
 5. Hai kiểu body lỗi: `{message}` (controller cũ) và JSON string trần (`Orders`/`Payments`).
 6. Hai kiểu inject: constructor (8 controller) và `[FromServices]` (4 controller).
-7. Trả entity EF trực tiếp ở orders/payments/`/api/management/*`.
-8. `PATCH /api/orders/{id}/status` **không validate** chuỗi trạng thái.
+7. Trả entity EF trực tiếp ở payments/`/api/management/*` (orders/recipes/kitchen items đã DTO hoá — xem `endpoint-baseline.md` quirk #7).
+8. `PATCH /api/orders/{id}/status` **trước đây không validate** chuỗi trạng thái. → **ĐÃ SỬA ở `29c01d1`** (B2: allow-list + chặn trạng thái cuối; controller trả 400/409).
 9. Kitchen status: `KitchenService` có allow-list, `ManagementService.UpdateKitchen` thì không.
 10. `GET /api/restaurant-tables/{id}` **có** ghi DB; `GET /api/restaurant-tables` **không** ghi (do tracking khác nhau — xem `data-access.md`).
 11. Soft delete + unique index `toppings.ToppingName` ⇒ không tạo lại được cùng tên.
@@ -143,11 +144,12 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 
-- **Nhóm B — lỗ hổng nghiệp vụ (đổi hành vi/schema)**: ánh xạ trạng thái bếp (`KitchenService.cs:34-36`,
-  `Cancelled` bị đưa về `SentToKitchen`); chặn thanh toán trùng (thêm unique `Payment.OrderId`);
-  transaction cho `PaymentService`/`IngredientService`/`PurchaseOrderService.CreateAsync`;
-  allow-list + transition cho `OrderService.UpdateStatusAsync`; chặn nhiều recipe active/1 size;
-  `rowversion` cho `Inventory`/`RestaurantTable`/`Order`; `DateTime.Now` → `UtcNow`.
+- **Nhóm B — lỗ hổng nghiệp vụ (đổi hành vi/schema)**: ✅ phần **không đổi schema** đã làm ở `29c01d1`
+  (B1 ánh xạ trạng thái bếp; B2 allow-list + chặn trạng thái cuối; B4 transaction cho
+  `PaymentService`/`IngredientService`/`PurchaseOrderService.CreateAsync`; B8 `.Trim()` null-safe +
+  `DateTime.Now`→`UtcNow` + chặn `Items=null`; chặn thanh toán đơn `Cancelled`).
+  **Còn lại (cần duyệt vì đổi schema):** B3 unique `Payment.OrderId`; B5 chặn nhiều recipe active/1 size
+  (+ unique index); B6 `HasFilter` cho unique index soft-delete; B7 `rowversion` cho `Inventory`/`RestaurantTable`/`Order`.
 - **Nhóm C — GĐ7 (đổi hợp đồng JSON)**: ✅ phần **field hiển thị** đã làm ở `46a18e9`
   (`GET /orders/{id}` thêm `items[]`, `KitchenOrderItem` thêm `foodName/sizeName/quantity`,
   `Recipe.ingredientCount` + `foodName/sizeName`) — **chỉ bổ sung**, frontend cũ không vỡ.
@@ -164,8 +166,8 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 178 test.
-2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1); GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** trước (không đổi hành vi, mở đường cho 6e), rồi **Nhóm B** (lỗ hổng nghiệp vụ), rồi **DTO hoá GĐ7** (phần còn lại).
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 185 test.
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1); GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** (không đổi hành vi, mở đường cho 6e), rồi phần **Nhóm B còn lại** (B3/B5/B6/B7 — cần duyệt vì đổi schema), rồi **DTO hoá GĐ7** (phần còn lại).
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa). **Frontend hiện vẫn chưa gửi token** (`frontend/js/common/api.js` không set header `Authorization`) — đây là việc phía frontend, xem `backend-frontend-audit.md` mục 5.
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 

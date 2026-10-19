@@ -20,15 +20,18 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 
 **Nhóm C (field hiển thị thiếu) đã được bổ sung ở commit `46a18e9`** — chỉ **thêm** field, không xoá; xem mục 4.
 
+**Nhóm B (lỗi nghiệp vụ, phần không đổi schema) đã sửa ở commit `29c01d1`** — B1/B2/B4/B8; xem mục 6 & 8.
+
 | Mục trong tài liệu này | Trạng thái |
 |---|---|
 | 3.1 — 6 endpoint frontend gọi mà backend thiếu | ✅ **Đã bù** (`afa4664`) |
 | 5.1 — CORS `FrontendPolicy` vô hiệu | ✅ **Đã bật `app.UseCors`** (`afa4664`) |
 | 4 — field hiển thị thiếu (Nhóm C/GĐ7) | ✅ **Đã bổ sung 4/4** (`46a18e9`), trừ #5 (dormant, xem 4.1) |
 | 5 — frontend không gửi `Authorization` | ⏳ Chưa (việc phía frontend) |
-| 6 — defect nghiệp vụ (Nhóm B) | ⏳ Chưa làm |
+| 6.1 — defect nghiệp vụ (Nhóm B) | ◑ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7 chờ duyệt (đổi schema)** |
+| 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176 test**, sau `46a18e9` là **178 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**.
 
 ---
 
@@ -205,6 +208,15 @@ Chú thích: **[C]** = tôi đọc code và xác nhận; **[P]** = đúng theo c
 | 8 | TB | `OrderService.cs:148-155` | `[C]` `UpdateStatusAsync` nhận **mọi chuỗi** trạng thái: không allow-list, không kiểm transition, không guard rỗng/null. |
 | 9 | TB | `PaymentService.cs:20-25` | `[C]` Không kiểm trạng thái đơn ⇒ **đơn `Cancelled` vẫn thanh toán được**; `Amount = order.TotalAmount` có thể = 0. |
 
+> **Trạng thái sau `29c01d1` (Nhóm B, không đổi schema):**
+> ✅ #1 (ánh xạ `Cancelled` → đơn `Cancelled`), #8 (allow-list + chặn trạng thái cuối).
+> ◑ #2 (đã thêm **transaction**; **unique index** `Payment.OrderId` còn chờ duyệt — đổi schema),
+> ◑ #9 (đã chặn thanh toán đơn `Cancelled`; `Amount = 0` chưa xử lý).
+> ⏳ #3 (kiểm tồn kho trước transaction), #4 (`InventoryService`), #5 (`PurchaseOrderService.Receive`),
+> #6 (`MenuService` N+1), #7 (nhiều recipe active — B5, đổi schema).
+> ✅ (mục 6.2) #13 `IngredientService` + #14 `PurchaseOrderService.CreateAsync` nay đã **có transaction**.
+> ✅ (mục 6.2) #15 `DateTime.Now` → `UtcNow` và (6.3) #22–#24 null-guard `.Trim()`/`Items` đã sửa.
+
 ### 6.2 Trung bình
 
 | # | Vị trí | Vấn đề |
@@ -294,14 +306,14 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 ### Nhóm B — chất lượng dữ liệu/nghiệp vụ (đổi hành vi, cần duyệt)
 
-- B1. `KitchenService.cs:34-36` — sửa ánh xạ `Cancelled`/`Pending`/`Accepted`.
-- B2. Allow-list + transition cho `OrderService.UpdateStatusAsync`.
-- B3. Chặn đơn `Cancelled`/`Paid` thanh toán sai; thêm **unique index** `Payment.OrderId` (⇒ **đổi schema**).
-- B4. Bọc transaction cho `PaymentService`, `IngredientService`, `PurchaseOrderService.CreateAsync`.
-- B5. Chặn nhiều recipe active / 1 size (`RecipeService`) + cân nhắc unique index (**đổi schema**).
-- B6. `HasFilter` cho unique index soft-delete (**đổi schema**).
-- B7. Concurrency token/`rowversion` cho `Inventory`/`RestaurantTable`/`Order` (**đổi schema**) — quyết định lớn.
-- B8. `DateTime.Now` → `UtcNow`; guard null cho các `.Trim()`.
+- B1. ✅ `KitchenService.cs:34-36` — sửa ánh xạ `Cancelled`/`Pending`/`Accepted`. (`29c01d1`)
+- B2. ✅ Allow-list + chặn trạng thái cuối cho `OrderService.UpdateStatusAsync`. (`29c01d1`)
+- B3. ◑ **Còn:** chặn đơn `Cancelled`/`Paid` thanh toán sai ✅ (chặn `Cancelled` ở `29c01d1`); **còn** thêm **unique index** `Payment.OrderId` (⇒ **đổi schema**).
+- B4. ✅ Bọc transaction cho `PaymentService`, `IngredientService`, `PurchaseOrderService.CreateAsync`. (`29c01d1`)
+- B5. ⏳ **Còn:** chặn nhiều recipe active / 1 size (`RecipeService`) + cân nhắc unique index (**đổi schema**).
+- B6. ⏳ **Còn:** `HasFilter` cho unique index soft-delete (**đổi schema**).
+- B7. ⏳ **Còn:** Concurrency token/`rowversion` cho `Inventory`/`RestaurantTable`/`Order` (**đổi schema**) — quyết định lớn.
+- B8. ✅ `DateTime.Now` → `UtcNow`; guard null cho các `.Trim()` + `Order.Items`. (`29c01d1`)
 
 ### Nhóm C — đổi hợp đồng JSON (cần phối hợp frontend) = GĐ7
 
