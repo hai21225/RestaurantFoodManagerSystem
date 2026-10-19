@@ -57,7 +57,8 @@ Ghi chú:
 | Kitchen | `KitchenService` | `AppDbContext` |
 | Menu | `MenuService` | `AppDbContext` |
 | Inventory group | `IngredientService`, `SupplierService`, `InventoryService`, `PurchaseOrderService`, `PromotionService`, `RecipeService` | `AppDbContext` |
-| Facade giữ lại | `ManagementService` | forward sang 6 service trên |
+
+> `ManagementService` (facade cũ) đã **xoá ở D2 `8fa8daa`**; không còn lớp trung gian nào.
 
 ## Việc chưa làm (cần phê duyệt riêng)
 

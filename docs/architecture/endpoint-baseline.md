@@ -8,7 +8,7 @@ Mọi giai đoạn sau (GĐ1–GĐ8) phải giữ nguyên các hợp đồng dư
 - Solution: `RestaurantFoodManagerSystem.sln` (1 project web + 1 project test)
 - Build baseline: `Build succeeded` — **16 warnings CS8618, 0 errors**
   (toàn bộ là non-nullable property trong entity/DTO, không phải lỗi)
-- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **242/242**, sau C4)*
+- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **241/241**, sau D2+D3)*
 
 ## Cách chạy lưới an toàn
 
@@ -23,10 +23,10 @@ Test dùng **SQLite in-memory** (`EnsureCreated`, không dùng migrations) nên:
 - không tạo/không sửa database thật,
 - không đổi schema, không chạm `Migrations/`.
 
-SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementService` mở transaction tường minh
-(InMemory provider không hỗ trợ transaction).
+SQLite được chọn thay vì EF InMemory vì `OrderService`, `PurchaseOrderService`, `RecipeService`
+(trước đây cả `ManagementService`) mở transaction tường minh (InMemory provider không hỗ trợ transaction).
 
-## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 242)
+## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 241)
 
 | Nhóm | File | Nội dung được khóa |
 |---|---|---|
@@ -188,9 +188,9 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
    allow-list `Pending/SentToKitchen/Preparing/Ready/Completed/Cancelled` (không nhận `Paid`), từ chối
    chuỗi rỗng/không hợp lệ (`400`) và không cho sửa khi đơn đã ở trạng thái cuối `Paid`/`Cancelled` (`409`).
    (Đã pin bằng `UpdateStatus_RejectsStatusOutsideAllowList` / `_RejectsBlankStatus` / `_RejectsChangeFromTerminalState`.)
-9. **Kitchen status có validate** (allow-list) ở `KitchenService`, nhưng
-   `ManagementService.UpdateKitchen` **không validate** → hai hành vi cho cùng nghiệp vụ.
-   (Đã pin bằng test `ManagementKitchen_UpdateSetsTimestamps_ButDoesNotValidateStatus`.)
+9. **Kitchen status có validate** (allow-list) ở `KitchenService`. Bản trùng `ManagementService.UpdateKitchen`
+   (không validate) **đã xoá ở D2 `8fa8daa`**, nên từ nay chỉ còn một hành vi bếp duy nhất.
+   (Test `ManagementKitchen_UpdateSetsTimestamps_ButDoesNotValidateStatus` đã bỏ cùng dead code.)
 10. **GET bàn theo id có side-effect ghi DB** (tracked entity + `SaveChanges`);
     **GET all bàn thì không ghi DB** (do repository dùng `AsNoTracking`).
     (Đã pin bằng 2 test `GetById_ComputesOccupied_AndPersistsIt` và `GetAll_ComputesStatus_ButDoesNotPersistIt`.)
@@ -235,7 +235,7 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 Với mỗi giai đoạn:
 
 1. Chạy `dotnet build` → không được tăng số warning/error.
-2. Chạy `dotnet test` → **242/242 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
+2. Chạy `dotnet test` → **241/241 phải pass** (105 lúc ghi baseline + test các giai đoạn sau; đã bỏ 1 test dead code).
 3. Với thay đổi có chạm controller/response shape: so sánh route + verb + status code + JSON
    với bảng ở mục 1 (baseline này).
 4. Với thay đổi có chạm schema: **dừng lại**, xin phê duyệt (xem mục 2, điểm 12).

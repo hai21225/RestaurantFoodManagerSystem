@@ -31,7 +31,7 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 | 6.1 — defect nghiệp vụ (Nhóm B) | ✅ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7** (`62f5d44`) |
 | 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**, sau GĐ6e là **232 test**, sau C4 `c8a2f26` là **242 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**, sau GĐ6e là **232 test**, sau C4 `c8a2f26` là **242 test**, sau D2+D3 `8fa8daa` là **241 test** (bỏ 1 test pin dead code `ManagementService`).
 
 ---
 
@@ -56,7 +56,7 @@ Entity **không có navigation property** (không `ICollection<OrderItem>`), nê
 | Cổng | Kết quả | Baseline trong docs |
 |---|---|---|
 | `dotnet build --no-incremental` | **14 warning / 0 error** | 14 / 0 ✅ |
-| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **242/242**)* | 156/156 ✅ |
+| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **241/241**)* | 156/156 ✅ |
 | `has-pending-model-changes` | **No changes** *(vẫn "No changes" sau migration Nhóm B `62f5d44`)* | No changes ✅ |
 
 Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy *(số tại thời điểm audit)*. Phần lớn là test **tầng service + DbContext** (SQLite in-memory); từ **GĐ6e** đã có thêm test tầng HTTP (`AuthHttpTests`, `ApiHostSmokeTests`) trên `WebApplicationFactory`.
@@ -257,11 +257,11 @@ Chú thích: **[C]** = tôi đọc code và xác nhận; **[P]** = đúng theo c
 
 | Ký hiệu | Vị trí | Bằng chứng |
 |---|---|---|
-| **Toàn bộ `ManagementService`** | `Application/Services/ManagementService.cs` | Không controller/service nào gọi. Chỉ `Program.cs:89` (DI) và test (`TestBase.cs:92`, `InventoryFlowTests.cs:475/478/481` — chỉ dùng `Kitchen`/`UpdateKitchen`). 22 method bất khả truy cập từ app. |
-| `UserRoleService.GetUserRoleByIdAsync` | `UserRoleService.cs:13` | Chỉ có định nghĩa, không nơi nào gọi. |
-| `UserRoleService.GetAllUserRolesAsync` | `UserRoleService.cs:28` | Chỉ có định nghĩa, không nơi nào gọi. |
+| ~~**Toàn bộ `ManagementService`**~~ | `Application/Services/ManagementService.cs` | ✅ **Đã xoá ở D2 (`8fa8daa`)**: không controller/service nào gọi; chỉ còn DI + test dùng cặp `Kitchen`/`UpdateKitchen`. |
+| ~~`UserRoleService.GetUserRoleByIdAsync`~~ | `UserRoleService.cs` | ✅ **Đã xoá ở D2 (`8fa8daa`)**: không nơi nào gọi. |
+| ~~`UserRoleService.GetAllUserRolesAsync`~~ | `UserRoleService.cs` | ✅ **Đã xoá ở D2 (`8fa8daa`)**: không nơi nào gọi. |
 
-Trùng lặp thật: `ManagementService.Kitchen`/`UpdateKitchen` (`:87-100`) trùng `KitchenService` nhưng **thiếu allow-list** và **không đồng bộ `Order.Status`**. Test đang **pin hành vi lệch** này (`InventoryFlowTests.cs:467-481`) — tức là có chủ ý, nhưng gây 2 hành vi cho cùng nghiệp vụ.
+Trùng lặp thật: `ManagementService.Kitchen`/`UpdateKitchen` trùng `KitchenService` nhưng **thiếu allow-list** và **không đồng bộ `Order.Status`**. Test từng **pin hành vi lệch** này (`InventoryFlowTests`); D2 (`8fa8daa`) đã xoá cả bản trùng và test đó — từ nay chỉ còn một hành vi bếp duy nhất ở `KitchenService`.
 
 ### 6.5 Điểm tốt (nên giữ)
 
@@ -328,8 +328,8 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 ### Nhóm D — không đổi hành vi (an toàn, làm bất cứ lúc nào)
 
 - D1. ✅ **GĐ8**: tách seed/`Migrate()` khỏi `Program.cs` → `DatabaseInitializer` + cờ `Database:*`; host test `WebApplicationFactory` (SQLite in-memory) đã chạy ⇒ mở đường cho 6e.
-- D2. Xoá `ManagementService` + `UserRoleService.GetUserRoleByIdAsync`/`GetAllUserRolesAsync` (dead code) — **nhưng** phải chuyển 2 test `InventoryFlowTests.cs:475-481` sang `KitchenService` (đổi test).
-- D3. Thêm `CancellationToken` cho 9 service còn thiếu.
+- D2. ✅ **Xong** (`8fa8daa`): xoá `ManagementService` + `UserRoleService.GetUserRoleByIdAsync`/`GetAllUserRolesAsync` (dead code); xoá test pin hành vi `ManagementService` (đã có test `KitchenService` tương đương).
+- D3. ✅ **Xong** (`8fa8daa`): thêm `CancellationToken` cho 9 service còn thiếu + `AuthService`; controller truyền token xuống.
 - D4. N+1 trong `MenuService` + N+1 HTTP ở frontend (sửa frontend cần duyệt riêng).
 - D5. Bỏ ghi DB trong GET (`RestaurantTableService`) — **đổi hành vi** (quirk #10) nên cần duyệt.
 
@@ -349,7 +349,7 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 - **Backend "chạy trơn tru" ở tầng service cơ bản, nhưng KHÔNG khép kín với frontend**: 7 endpoint thiếu, ~5 nhóm field thiếu, auth chưa nối, CORS có nghi vấn.
 - **Nghiệp vụ có lỗ hổng thật**: ánh xạ trạng thái bếp sai (`Cancelled`), double-payment khả thi, trừ kho không khoá, recipe cộng dồn.
-- **Code vệ sinh còn nợ**: `ManagementService` chết, 9 service thiếu `CancellationToken`, nhiều truy vấn không phân trang, `DateTime.Now` lẫn lộn.
+- **Code vệ sinh còn nợ**: nhiều truy vấn không phân trang; `DateTime.Now` vẫn còn ở một số chỗ (đã giảm sau `29c01d1`). Dead code `ManagementService` và thiếu `CancellationToken` đã xử lý ở D2+D3 (`8fa8daa`).
 - **Điểm mạnh**: entity khớp spec gần tuyệt đối; unique index & FK phủ tốt; snapshot giá đúng; soft delete nhất quán; test 156/156 xanh.
 
 Ghi chú: **không file code nào bị sửa** trong phiên audit này; chỉ tạo tài liệu này (và script trích PDF đặt ngoài repo ở `D:\Temp\opencode\`).
