@@ -37,7 +37,7 @@ public sealed class PurchaseOrderService
         {
             if (!await _db.Ingredients.AnyAsync(x => x.IngredientId == i.IngredientId && x.IsActive, ct))
                 throw new KeyNotFoundException("Ingredient not found");
-            p.TotalAmount += i.Quantity * i.UnitPrice;
+            p.TotalAmount += i.Quanlity * i.UnitPrice;
         }
 
         _db.PurchaseOrders.Add(p);
@@ -49,9 +49,9 @@ public sealed class PurchaseOrderService
             {
                 PurchaseOrderId = p.Id,
                 IngredientId = i.IngredientId,
-                Quanlity = i.Quantity,
+                Quanlity = i.Quanlity,
                 UnitPrice = i.UnitPrice,
-                TotalPrice = i.Quantity * i.UnitPrice
+                TotalPrice = i.Quanlity * i.UnitPrice
             });
         }
         await _db.SaveChangesAsync(ct);

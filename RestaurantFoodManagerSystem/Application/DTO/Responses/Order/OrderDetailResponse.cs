@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// Kết quả của <c>GET /api/orders/{id}</c> (Nhóm C/GĐ7).
 /// Bổ sung <see cref="Items"/> so với entity <c>Order</c> thô, để hoá đơn hiển thị được
@@ -28,7 +30,9 @@ public sealed class OrderItemDetailResponse
     public int SizeId { get; set; }
     public string FoodName { get; set; } = string.Empty;
     public string SizeName { get; set; } = string.Empty;
-    public int Quantity { get; set; }
+    // C# dùng Quanlity theo quy ước project/DB; JSON vẫn là "quantity" cho frontend hiện tại.
+    [JsonPropertyName("quantity")]
+    public int Quanlity { get; set; }
     public decimal UnitPrice { get; set; }
     public string? Note { get; set; }
     public string Status { get; set; } = string.Empty;

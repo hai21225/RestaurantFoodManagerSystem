@@ -112,8 +112,8 @@ public sealed class KitchenFlowTests : TestBase
 
         Assert.Equal(s.Food.FoodName, item.FoodName);
         Assert.Equal(s.Size.SizeName, item.SizeName);
-        Assert.Equal(4, item.Quantity);
-        Assert.Equal(4, item.Quanlity); // legacy alias kept
+        Assert.Equal(4, item.Quanlity);
+        Assert.Equal(4, item.QuantityCompat); // JSON alias "quantity" kept for frontend
         Assert.Equal("extra", item.Note);
     }
 

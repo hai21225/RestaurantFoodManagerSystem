@@ -59,7 +59,7 @@ public sealed class RecipeService
             {
                 RecipeId = x.RecipeId,
                 IngredientId = i.IngredientId,
-                Quanlity = i.Quantity
+                Quanlity = i.Quanlity
             });
         }
         await _db.SaveChangesAsync(ct);
@@ -81,7 +81,7 @@ public sealed class RecipeService
                                      IngredientId = i.IngredientId,
                                      IngredientName = i.Name,
                                      Unit = i.Unit,
-                                     Quantity = ri.Quanlity
+                                     Quanlity = ri.Quanlity
                                  }).ToListAsync(ct);
 
         // Nhóm C/GĐ7: join tên món/cỡ để tiêu đề chi tiết công thức hiển thị đúng.
@@ -158,7 +158,7 @@ public sealed class RecipeService
             {
                 RecipeId = id,
                 IngredientId = i.IngredientId,
-                Quanlity = i.Quantity
+                Quanlity = i.Quanlity
             });
         }
 

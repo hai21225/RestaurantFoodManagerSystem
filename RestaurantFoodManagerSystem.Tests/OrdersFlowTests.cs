@@ -9,17 +9,17 @@ namespace RestaurantFoodManagerSystem.Tests;
 /// </summary>
 public sealed class OrdersFlowTests : TestBase
 {
-    private static CreateOrderRequest Request(int tableId, int createdBy, int sizeId, int quantity = 2, int? toppingId = null, int toppingQuantity = 1)
+    private static CreateOrderRequest Request(int tableId, int createdBy, int sizeId, int quantity = 2, int? toppingId = null, int toppingQuanlity = 1)
     {
         var item = new CreateOrderItemRequest
         {
             SizeId = sizeId,
-            Quantity = quantity,
+            Quanlity = quantity,
             Note = "no onion"
         };
         if (toppingId.HasValue)
         {
-            item.Toppings.Add(new CreateOrderToppingRequest { ToppingId = toppingId.Value, Quantity = toppingQuantity });
+            item.Toppings.Add(new CreateOrderToppingRequest { ToppingId = toppingId.Value, Quanlity = toppingQuanlity });
         }
         var request = new CreateOrderRequest { TableId = tableId, CreatedBy = createdBy };
         request.Items.Add(item);
@@ -32,7 +32,7 @@ public sealed class OrdersFlowTests : TestBase
         var s = SeedOrderScenario(sizePrice: 50m, toppingPrice: 5m, stock: 100m);
 
         var order = await Orders.CreateAsync(
-            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2, toppingId: s.Topping.ToppingId, toppingQuantity: 1),
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 2, toppingId: s.Topping.ToppingId, toppingQuanlity: 1),
             CancellationToken.None);
 
         // Subtotal = (size 50 * 2) + (topping 5 * 1 * 2) = 110
@@ -87,8 +87,8 @@ public sealed class OrdersFlowTests : TestBase
         var s = SeedOrderScenario(sizePrice: 10m, toppingPrice: 1m, stock: 100m);
 
         var request = new CreateOrderRequest { TableId = s.Table.TableId, CreatedBy = s.Staff.Id };
-        request.Items.Add(new CreateOrderItemRequest { SizeId = s.Size.SizeId, Quantity = 2 });
-        request.Items.Add(new CreateOrderItemRequest { SizeId = s.Size.SizeId, Quantity = 3 });
+        request.Items.Add(new CreateOrderItemRequest { SizeId = s.Size.SizeId, Quanlity = 2 });
+        request.Items.Add(new CreateOrderItemRequest { SizeId = s.Size.SizeId, Quanlity = 3 });
 
         var order = await Orders.CreateAsync(request, CancellationToken.None);
 
@@ -202,7 +202,7 @@ public sealed class OrdersFlowTests : TestBase
         var item = Assert.Single(detail.Items);
         Assert.Equal(s.Food.FoodName, item.FoodName);
         Assert.Equal(s.Size.SizeName, item.SizeName);
-        Assert.Equal(3, item.Quantity);
+        Assert.Equal(3, item.Quanlity);
         Assert.Equal(50m, item.UnitPrice);
         Assert.Equal("no onion", item.Note);
         Assert.Equal("Pending", item.Status);

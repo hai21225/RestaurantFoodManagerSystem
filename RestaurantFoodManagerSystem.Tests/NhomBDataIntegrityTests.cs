@@ -79,14 +79,14 @@ public sealed class NhomBDataIntegrityTests : TestBase
         {
             SizeId = size.SizeId,
             Name = "first",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Recipes.CreateAsync(new RecipeRequest
         {
             SizeId = size.SizeId,
             Name = "second",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None));
 
         Assert.Equal("This size already has an active recipe", ex.Message);
@@ -105,7 +105,7 @@ public sealed class NhomBDataIntegrityTests : TestBase
         {
             SizeId = size.SizeId,
             Name = "v1",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
 
         await Recipes.DeleteAsync(first.RecipeId, CancellationToken.None);
@@ -114,7 +114,7 @@ public sealed class NhomBDataIntegrityTests : TestBase
         {
             SizeId = size.SizeId,
             Name = "v2",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 2m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 2m } }
         }, CancellationToken.None);
 
         Assert.True(second.IsActive);
@@ -134,21 +134,21 @@ public sealed class NhomBDataIntegrityTests : TestBase
         {
             SizeId = sizeA.SizeId,
             Name = "a",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
 
         await Recipes.CreateAsync(new RecipeRequest
         {
             SizeId = sizeB.SizeId,
             Name = "b",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Recipes.UpdateAsync(recipeA.RecipeId, new RecipeRequest
         {
             SizeId = sizeB.SizeId,
             Name = "a",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None));
 
         Assert.Equal("This size already has an active recipe", ex.Message);

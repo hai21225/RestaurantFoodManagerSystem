@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// Kết quả của <c>GET /api/management/recipes/{id}</c>.
 /// Nhóm C/GĐ7 bổ sung <see cref="FoodName"/>/<see cref="SizeName"/> đã join để tiêu đề chi tiết
@@ -23,7 +25,9 @@ public sealed class RecipeIngredientResponse
     public int IngredientId { get; set; }
     public string IngredientName { get; set; } = string.Empty;
     public string Unit { get; set; } = string.Empty;
-    public decimal Quantity { get; set; }
+    // C# dùng Quanlity theo quy ước project/DB; JSON vẫn là "quantity" cho frontend hiện tại.
+    [JsonPropertyName("quantity")]
+    public decimal Quanlity { get; set; }
 }
 
 /// <summary>
@@ -39,4 +43,17 @@ public sealed class RecipeSummaryResponse
     public string Version { get; set; } = string.Empty;
     public bool IsActive { get; set; }
     public int IngredientCount { get; set; }
+
+    /// <summary>
+    /// Dùng cho <c>POST /api/management/recipes</c> (C4) để không trả entity <see cref="Recipe"/> thô.
+    /// </summary>
+    public static RecipeSummaryResponse From(Recipe x, int ingredientCount) => new()
+    {
+        RecipeId = x.RecipeId,
+        SizeId = x.SizeId,
+        Name = x.Name,
+        Version = x.Version,
+        IsActive = x.IsActive,
+        IngredientCount = ingredientCount
+    };
 }

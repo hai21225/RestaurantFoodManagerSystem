@@ -1,7 +1,9 @@
+using System.Text.Json.Serialization;
+
 /// <summary>
 /// Kết quả của <c>GET /api/management/kitchen/orders/{id}/items</c> (Nhóm C/GĐ7).
-/// Giữ nguyên các field cũ của entity <c>KitchenOrderItem</c> (kể cả typo <see cref="Quanlity"/>)
-/// và bổ sung <see cref="Quantity"/> đúng chính tả + tên món/cỡ đã join.
+/// Giữ field <c>quanlity</c> theo quy ước của project/DB, đồng thời vẫn phát
+/// alias JSON <c>quantity</c> cho frontend hiện tại.
 /// </summary>
 public sealed class KitchenItemResponse
 {
@@ -9,11 +11,12 @@ public sealed class KitchenItemResponse
     public int KitchenOrderId { get; set; }
     public int OrderItemId { get; set; }
 
-    /// <summary>Tên cũ (typo) — giữ để không phá vỡ hợp đồng cũ.</summary>
+    /// <summary>Tên theo quy ước project/DB.</summary>
     public int Quanlity { get; set; }
 
-    /// <summary>Tên đúng chính tả, frontend đọc field này.</summary>
-    public int Quantity { get; set; }
+    /// <summary>Alias JSON <c>quantity</c> — frontend hiện tại đọc field này.</summary>
+    [JsonPropertyName("quantity")]
+    public int QuantityCompat => Quanlity;
 
     public string Status { get; set; } = string.Empty;
     public string? Note { get; set; }

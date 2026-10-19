@@ -68,8 +68,8 @@ public sealed class CatalogEditTests : TestBase
             Version = "2",
             Ingredients =
             [
-                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quantity = 3m },
-                new RecipeIngredientRequest { IngredientId = second.IngredientId, Quantity = 0.5m }
+                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quanlity = 3m },
+                new RecipeIngredientRequest { IngredientId = second.IngredientId, Quanlity = 0.5m }
             ]
         };
 
@@ -102,7 +102,7 @@ public sealed class CatalogEditTests : TestBase
             SizeId = size.SizeId,
             Name = "x",
             Version = "1",
-            Ingredients = [new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m }]
+            Ingredients = [new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m }]
         };
 
         Assert.False(await Recipes.UpdateAsync(999_999, request, default));
@@ -137,8 +137,8 @@ public sealed class CatalogEditTests : TestBase
             Version = "1",
             Ingredients =
             [
-                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quantity = 1m },
-                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quantity = 2m }
+                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quanlity = 1m },
+                new RecipeIngredientRequest { IngredientId = first.IngredientId, Quanlity = 2m }
             ]
         };
 
@@ -156,7 +156,7 @@ public sealed class CatalogEditTests : TestBase
             SizeId = 999_999,
             Name = "x",
             Version = "1",
-            Ingredients = [new RecipeIngredientRequest { IngredientId = first.IngredientId, Quantity = 1m }]
+            Ingredients = [new RecipeIngredientRequest { IngredientId = first.IngredientId, Quanlity = 1m }]
         };
 
         await Assert.ThrowsAsync<KeyNotFoundException>(

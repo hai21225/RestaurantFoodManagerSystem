@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 public sealed class CreateOrderRequest
 {
@@ -10,7 +11,8 @@ public sealed class CreateOrderRequest
 public sealed class CreateOrderItemRequest
 {
     [Range(1, int.MaxValue)] public int SizeId { get; set; }
-    [Range(1, int.MaxValue)] public int Quantity { get; set; }
+    // C# dùng tên Quanlity theo quy ước của project/DB; JSON vẫn là "quantity" để không phá frontend.
+    [Range(1, int.MaxValue)] [JsonPropertyName("quantity")] public int Quanlity { get; set; }
     public string? Note { get; set; }
     public List<CreateOrderToppingRequest> Toppings { get; set; } = [];
 }
@@ -18,7 +20,7 @@ public sealed class CreateOrderItemRequest
 public sealed class CreateOrderToppingRequest
 {
     [Range(1, int.MaxValue)] public int ToppingId { get; set; }
-    [Range(1, int.MaxValue)] public int Quantity { get; set; } = 1;
+    [Range(1, int.MaxValue)] [JsonPropertyName("quantity")] public int Quanlity { get; set; } = 1;
 }
 
 public sealed class UpdateOrderStatusRequest

@@ -25,7 +25,6 @@ public sealed class KitchenService
              KitchenOrderId = ki.KitchenOrderId,
              OrderItemId = ki.OrderItemId,
              Quanlity = ki.Quanlity,
-             Quantity = ki.Quanlity,
              Status = ki.Status,
              Note = ki.Note,
              FoodName = f.FoodName,

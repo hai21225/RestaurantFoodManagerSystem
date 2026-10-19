@@ -15,7 +15,7 @@ public sealed class ActorFromTokenTests : TestBase
     private static CreateOrderRequest OrderRequest(int tableId, int createdBy, int sizeId)
     {
         var request = new CreateOrderRequest { TableId = tableId, CreatedBy = createdBy };
-        request.Items.Add(new CreateOrderItemRequest { SizeId = sizeId, Quantity = 1 });
+        request.Items.Add(new CreateOrderItemRequest { SizeId = sizeId, Quanlity = 1 });
         return request;
     }
 
@@ -90,7 +90,7 @@ public sealed class ActorFromTokenTests : TestBase
         {
             SupplierId = supplier.SupplierId,
             CreatedBy = bodyActor.Id,
-            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quantity = 1m, UnitPrice = 1m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
         }, CancellationToken.None);
 
         Assert.Equal(tokenActor.Id, purchase.CreatedBy);
@@ -107,7 +107,7 @@ public sealed class ActorFromTokenTests : TestBase
         {
             SupplierId = supplier.SupplierId,
             CreatedBy = bodyActor.Id,
-            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quantity = 2m, UnitPrice = 1m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 2m, UnitPrice = 1m } }
         }, CancellationToken.None);
 
         CurrentUser.UserId = tokenActor.Id;
@@ -127,7 +127,7 @@ public sealed class ActorFromTokenTests : TestBase
 
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
-            Quantity = 5m,
+            Quanlity = 5m,
             CreatedBy = bodyActor.Id,
             Note = "token test"
         }, CancellationToken.None));
@@ -145,7 +145,7 @@ public sealed class ActorFromTokenTests : TestBase
 
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
-            Quantity = 5m,
+            Quanlity = 5m,
             CreatedBy = bodyActor.Id
         }, CancellationToken.None));
 

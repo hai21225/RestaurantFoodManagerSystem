@@ -23,15 +23,15 @@ public sealed class InventoryService
         if (x is null) return false;
 
         var before = x.Quanlity;
-        if (before + r.Quantity < 0) throw new InvalidOperationException("Inventory cannot become negative");
+        if (before + r.Quanlity < 0) throw new InvalidOperationException("Inventory cannot become negative");
 
-        x.Quanlity += r.Quantity;
+        x.Quanlity += r.Quanlity;
         x.UpdatedAt = DateTime.UtcNow;
         _db.InventoryTransactions.Add(new InventoryTransaction
         {
             IngredientId = ingredientId,
-            Type = r.Quantity >= 0 ? "AdjustmentIn" : "AdjustmentOut",
-            Quanlity = Math.Abs(r.Quantity),
+            Type = r.Quanlity >= 0 ? "AdjustmentIn" : "AdjustmentOut",
+            Quanlity = Math.Abs(r.Quanlity),
             QuanlityBefore = before,
             QuanlityAfter = x.Quanlity,
             Note = r.Note,

@@ -35,7 +35,7 @@ public sealed class OrderService
                                SizeId = oi.SizeId,
                                FoodName = f.FoodName,
                                SizeName = fs.SizeName,
-                               Quantity = oi.Quanlity,
+                               Quanlity = oi.Quanlity,
                                UnitPrice = oi.UnitPrice,
                                Note = oi.Note,
                                Status = oi.Status
@@ -80,7 +80,7 @@ public sealed class OrderService
 
             foreach (var ingredient in recipeIngredients)
             {
-                var required = ingredient.Quanlity * itemRequest.Quantity;
+                var required = ingredient.Quanlity * itemRequest.Quanlity;
                 requiredIngredients[ingredient.IngredientId] =
                     requiredIngredients.GetValueOrDefault(ingredient.IngredientId) + required;
             }
@@ -115,7 +115,7 @@ public sealed class OrderService
         {
             var size = await _db.FoodSizes.FirstOrDefaultAsync(x => x.SizeId == itemRequest.SizeId && x.IsActive, ct);
             if (size is null) throw new KeyNotFoundException($"Food size {itemRequest.SizeId} not found");
-            var item = new OrderItem { OrderId = order.OrderId, SizeId = size.SizeId, Quanlity = itemRequest.Quantity, UnitPrice = size.SizePrice, Note = itemRequest.Note, Status = "Pending", CreatedAt = DateTime.UtcNow };
+            var item = new OrderItem { OrderId = order.OrderId, SizeId = size.SizeId, Quanlity = itemRequest.Quanlity, UnitPrice = size.SizePrice, Note = itemRequest.Note, Status = "Pending", CreatedAt = DateTime.UtcNow };
             order.Subtotal += item.UnitPrice * item.Quanlity;
             _db.OrderItems.Add(item);
             await _db.SaveChangesAsync(ct);
@@ -124,9 +124,9 @@ public sealed class OrderService
             {
                 var topping = await _db.Toppings.FirstOrDefaultAsync(x => x.ToppingId == toppingRequest.ToppingId && x.IsActive && x.IsAvailable, ct);
                 if (topping is null) throw new KeyNotFoundException($"Topping {toppingRequest.ToppingId} not found");
-                item.UnitPrice += topping.ToppingPrice * toppingRequest.Quantity;
-                order.Subtotal += topping.ToppingPrice * toppingRequest.Quantity * item.Quanlity;
-                _db.OrderItemToppings.Add(new OrderItemTopping { OrderItemId = item.Id, ToppingId = topping.ToppingId, Quanlity = toppingRequest.Quantity, UnitPrice = topping.ToppingPrice });
+                item.UnitPrice += topping.ToppingPrice * toppingRequest.Quanlity;
+                order.Subtotal += topping.ToppingPrice * toppingRequest.Quanlity * item.Quanlity;
+                _db.OrderItemToppings.Add(new OrderItemTopping { OrderItemId = item.Id, ToppingId = topping.ToppingId, Quanlity = toppingRequest.Quanlity, UnitPrice = topping.ToppingPrice });
             }
         }
         order.TotalAmount = order.Subtotal;

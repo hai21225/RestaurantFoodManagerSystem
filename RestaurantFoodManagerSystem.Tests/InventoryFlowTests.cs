@@ -92,7 +92,7 @@ public sealed class InventoryFlowTests : TestBase
 
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
-            Quantity = 5m,
+            Quanlity = 5m,
             CreatedBy = staff.Id,
             Note = "restock"
         }, CancellationToken.None));
@@ -116,7 +116,7 @@ public sealed class InventoryFlowTests : TestBase
 
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
-            Quantity = -4m,
+            Quanlity = -4m,
             CreatedBy = staff.Id
         }, CancellationToken.None));
 
@@ -134,7 +134,7 @@ public sealed class InventoryFlowTests : TestBase
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
-            Quantity = -4m,
+            Quanlity = -4m,
             CreatedBy = staff.Id
         }, CancellationToken.None));
 
@@ -149,7 +149,7 @@ public sealed class InventoryFlowTests : TestBase
         Db.Ingredients.Add(new Ingredient { Name = "NoStock", Unit = "kg", IsActive = true });
         Db.SaveChanges();
 
-        Assert.False(await InventorySvc.AdjustAsync(Db.Ingredients.Single().IngredientId, new InventoryAdjustmentRequest { Quantity = 1m }, CancellationToken.None));
+        Assert.False(await InventorySvc.AdjustAsync(Db.Ingredients.Single().IngredientId, new InventoryAdjustmentRequest { Quanlity = 1m }, CancellationToken.None));
     }
 
     // ============================ SUPPLIERS ============================
@@ -201,8 +201,8 @@ public sealed class InventoryFlowTests : TestBase
             CreatedBy = staff.Id,
             Items =
             {
-                new PurchaseOrderItemRequest { IngredientId = first.IngredientId, Quantity = 3m, UnitPrice = 10m },
-                new PurchaseOrderItemRequest { IngredientId = second.IngredientId, Quantity = 2m, UnitPrice = 2.5m }
+                new PurchaseOrderItemRequest { IngredientId = first.IngredientId, Quanlity = 3m, UnitPrice = 10m },
+                new PurchaseOrderItemRequest { IngredientId = second.IngredientId, Quanlity = 2m, UnitPrice = 2.5m }
             }
         }, CancellationToken.None);
 
@@ -223,14 +223,14 @@ public sealed class InventoryFlowTests : TestBase
         {
             SupplierId = 999999,
             CreatedBy = 1,
-            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quantity = 1m, UnitPrice = 1m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
         }, CancellationToken.None));
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Purchases.CreateAsync(new PurchaseOrderRequest
         {
             SupplierId = supplier.SupplierId,
             CreatedBy = 1,
-            Items = { new PurchaseOrderItemRequest { IngredientId = 999999, Quantity = 1m, UnitPrice = 1m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = 999999, Quanlity = 1m, UnitPrice = 1m } }
         }, CancellationToken.None));
     }
 
@@ -245,7 +245,7 @@ public sealed class InventoryFlowTests : TestBase
         {
             SupplierId = supplier.SupplierId,
             CreatedBy = staff.Id,
-            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quantity = 9m, UnitPrice = 2m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 9m, UnitPrice = 2m } }
         }, CancellationToken.None);
 
         Assert.True(await Purchases.ReceiveAsync(purchase.Id, new ReceivePurchaseRequest { ReceivedBy = staff.Id }, CancellationToken.None));
@@ -272,7 +272,7 @@ public sealed class InventoryFlowTests : TestBase
         {
             SupplierId = supplier.SupplierId,
             CreatedBy = staff.Id,
-            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quantity = 1m, UnitPrice = 1m } }
+            Items = { new PurchaseOrderItemRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m, UnitPrice = 1m } }
         }, CancellationToken.None);
 
         Assert.True(await Purchases.ReceiveAsync(purchase.Id, new ReceivePurchaseRequest { ReceivedBy = staff.Id }, CancellationToken.None));
@@ -373,7 +373,7 @@ public sealed class InventoryFlowTests : TestBase
         {
             SizeId = 999999,
             Name = "r",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None));
 
         var category = SeedCategory();
@@ -401,7 +401,7 @@ public sealed class InventoryFlowTests : TestBase
             SizeId = size.SizeId,
             Name = "  Pho  ",
             Version = null!,
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
 
         Assert.Equal("Pho", recipe.Name);
@@ -422,8 +422,8 @@ public sealed class InventoryFlowTests : TestBase
             Name = "r",
             Ingredients =
             {
-                new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m },
-                new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 2m }
+                new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m },
+                new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 2m }
             }
         }, CancellationToken.None));
         Assert.Equal("An ingredient cannot be repeated in the same recipe", duplicate.Message);
@@ -432,7 +432,7 @@ public sealed class InventoryFlowTests : TestBase
         {
             SizeId = size.SizeId,
             Name = "r",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = 999999, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = 999999, Quanlity = 1m } }
         }, CancellationToken.None));
     }
 
@@ -449,7 +449,7 @@ public sealed class InventoryFlowTests : TestBase
             SizeId = size.SizeId,
             Name = "  Pho broth  ",
             Version = " 2 ",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 2.5m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 2.5m } }
         }, CancellationToken.None);
 
         Assert.Equal("Pho broth", recipe.Name);
@@ -463,7 +463,7 @@ public sealed class InventoryFlowTests : TestBase
         Assert.Equal(size.SizeName, details.SizeName);
         var detailIngredient = Assert.Single(details.Ingredients);
         Assert.Equal(ingredient.IngredientId, detailIngredient.IngredientId);
-        Assert.Equal(2.5m, detailIngredient.Quantity);
+        Assert.Equal(2.5m, detailIngredient.Quanlity);
         Assert.Equal(ingredient.Name, detailIngredient.IngredientName);
 
         Assert.Null(await Recipes.GetDetailsAsync(999999, CancellationToken.None));
@@ -485,14 +485,14 @@ public sealed class InventoryFlowTests : TestBase
         {
             SizeId = size.SizeId,
             Name = "active",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
         // Nhóm B5: mỗi size chỉ có một công thức active ⇒ công thức thứ hai dùng size khác.
         var removed = await Recipes.CreateAsync(new RecipeRequest
         {
             SizeId = otherSize.SizeId,
             Name = "removed",
-            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
+            Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quanlity = 1m } }
         }, CancellationToken.None);
         await Recipes.DeleteAsync(removed.RecipeId, CancellationToken.None);
 
