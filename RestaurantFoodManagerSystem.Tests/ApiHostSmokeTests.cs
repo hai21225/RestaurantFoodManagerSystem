@@ -15,20 +15,35 @@ namespace RestaurantFoodManagerSystem.Tests;
 
 /// <summary>
 /// GĐ8: host API dựng được bằng <see cref="WebApplicationFactory{TEntryPoint}"/> mà KHÔNG cần
-/// SQL Server thật. Đây là hạ tầng bắt buộc cho GĐ6e (test 401/403 ở mức HTTP).
+/// SQL Server thật. GĐ6e dùng lại factory này để test 401/403 ở mức HTTP.
 ///
 /// <para>
 /// Cách làm: thay <see cref="AppDbContext"/> bằng SQLite in-memory, tắt
 /// <c>Database:MigrateOnStartup</c> (migration viết cho SQL Server) nhưng vẫn bật
 /// <c>Database:SeedOnStartup</c> để chạy đúng đường khởi động của app.
 /// </para>
+///
+/// <para>
+/// <paramref name="enforce"/> = <c>true</c> bật <c>Auth:Enforce</c> + khóa ký JWT test (xem
+/// <see cref="EnforcedRestaurantApiFactory"/>); mặc định <c>false</c> giữ baseline dev (anonymous).
+/// </para>
 /// </summary>
-public sealed class RestaurantApiFactory : WebApplicationFactory<Program>
+public class RestaurantApiFactory : WebApplicationFactory<Program>
 {
-    private readonly SqliteConnection _connection;
+    /// <summary>Khóa ký HS256 dùng riêng trong test (không phải khóa thật, không dùng ngoài test).</summary>
+    public const string TestJwtSigningKey = "gd6e-http-test-signing-key-0123456789abcdef";
 
-    public RestaurantApiFactory()
+    private readonly SqliteConnection _connection;
+    private readonly bool _enforce;
+
+    public RestaurantApiFactory() : this(enforce: false)
     {
+    }
+
+    protected RestaurantApiFactory(bool enforce)
+    {
+        _enforce = enforce;
+
         _connection = new SqliteConnection("DataSource=:memory:");
         _connection.Open();
 
@@ -38,10 +53,18 @@ public sealed class RestaurantApiFactory : WebApplicationFactory<Program>
         context.Database.EnsureCreated();
     }
 
+    /// <summary><c>Auth:Enforce</c> của host test.</summary>
+    public bool Enforce => _enforce;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseSetting($"{DatabaseInitializationOptions.SectionName}:MigrateOnStartup", "false");
         builder.UseSetting($"{DatabaseInitializationOptions.SectionName}:SeedOnStartup", "true");
+
+        // GĐ6e: bật/tắt enforcement + nạp khóa ký cho host test. UseSetting được áp trước khi
+        // Program.cs đọc cấu hình nên cặp Auth:Enforce / Jwt:Key có hiệu lực ngay từ đầu.
+        builder.UseSetting("Auth:Enforce", _enforce ? "true" : "false");
+        builder.UseSetting("Authentication:Jwt:Key", TestJwtSigningKey);
 
         builder.ConfigureTestServices(services =>
         {
@@ -68,6 +91,14 @@ public sealed class RestaurantApiFactory : WebApplicationFactory<Program>
         {
             _connection.Dispose();
         }
+    }
+}
+
+public sealed class EnforcedRestaurantApiFactory : RestaurantApiFactory
+{
+    /// <summary>Host test có <c>Auth:Enforce=true</c> (401/403 thật) và khóa ký JWT test.</summary>
+    public EnforcedRestaurantApiFactory() : base(enforce: true)
+    {
     }
 }
 
