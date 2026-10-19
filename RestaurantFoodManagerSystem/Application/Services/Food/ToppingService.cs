@@ -1,14 +1,13 @@
-﻿public class ToppingService
-{
-    private readonly IRepository<Topping> _toppingRepository;
-    private readonly IUnitOfWork _unitOfWork;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public ToppingService(
-        IRepository<Topping> toppingRepository,
-        IUnitOfWork unitOfWork)
+public class ToppingService
+{
+    private readonly AppDbContext _db;
+
+    public ToppingService(AppDbContext db)
     {
-        _toppingRepository = toppingRepository;
-        _unitOfWork = unitOfWork;
+        _db = db;
     }
 
 
@@ -19,13 +18,16 @@
 
         if (includeInactive)
         {
-            toppings = await _toppingRepository.GetAllAsync();
+            toppings = await _db.Toppings
+                .AsNoTracking()
+                .ToListAsync();
         }
         else
         {
-            toppings = await _toppingRepository.FindAsync(
-                x => x.IsActive
-            );
+            toppings = await _db.Toppings
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .ToListAsync();
         }
 
         return toppings
@@ -36,7 +38,7 @@
 
     public async Task<ToppingResponseDto?> GetByIdAsync(int id)
     {
-        var topping = await _toppingRepository.GetByIdAsync(id);
+        var topping = await _db.Toppings.FindAsync(id);
 
         if (topping == null)
         {
@@ -52,10 +54,9 @@
     {
         var name = request.ToppingName.Trim();
 
-        var exists = await _toppingRepository.ExistsAsync(
-            x => x.ToppingName == name &&
-                 x.IsActive
-        );
+        var exists = await _db.Toppings.AnyAsync(x =>
+            x.ToppingName == name &&
+            x.IsActive);
 
         if (exists)
         {
@@ -70,9 +71,9 @@
             IsActive = true
         };
 
-        await _toppingRepository.AddAsync(topping);
+        await _db.Toppings.AddAsync(topping);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync();
 
         if (result <= 0)
         {
@@ -87,7 +88,7 @@
         int id,
         UpdateToppingRequest request)
     {
-        var topping = await _toppingRepository.GetByIdAsync(id);
+        var topping = await _db.Toppings.FindAsync(id);
 
         if (topping == null)
         {
@@ -96,11 +97,10 @@
 
         var name = request.ToppingName.Trim();
 
-        var duplicate = await _toppingRepository.ExistsAsync(
-            x => x.ToppingId != id &&
-                 x.ToppingName == name &&
-                 x.IsActive
-        );
+        var duplicate = await _db.Toppings.AnyAsync(x =>
+            x.ToppingId != id &&
+            x.ToppingName == name &&
+            x.IsActive);
 
         if (duplicate)
         {
@@ -111,9 +111,9 @@
         topping.ToppingPrice = request.ToppingPrice;
         topping.IsAvailable = request.IsAvailable;
 
-        _toppingRepository.Update(topping);
+        _db.Toppings.Update(topping);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _db.SaveChangesAsync();
 
         return MapToDto(topping);
     }
@@ -123,7 +123,7 @@
         int id,
         bool isAvailable)
     {
-        var topping = await _toppingRepository.GetByIdAsync(id);
+        var topping = await _db.Toppings.FindAsync(id);
 
         if (topping == null)
         {
@@ -132,15 +132,15 @@
 
         topping.IsAvailable = isAvailable;
 
-        _toppingRepository.Update(topping);
+        _db.Toppings.Update(topping);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
     public async Task<bool> DeleteAsync(int id)
     {
-        var topping = await _toppingRepository.GetByIdAsync(id);
+        var topping = await _db.Toppings.FindAsync(id);
 
         if (topping == null)
         {
@@ -151,9 +151,9 @@
         topping.IsActive = false;
         topping.IsAvailable = false;
 
-        _toppingRepository.Update(topping);
+        _db.Toppings.Update(topping);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 

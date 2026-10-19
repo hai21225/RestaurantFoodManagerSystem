@@ -1,34 +1,32 @@
-﻿public class FoodSizeService
-{
-    private readonly IRepository<FoodSize> _foodSizeRepository;
-    private readonly IRepository<Food> _foodRepository;
-    private readonly IUnitOfWork _unitOfWork;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public FoodSizeService(
-        IRepository<FoodSize> foodSizeRepository,
-        IRepository<Food> foodRepository,
-        IUnitOfWork unitOfWork)
+public class FoodSizeService
+{
+    private readonly AppDbContext _db;
+
+    public FoodSizeService(AppDbContext db)
     {
-        _foodSizeRepository = foodSizeRepository;
-        _foodRepository = foodRepository;
-        _unitOfWork = unitOfWork;
+        _db = db;
     }
 
 
     public async Task<List<FoodSizeResponseDto>>
         GetByFoodIdAsync(int foodId)
     {
-        var food = await _foodRepository.GetByIdAsync(foodId);
+        var food = await _db.Foods.FindAsync(foodId);
 
         if (food == null)
         {
             throw new Exception("Food not found");
         }
 
-        var sizes = await _foodSizeRepository.FindAsync(
-            x => x.FoodId == foodId &&
-                 x.IsActive
-        );
+        var sizes = await _db.FoodSizes
+            .AsNoTracking()
+            .Where(x =>
+                x.FoodId == foodId &&
+                x.IsActive)
+            .ToListAsync();
 
         return sizes
             .Select(MapToDto)
@@ -40,11 +38,12 @@
         int foodId,
         int sizeId)
     {
-        var size = await _foodSizeRepository.FindOneAsync(
-            x => x.SizeId == sizeId &&
-                 x.FoodId == foodId &&
-                 x.IsActive
-        );
+        var size = await _db.FoodSizes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.SizeId == sizeId &&
+                x.FoodId == foodId &&
+                x.IsActive);
 
         if (size == null)
         {
@@ -59,7 +58,7 @@
         int foodId,
         CreateFoodSizeRequest request)
     {
-        var food = await _foodRepository.GetByIdAsync(foodId);
+        var food = await _db.Foods.FindAsync(foodId);
 
         if (food == null)
         {
@@ -68,11 +67,10 @@
 
         var name = request.SizeName.Trim();
 
-        var duplicate = await _foodSizeRepository.ExistsAsync(
-            x => x.FoodId == foodId &&
-                 x.SizeName == name &&
-                 x.IsActive
-        );
+        var duplicate = await _db.FoodSizes.AnyAsync(x =>
+            x.FoodId == foodId &&
+            x.SizeName == name &&
+            x.IsActive);
 
         if (duplicate)
         {
@@ -101,9 +99,9 @@
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _foodSizeRepository.AddAsync(size);
+        await _db.FoodSizes.AddAsync(size);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync();
 
         if (result <= 0)
         {
@@ -119,11 +117,12 @@
         int sizeId,
         UpdateFoodSizeRequest request)
     {
-        var size = await _foodSizeRepository.FindOneAsync(
-            x => x.SizeId == sizeId &&
-                 x.FoodId == foodId &&
-                 x.IsActive
-        );
+        var size = await _db.FoodSizes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.SizeId == sizeId &&
+                x.FoodId == foodId &&
+                x.IsActive);
 
         if (size == null)
         {
@@ -132,12 +131,11 @@
 
         var name = request.SizeName.Trim();
 
-        var duplicate = await _foodSizeRepository.ExistsAsync(
-            x => x.FoodId == foodId &&
-                 x.SizeId != sizeId &&
-                 x.SizeName == name &&
-                 x.IsActive
-        );
+        var duplicate = await _db.FoodSizes.AnyAsync(x =>
+            x.FoodId == foodId &&
+            x.SizeId != sizeId &&
+            x.SizeName == name &&
+            x.IsActive);
 
         if (duplicate)
         {
@@ -159,9 +157,9 @@
         size.IsDefault = request.IsDefault;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _foodSizeRepository.Update(size);
+        _db.FoodSizes.Update(size);
 
-        await _unitOfWork.SaveChangesAsync();
+        await _db.SaveChangesAsync();
 
         return MapToDto(size);
     }
@@ -171,11 +169,12 @@
         int foodId,
         int sizeId)
     {
-        var size = await _foodSizeRepository.FindOneAsync(
-            x => x.SizeId == sizeId &&
-                 x.FoodId == foodId &&
-                 x.IsActive
-        );
+        var size = await _db.FoodSizes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.SizeId == sizeId &&
+                x.FoodId == foodId &&
+                x.IsActive);
 
         if (size == null)
         {
@@ -190,9 +189,9 @@
         size.IsDefault = true;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _foodSizeRepository.Update(size);
+        _db.FoodSizes.Update(size);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
@@ -200,11 +199,12 @@
         int foodId,
         int sizeId)
     {
-        var size = await _foodSizeRepository.FindOneAsync(
-            x => x.SizeId == sizeId &&
-                 x.FoodId == foodId &&
-                 x.IsActive
-        );
+        var size = await _db.FoodSizes
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.SizeId == sizeId &&
+                x.FoodId == foodId &&
+                x.IsActive);
 
         if (size == null)
         {
@@ -215,9 +215,9 @@
         size.IsDefault = false;
         size.UpdatedAt = DateTime.UtcNow;
 
-        _foodSizeRepository.Update(size);
+        _db.FoodSizes.Update(size);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
@@ -225,21 +225,22 @@
         int foodId,
         int? exceptSizeId = null)
     {
-        var defaults = await _foodSizeRepository.FindAsync(
-            x =>
+        var defaults = await _db.FoodSizes
+            .AsNoTracking()
+            .Where(x =>
                 x.FoodId == foodId &&
                 x.IsDefault &&
                 x.IsActive &&
                 (!exceptSizeId.HasValue ||
-                 x.SizeId != exceptSizeId.Value)
-        );
+                 x.SizeId != exceptSizeId.Value))
+            .ToListAsync();
 
         foreach (var size in defaults)
         {
             size.IsDefault = false;
             size.UpdatedAt = DateTime.UtcNow;
 
-            _foodSizeRepository.Update(size);
+            _db.FoodSizes.Update(size);
         }
     }
 

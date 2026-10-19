@@ -1,18 +1,13 @@
-﻿public class FoodService
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
+
+public class FoodService
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly AppDbContext _db;
 
-    private readonly IRepository<Food> _foodRepository;
-    private readonly IRepository<Category> _categoryRepository;
-
-    public FoodService(
-        IUnitOfWork unitOfWork,
-        IRepository<Food> foodRepository,
-        IRepository<Category> categoryRepository)
+    public FoodService(AppDbContext db)
     {
-        _unitOfWork = unitOfWork;
-        _foodRepository = foodRepository;
-        _categoryRepository = categoryRepository;
+        _db = db;
     }
 
 
@@ -27,13 +22,16 @@
 
         if (includeInactive)
         {
-            foods = await _foodRepository.GetAllAsync();
+            foods = await _db.Foods
+                .AsNoTracking()
+                .ToListAsync();
         }
         else
         {
-            foods = await _foodRepository.FindAsync(
-                x => x.IsActive
-            );
+            foods = await _db.Foods
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .ToListAsync();
         }
 
         return foods.Select(MapToDto).ToList();
@@ -46,7 +44,7 @@
 
     public async Task<FoodResponseDto?> GetFoodByIdAsync(int id)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync(id);
 
         if (food == null)
         {
@@ -64,11 +62,12 @@
     public async Task<List<FoodResponseDto>>
         GetFoodsByCategoryIdAsync(int categoryId)
     {
-        var foods = await _foodRepository.FindAsync(
-            x =>
+        var foods = await _db.Foods
+            .AsNoTracking()
+            .Where(x =>
                 x.CategoryId == categoryId &&
-                x.IsActive
-        );
+                x.IsActive)
+            .ToListAsync();
 
         return foods
             .Select(MapToDto)
@@ -83,8 +82,8 @@
     public async Task<FoodResponseDto> AddFoodAsync(
         CreateFoodRequest request)
     {
-        var category = await _categoryRepository
-            .GetByIdAsync(request.CategoryId);
+        var category = await _db.Categories
+            .FindAsync(request.CategoryId);
 
         if (category == null)
         {
@@ -116,9 +115,9 @@
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _foodRepository.AddAsync(food);
+        await _db.Foods.AddAsync(food);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync();
 
         if (result <= 0)
         {
@@ -137,15 +136,15 @@
         int id,
         UpdateFoodRequest request)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync(id);
 
         if (food == null)
         {
             return null;
         }
 
-        var category = await _categoryRepository
-            .GetByIdAsync(request.CategoryId);
+        var category = await _db.Categories
+            .FindAsync(request.CategoryId);
 
         if (category == null)
         {
@@ -170,9 +169,9 @@
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync();
 
         if (result <= 0)
         {
@@ -191,7 +190,7 @@
         int id,
         bool isAvailable)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync(id);
 
         if (food == null)
         {
@@ -201,9 +200,9 @@
         food.IsAvailable = isAvailable;
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
@@ -213,7 +212,7 @@
 
     public async Task<bool> DeleteFoodAsync(int id)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync(id);
 
         if (food == null)
         {
@@ -227,9 +226,9 @@
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 

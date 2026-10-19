@@ -55,19 +55,16 @@ public abstract class TestBase : IDisposable
     // Wiring (mirrors the real DI registrations one-to-one)
     // ==========================================================
 
-    protected IUnitOfWork Uow => new UnitOfWork(Db);
-    protected IRepository<T> Repo<T>() where T : class => new Repository<T>(Db);
+    protected AuthService Auth => new(new UserService(Db),
+                                      new UserRoleService(Db),
+                                      new RoleService(Db));
 
-    protected AuthService Auth => new(new UserService(Uow, Repo<Users>()),
-                                      new UserRoleService(Uow, Repo<UserRoles>()),
-                                      new RoleService(Repo<Roles>()));
-
-    protected FoodService Foods => new(Uow, Repo<Food>(), Repo<Category>());
-    protected CategoryService Categories => new(Repo<Category>(), Uow);
-    protected FoodSizeService FoodSizes => new(Repo<FoodSize>(), Repo<Food>(), Uow);
-    protected ToppingService Toppings => new(Repo<Topping>(), Uow);
-    protected FoodToppingService FoodToppings => new(Repo<FoodTopping>(), Repo<Food>(), Repo<Topping>(), Uow);
-    protected RestaurantTableService Tables => new(Uow, Repo<RestaurantTable>(), Db);
+    protected FoodService Foods => new(Db);
+    protected CategoryService Categories => new(Db);
+    protected FoodSizeService FoodSizes => new(Db);
+    protected ToppingService Toppings => new(Db);
+    protected FoodToppingService FoodToppings => new(Db);
+    protected RestaurantTableService Tables => new(Db);
 
     protected OrderService Orders => new(Db, Tables);
     protected PaymentService Payments => new(Db, Tables);

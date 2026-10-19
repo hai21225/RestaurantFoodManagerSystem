@@ -1,12 +1,13 @@
-﻿public class UserService
-{
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IRepository<Users> _userRepository;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public UserService(IUnitOfWork unitOfWork, IRepository<Users> userRepository)
+public class UserService
+{
+    private readonly AppDbContext _db;
+
+    public UserService(AppDbContext db)
     {
-        _unitOfWork = unitOfWork;
-        _userRepository = userRepository;
+        _db = db;
     }
 
     public async Task<UserDto?> FindUserByUsernameAsync(string username)
@@ -17,8 +18,9 @@
             return null;
         }
 
-        var user = await _userRepository.FindOneAsync(
-            u => u.UserName == normalizedUsername);
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.UserName == normalizedUsername);
 
         if (user == null)
         {
@@ -49,12 +51,12 @@
             throw new ArgumentException("Username and email are required");
         }
 
-        if (await _userRepository.ExistsAsync(x => x.UserName == username))
+        if (await _db.Users.AnyAsync(x => x.UserName == username))
         {
             throw new InvalidOperationException("Username already exists");
         }
 
-        if (await _userRepository.ExistsAsync(x => x.UserEmail == email))
+        if (await _db.Users.AnyAsync(x => x.UserEmail == email))
         {
             throw new InvalidOperationException("Email already exists");
         }
@@ -70,8 +72,8 @@
             CreatedAt = DateTime.Now,
             UpdatedAt = DateTime.Now
         };
-        await _userRepository.AddAsync(user);
-        return await _unitOfWork.SaveChangesAsync()>0;
+        await _db.Users.AddAsync(user);
+        return await _db.SaveChangesAsync()>0;
 
     }
 }

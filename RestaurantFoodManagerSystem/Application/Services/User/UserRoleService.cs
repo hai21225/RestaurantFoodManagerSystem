@@ -1,17 +1,18 @@
-﻿public class UserRoleService
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
+
+public class UserRoleService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IRepository<UserRoles> _userRoleRepository;
-    
-    public UserRoleService(IUnitOfWork unitOfWork, IRepository<UserRoles> userRoleRepository)
+    private readonly AppDbContext _db;
+
+    public UserRoleService(AppDbContext db)
     {
-        _unitOfWork = unitOfWork;
-        _userRoleRepository = userRoleRepository;
+        _db = db;
     }
 
     public async Task<UserRoleDto> GetUserRoleByIdAsync(int id)
     {
-        var userRole = await _userRoleRepository.GetByIdAsync(id);
+        var userRole = await _db.UserRoles.FindAsync(id);
         if (userRole == null)
         {
             throw new Exception("User role not found");
@@ -26,7 +27,9 @@
 
     public async Task<List<UserRoleDto>> GetAllUserRolesAsync()
     {
-        var userRoles = await _userRoleRepository.GetAllAsync();
+        var userRoles = await _db.UserRoles
+            .AsNoTracking()
+            .ToListAsync();
         var userRoleDtos = userRoles.Select(userRole => new UserRoleDto
         {
             RoleId = userRole.RoleId,
@@ -46,7 +49,7 @@
             RoleId = userRoleDto.RoleId,
             UserId = userRoleDto.UserId,
         };
-        await _userRoleRepository.AddAsync(userRole);
-        return await _unitOfWork.SaveChangesAsync()>0;
+        await _db.UserRoles.AddAsync(userRole);
+        return await _db.SaveChangesAsync()>0;
     }
 }

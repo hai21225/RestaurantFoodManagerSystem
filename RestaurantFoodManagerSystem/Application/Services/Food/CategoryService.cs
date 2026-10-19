@@ -1,21 +1,20 @@
-﻿public class CategoryService
-{
-    private readonly IRepository<Category> _categoryRepository;
-    private readonly IUnitOfWork _unitOfWork;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public CategoryService(
-        IRepository<Category> categoryRepository,
-        IUnitOfWork unitOfWork)
+public class CategoryService
+{
+    private readonly AppDbContext _db;
+
+    public CategoryService(AppDbContext db)
     {
-        _categoryRepository = categoryRepository;
-        _unitOfWork = unitOfWork;
+        _db = db;
     }
 
 
     // GET BY ID
     public async Task<CategoryDTO> GetCategoryByIdAsync(int id)
     {
-        var category = await _categoryRepository.GetByIdAsync(id);
+        var category = await _db.Categories.FindAsync(id);
 
         if (category == null)
         {
@@ -36,9 +35,10 @@
     // SEARCH BY NAME
     public async Task<List<CategoryDTO>> GetCategoriesByNameAsync(string name)
     {
-        var categories = await _categoryRepository.FindAsync(
-            c => c.CategoryName.Contains(name)
-        );
+        var categories = await _db.Categories
+            .AsNoTracking()
+            .Where(c => c.CategoryName.Contains(name))
+            .ToListAsync();
 
         return categories.Select(category => new CategoryDTO
         {
@@ -55,7 +55,9 @@
     // GET ALL
     public async Task<List<CategoryDTO>> GetAllCategoriesAsync()
     {
-        var categories = await _categoryRepository.GetAllAsync();
+        var categories = await _db.Categories
+            .AsNoTracking()
+            .ToListAsync();
 
         return categories.Select(category => new CategoryDTO
         {
@@ -90,9 +92,9 @@
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _categoryRepository.AddAsync(category);
+        await _db.Categories.AddAsync(category);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
@@ -104,8 +106,8 @@
             throw new ArgumentNullException(nameof(categoryDTO));
         }
 
-        var category = await _categoryRepository
-            .GetByIdAsync(categoryDTO.Id);
+        var category = await _db.Categories
+            .FindAsync(categoryDTO.Id);
 
         if (category == null)
         {
@@ -123,16 +125,16 @@
 
         category.UpdatedAt = DateTime.UtcNow;
 
-        _categoryRepository.Update(category);
+        _db.Categories.Update(category);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 
 
     // DELETE - SOFT DELETE
     public async Task<bool> DeleteCategoryAsync(int id)
     {
-        var category = await _categoryRepository.GetByIdAsync(id);
+        var category = await _db.Categories.FindAsync(id);
 
         if (category == null)
         {
@@ -142,8 +144,8 @@
         category.IsActive = false;
         category.UpdatedAt = DateTime.UtcNow;
 
-        _categoryRepository.Update(category);
+        _db.Categories.Update(category);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync() > 0;
     }
 }

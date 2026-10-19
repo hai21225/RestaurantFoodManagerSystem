@@ -1,15 +1,20 @@
-﻿public class RoleService
-{
-    private readonly IRepository<Roles> _roleRepository;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public RoleService(IRepository<Roles> roleRepository)
+public class RoleService
+{
+    private readonly AppDbContext _db;
+
+    public RoleService(AppDbContext db)
     {
-        _roleRepository = roleRepository;
+        _db = db;
     }
 
     public async Task<Roles> GetRoleByRoleNameAsync(string name)
     {
-        var role = await _roleRepository.FindOneAsync(x => x.RoleName == name);
+        var role = await _db.Roles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.RoleName == name);
         if (role == null)
         {
             throw new Exception("Role not found");
