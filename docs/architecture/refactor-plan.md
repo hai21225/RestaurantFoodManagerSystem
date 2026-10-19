@@ -1,6 +1,6 @@
 # Kế hoạch refactor backend — trạng thái & đầu việc tiếp theo
 
-Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`62f5d44`** (local, chưa push)
+Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit C4: **`c8a2f26`** (code; docs cập nhật sau, local, chưa push)
 
 Tài liệu liên quan:
 
@@ -12,13 +12,13 @@ Tài liệu liên quan:
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln --no-incremental   # hiện: 14 warning, 0 error
-dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 232/232 pass
+dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 242/242 pass
 dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj
 ```
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **232/232** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema + 5 GĐ8 initializer + 2 GĐ8 host + 26 GĐ6e HTTP auth). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **242/242** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema + 5 GĐ8 initializer + 2 GĐ8 host + 26 GĐ6e HTTP auth + 6 C4 HTTP DTO + 4 C4 JSON contract). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -41,6 +41,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | Nhóm B schema | Hoàn tất **B3/B5/B6/B7** (đổi schema, đã duyệt): unique index lọc `payments.OrderId` (`Status='Paid'`) + chặn `TotalAmount<=0`; unique index lọc `recipes.SizeId` (`IsActive=1`) + chặn trùng công thức active; `HasFilter(IsActive=1)` cho `categories.CategoryName`, `food_sizes(FoodId,SizeName)`, `toppings.ToppingName`, `ingredients.Name`, `restaurant_tables.TableNumber` (**users giữ unique toàn cục**); `RowVersion` (`rowversion`) cho `orders`/`inventory`/`restaurant_tables` + map xung đột ghi → 409; migration `20261019090127_NhomB_DataIntegrity` đã áp xuống DB thật; +14 test | `62f5d44` | **Có** (schema + 409 mới) |
 | GĐ8 | Tách migrate + seed khỏi `Program.cs` → `Infrastructure/Persistence/DatabaseInitializer.cs`; thêm `DatabaseInitializationOptions` (`MigrateOnStartup`/`SeedOnStartup`, mặc định `true`); `public partial class Program` cho `WebApplicationFactory`; thêm package test `Microsoft.AspNetCore.Mvc.Testing` 8.0.32 + factory SQLite in-memory; +7 test (5 initializer + 2 host) | `1f93733` | Không (mặc định giữ nguyên migrate + seed lúc khởi động) |
 | GĐ6e | Test phân quyền ở **mức HTTP** trên `WebApplicationFactory`: `RestaurantApiFactory` thêm cờ `enforce` + `EnforcedRestaurantApiFactory` (enforce + JWT key test); 401 thiếu/sai token, 403 sai role, 200 đúng role cho đủ 6 policy + Admin, `[AllowAnonymous]` vẫn 200; khoá baseline `Auth:Enforce=false`; +26 case | `272fe75` | Không (chỉ test; production vẫn `Enforce=false`) |
+| C4 | DTO hoá response `/api/management/*`: `IngredientResponse`, `SupplierResponse`, `InventoryResponse`, `PurchaseOrderResponse`, `PromotionResponse`, `KitchenOrderResponse`; `POST /recipes` trả `RecipeSummaryResponse`; controller map entity → DTO, service giữ nguyên. Chuẩn hoá C# `Quantity` → `Quanlity` trong DTO/request/service (DB đã là `Quanlity`), giữ JSON `quantity` ở các endpoint cũ bằng `[JsonPropertyName]`; `inventory` trả `quanlity` và bỏ `rowVersion` nội bộ. +6 HTTP DTO + 4 JSON contract test. **Không đổi schema, không cần migration, không sửa frontend.** | `c8a2f26` | Không (JSON field frontend đang đọc giữ nguyên; chỉ bỏ `rowVersion` không dùng) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -54,7 +55,7 @@ Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`. → **ĐÃ SỬA ở `29c01d1`** (B8: tất cả dùng `UtcNow`).
 5. Hai kiểu body lỗi: `{message}` (controller cũ) và JSON string trần (`Orders`/`Payments`).
 6. Hai kiểu inject: constructor (8 controller) và `[FromServices]` (4 controller).
-7. Trả entity EF trực tiếp ở payments/`/api/management/*` (orders/recipes/kitchen items đã DTO hoá — xem `endpoint-baseline.md` quirk #7).
+7. Trả entity EF trực tiếp ở `POST /orders`, `POST/GET /payments`; các response `/api/management/*` đã DTO hoá ở C4 (`c8a2f26`) - xem `endpoint-baseline.md` quirk #7.
 8. `PATCH /api/orders/{id}/status` **trước đây không validate** chuỗi trạng thái. → **ĐÃ SỬA ở `29c01d1`** (B2: allow-list + chặn trạng thái cuối; controller trả 400/409).
 9. Kitchen status: `KitchenService` có allow-list, `ManagementService.UpdateKitchen` thì không.
 10. `GET /api/restaurant-tables/{id}` **có** ghi DB; `GET /api/restaurant-tables` **không** ghi (do tracking khác nhau — xem `data-access.md`).
@@ -158,8 +159,13 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 - **Nhóm C — GĐ7 (đổi hợp đồng JSON)**: ✅ phần **field hiển thị** đã làm ở `46a18e9`
   (`GET /orders/{id}` thêm `items[]`, `KitchenOrderItem` thêm `foodName/sizeName/quantity`,
   `Recipe.ingredientCount` + `foodName/sizeName`) — **chỉ bổ sung**, frontend cũ không vỡ.
-  Còn lại: **DTO hoá** response để bỏ trả entity thô (mục tiếp theo).
-- GĐ7: DTO hoá response, bỏ trả entity EF ở orders/payments/`/api/management/*` — **đổi hợp đồng JSON**, phải phối hợp frontend.
+- ✅ **C4 (`c8a2f26`)**: DTO hoá toàn bộ response `/api/management/*` (ingredient/supplier/inventory/
+  purchase-order/promotion/recipe POST/kitchen-order). JSON field frontend đang đọc giữ nguyên;
+  `inventory` bỏ `rowVersion` nội bộ. Chuẩn hoá C# `Quantity` → `Quanlity` (DB đã là `Quanlity`),
+  giữ JSON `quantity` ở các endpoint cũ bằng `[JsonPropertyName]`. **Không đổi schema, không cần migration,
+  không sửa frontend.**
+- Còn lại của GĐ7: `POST /orders`, `POST/GET /payments` vẫn trả entity EF thô — nếu DTO hoá phải phối hợp frontend
+  vì có thể đổi/ bổ sung JSON field.
 - GĐ8 ✅: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi** (cờ `Database:MigrateOnStartup`/`SeedOnStartup` mặc định `true`).
 - GĐ6d: siết `register` (đã gắn `AdminOnly` ở 6b), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema — **đổi hành vi khi enforce**.
 - GĐ6e ✅: test HTTP-level 401/403 đã có (`AuthHttpTests`, dùng `EnforcedRestaurantApiFactory` từ GĐ8).
@@ -171,8 +177,8 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 232 test.
-2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1) + 6e; GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7; GĐ8 tách migrate/seed khỏi `Program.cs`; GĐ6e có test 401/403 mức HTTP.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **DTO hoá GĐ7** (phần còn lại), rồi **GĐ6d** khi frontend gửi Bearer token.
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 242 test.
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1) + 6e; GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7; GĐ8 tách migrate/seed khỏi `Program.cs`; GĐ6e có test 401/403 mức HTTP; C4 (`c8a2f26`) DTO hoá `/api/management/*` + chuẩn hoá C# `Quanlity`.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ6d** khi frontend gửi Bearer token, rồi DTO hoá nốt `orders`/`payments` nếu chấp nhận đổi hợp đồng JSON.
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa). **Frontend hiện vẫn chưa gửi token** (`frontend/js/common/api.js` không set header `Authorization`) — đây là việc phía frontend, xem `backend-frontend-audit.md` mục 5.
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
@@ -224,6 +230,19 @@ Chi tiết GĐ6e đã triển khai:
 Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
 `Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.
 Khi khóa trống, `TokenService` trả `null` và login **vẫn chạy** (chưa enforce) — token chỉ có giá trị khi đã cấu hình khóa.
+
+Chi tiết C4 đã triển khai (`c8a2f26`):
+
+- Thêm `IngredientResponse`, `SupplierResponse`, `InventoryResponse`, `PurchaseOrderResponse`,
+  `PromotionResponse`, `KitchenOrderResponse`; `POST /management/recipes` trả `RecipeSummaryResponse`.
+  Controller map entity → DTO, **service không đổi** (test service hiện có không phải sửa theo).
+- `InventoryResponse` giữ `quanlity` (frontend `inventory.js` đang đọc) và **bỏ `rowVersion`** khỏi JSON.
+- Chuẩn hoá C# `Quantity` → `Quanlity` trong DTO/request/service theo quy ước entity/DB. Các endpoint cũ
+  vẫn phát/nhận JSON `quantity` nhờ `[JsonPropertyName("quantity")]`; `KitchenItemResponse` phát cả
+  `quanlity` (legacy) và `quantity` (alias).
+- **Không tạo migration**: kiểm tra DB thật `HAI2\SQLEXPRESS / RestaurantFoodManager` cho thấy các cột
+  đã là `Quanlity`; `dotnet ef migrations has-pending-model-changes` → `No changes`.
+- Test mới: 6 HTTP DTO (`ManagementDtoHttpTests`) + 4 JSON contract (`DtoJsonContractTests`) ⇒ **242/242**.
 
 **Lưu ý phiên này:** không `git push` (theo yêu cầu chủ dự án); commit chỉ ở máy local.
 

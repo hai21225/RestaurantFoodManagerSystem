@@ -31,7 +31,7 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 | 6.1 — defect nghiệp vụ (Nhóm B) | ✅ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7** (`62f5d44`) |
 | 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**, sau GĐ6e là **232 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**, sau GĐ6e là **232 test**, sau C4 `c8a2f26` là **242 test**.
 
 ---
 
@@ -56,7 +56,7 @@ Entity **không có navigation property** (không `ICollection<OrderItem>`), nê
 | Cổng | Kết quả | Baseline trong docs |
 |---|---|---|
 | `dotnet build --no-incremental` | **14 warning / 0 error** | 14 / 0 ✅ |
-| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **232/232**)* | 156/156 ✅ |
+| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **242/242**)* | 156/156 ✅ |
 | `has-pending-model-changes` | **No changes** *(vẫn "No changes" sau migration Nhóm B `62f5d44`)* | No changes ✅ |
 
 Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy *(số tại thời điểm audit)*. Phần lớn là test **tầng service + DbContext** (SQLite in-memory); từ **GĐ6e** đã có thêm test tầng HTTP (`AuthHttpTests`, `ApiHostSmokeTests`) trên `WebApplicationFactory`.
@@ -70,7 +70,7 @@ Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy *(số tại thờ
 | `Domain\Entity` | Entity thuần, không phụ thuộc EF Core ✅ |
 | `Application/Services` | **20 service** dùng trực tiếp `AppDbContext` |
 | `Application/Features/Auth` | `AuthService`, `TokenService`, `JwtOptions`, `AuthPolicies` |
-| `Application/DTO` | Request/Response DTO cho food catalog + auth; các nhóm khác trả **entity thô** |
+| `Application/DTO` | Request/Response DTO cho food catalog + auth + `/api/management/*` (C4); `POST /orders` và payments vẫn trả **entity thô** |
 | `Infrastructure/Persistence` | `AppDbContext` (duy nhất) |
 | `Infrastructure/Auth` | JWT wiring, policy provider, `ICurrentUser` |
 | `Controllers` | 13 controller |
@@ -323,7 +323,7 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 - C1. ✅ `Order.items[]` (kèm tên món/cỡ) cho `GET /orders/{id}` và hoá đơn. (`46a18e9`)
 - C2. ✅ `KitchenOrderItem`: trả `foodName`/`sizeName`/`quantity` (đúng chính tả) **thêm** bên cạnh `quanlity` cũ. (`46a18e9`)
 - C3. ✅ `Recipe` list: thêm `ingredientCount`; detail: thêm `foodName`/`sizeName`. (`46a18e9`)
-- C4. ⏳ Bỏ trả entity thô (`Ingredient`, `Supplier`, `Inventory`, `PurchaseOrder`, `Promotion`, `Recipe`, `KitchenOrder*`) → DTO hoàn toàn.
+- C4. ✅ **Xong** (`c8a2f26`): bỏ trả entity thô ở toàn bộ `/api/management/*` (`Ingredient`, `Supplier`, `Inventory`, `PurchaseOrder`, `Promotion`, `Recipe`, `KitchenOrder*`) → DTO. JSON field frontend đang đọc giữ nguyên; `inventory` bỏ `rowVersion`; C# `Quantity` chuẩn hoá về `Quanlity`, JSON cũ `quantity` giữ bằng `[JsonPropertyName]`. Không đổi schema/migration, không sửa frontend. +10 test (6 HTTP DTO + 4 JSON contract).
 
 ### Nhóm D — không đổi hành vi (an toàn, làm bất cứ lúc nào)
 

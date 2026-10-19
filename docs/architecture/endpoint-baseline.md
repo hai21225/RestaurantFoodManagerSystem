@@ -8,7 +8,7 @@ Mọi giai đoạn sau (GĐ1–GĐ8) phải giữ nguyên các hợp đồng dư
 - Solution: `RestaurantFoodManagerSystem.sln` (1 project web + 1 project test)
 - Build baseline: `Build succeeded` — **16 warnings CS8618, 0 errors**
   (toàn bộ là non-nullable property trong entity/DTO, không phải lỗi)
-- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **232/232**, sau GĐ6e)*
+- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **242/242**, sau C4)*
 
 ## Cách chạy lưới an toàn
 
@@ -26,7 +26,7 @@ Test dùng **SQLite in-memory** (`EnsureCreated`, không dùng migrations) nên:
 SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementService` mở transaction tường minh
 (InMemory provider không hỗ trợ transaction).
 
-## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 232)
+## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 242)
 
 | Nhóm | File | Nội dung được khóa |
 |---|---|---|
@@ -40,6 +40,7 @@ SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementSe
 | Menu | `MenuTests.cs` | lọc category/food/size/topping, thứ tự category |
 | Khởi động/host | `DatabaseInitializerTests.cs`, `ApiHostSmokeTests.cs` | seed 5 role idempotent, cờ `Database:MigrateOnStartup`/`SeedOnStartup`, host dựng bằng `WebApplicationFactory` trên SQLite in-memory |
 | Auth HTTP | `AuthHttpTests.cs`, `AuthDisabledHttpTests.cs` | 401 thiếu/sai token, 403 sai role, 200 đúng role (đủ 6 policy + Admin), `[AllowAnonymous]` vẫn 200; baseline enforce=false vẫn anonymous |
+| Management DTO (C4) | `ManagementDtoHttpTests.cs`, `DtoJsonContractTests.cs` | `/api/management/*` trả DTO; `inventory` có `quanlity`, không có `rowVersion`; request/response cũ vẫn dùng JSON `quantity`; `KitchenItemResponse` phát cả `quanlity` + `quantity` |
 
 ---
 
@@ -132,30 +133,30 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 
 | Verb | Route | Request | Success | Lỗi |
 |---|---|---|---|---|
-| GET | `/api/management/ingredients` | – | `200` **`Ingredient[]` entity** | – |
-| POST | `/api/management/ingredients` | `IngredientRequest` | `200` **`Ingredient` entity** | – |
+| GET | `/api/management/ingredients` | – | `200` **`IngredientResponse[]`** | – |
+| POST | `/api/management/ingredients` | `IngredientRequest` | `200` **`IngredientResponse`** | – |
 | PUT | `/api/management/ingredients/{id:int}` | `IngredientRequest` | `204` | `404` |
 | DELETE | `/api/management/ingredients/{id:int}` | – | `204` | `404` |
-| GET | `/api/management/suppliers` | – | `200` **`Supplier[]` entity** | – |
-| POST | `/api/management/suppliers` | `SupplierRequest` | `200` **`Supplier` entity** | – |
+| GET | `/api/management/suppliers` | – | `200` **`SupplierResponse[]`** | – |
+| POST | `/api/management/suppliers` | `SupplierRequest` | `200` **`SupplierResponse`** | – |
 | PUT | `/api/management/suppliers/{id:int}` | `SupplierRequest` | `204` | `404` |
 | DELETE | `/api/management/suppliers/{id:int}` | – | `204` | `404` |
-| GET | `/api/management/inventory` | – | `200` **`Inventory[]` entity** | – |
+| GET | `/api/management/inventory` | – | `200` **`InventoryResponse[]`** (`quanlity`; không có `rowVersion`) | – |
 | POST | `/api/management/inventory/{ingredientId:int}/adjust` | `InventoryAdjustmentRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
-| GET | `/api/management/purchase-orders` | – | `200` **`PurchaseOrder[]` entity** | – |
-| POST | `/api/management/purchase-orders` | `PurchaseOrderRequest` | `200` **`PurchaseOrder` entity** | `400` `"..."` |
+| GET | `/api/management/purchase-orders` | – | `200` **`PurchaseOrderResponse[]`** | – |
+| POST | `/api/management/purchase-orders` | `PurchaseOrderRequest` | `200` **`PurchaseOrderResponse`** | `400` `"..."` |
 | POST | `/api/management/purchase-orders/{id:int}/receive` | `ReceivePurchaseRequest` | `204` | `404`, `409` `"..."` (xung đột ghi) |
-| GET | `/api/management/promotions` | – | `200` **`Promotion[]` entity** | – |
-| POST | `/api/management/promotions` | `PromotionRequest` | `200` **`Promotion` entity** | `400` `"..."` |
+| GET | `/api/management/promotions` | – | `200` **`PromotionResponse[]`** | – |
+| POST | `/api/management/promotions` | `PromotionRequest` | `200` **`PromotionResponse`** | `400` `"..."` |
 | PUT | `/api/management/promotions/{id:int}` | `PromotionRequest` | `204` | `404` |
 | PATCH | `/api/management/promotions/{id:int}/active?active` | – | `204` | `404` |
 | DELETE | `/api/management/promotions/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/recipes` | – | `200` **`RecipeSummaryResponse[]`** (mọi field `Recipe` cũ + `ingredientCount`) | – |
 | GET | `/api/management/recipes/{id:int}` | – | `200` `RecipeResponse` (thêm `foodName`/`sizeName`) | `404` |
-| POST | `/api/management/recipes` | `RecipeRequest` | `200` **`Recipe` entity** | `400` `"..."`, `409` `"..."` (size đã có công thức active) |
+| POST | `/api/management/recipes` | `RecipeRequest` | `200` **`RecipeSummaryResponse`** | `400` `"..."`, `409` `"..."` (size đã có công thức active) |
 | PUT | `/api/management/recipes/{id:int}` | `RecipeRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (size đã có công thức active) |
 | DELETE | `/api/management/recipes/{id:int}` | – | `204` | `404` |
-| GET | `/api/management/kitchen/orders` | – | `200` **`KitchenOrder[]` entity** | – |
+| GET | `/api/management/kitchen/orders` | – | `200` **`KitchenOrderResponse[]`** | – |
 | GET | `/api/management/kitchen/orders/{id:int}/items` | – | `200` **`KitchenItemResponse[]`** (mọi field `KitchenOrderItem` cũ kể cả `quanlity` + `foodName`/`sizeName`/`quantity`) | – |
 | PATCH | `/api/management/kitchen/orders/{id:int}/status` | `KitchenStatusRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
 | PATCH | `/api/management/kitchen/items/{id:int}/status` | `KitchenItemStatusRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
@@ -177,9 +178,12 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.
 5. **Hai kiểu trả lỗi**: `{message}` (controller cũ) và JSON string trần (controller mới).
 6. **Hai kiểu inject**: constructor (8 controller) và `[FromServices]` (4 controller).
-7. **Trả entity trực tiếp**: payments và phần lớn `/api/management/*`. **Đã DTO hoá (chỉ bổ sung field, GĐ7-C `46a18e9`)**:
-   `GET /orders/{id}` → `OrderDetailResponse` (thêm `items[]`), `GET /management/recipes` → `RecipeSummaryResponse` (thêm `ingredientCount`),
-   `GET /management/recipes/{id}` → `RecipeResponse` (thêm `foodName`/`sizeName`), `GET /management/kitchen/orders/{id}/items` → `KitchenItemResponse` (thêm `foodName`/`sizeName`/`quantity`, giữ `quanlity`).
+7. **Trả entity trực tiếp**: `POST /api/orders`, `POST /api/payments`, `GET /api/payments/order/{orderId}`.
+   **Đã DTO hoá**: `GET /orders/{id}` → `OrderDetailResponse` (GĐ7-C `46a18e9`); toàn bộ `/api/management/*`
+   → DTO ở C4 (`c8a2f26`): `IngredientResponse`, `SupplierResponse`, `InventoryResponse`,
+   `PurchaseOrderResponse`, `PromotionResponse`, `RecipeSummaryResponse` (GET list + POST),
+   `RecipeResponse` (GET detail), `KitchenOrderResponse`, `KitchenItemResponse`.
+   `GET /management/inventory` bỏ `rowVersion` nội bộ; các field frontend đang đọc giữ nguyên.
 8. **Order status GIỜ ĐÃ validate** (Nhóm B2 `29c01d1`): `PATCH /api/orders/{id}/status` chỉ nhận
    allow-list `Pending/SentToKitchen/Preparing/Ready/Completed/Cancelled` (không nhận `Paid`), từ chối
    chuỗi rỗng/không hợp lệ (`400`) và không cho sửa khi đơn đã ở trạng thái cuối `Paid`/`Cancelled` (`409`).
@@ -219,6 +223,10 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 22. **Đồng thời (B7)**: `orders`/`inventory`/`restaurant_tables` có `RowVersion` (`rowversion` trên SQL Server).
     Request ghi dựa trên dữ liệu cũ ⇒ `409 "Dữ liệu vừa bị thay đổi bởi thao tác khác..."` thay vì ghi đè im lặng.
     `RefreshStatusForTableAsync` (side-effect sau khi transaction chính commit) **retry** tối đa 2 lần thay vì trả 409.
+23. **Quy ước `Quanlity` (C4 `c8a2f26`)**: entity + cột DB đã dùng `Quanlity`; C# DTO/request/service cũng
+    được chuẩn hoá về `Quanlity`. Các endpoint cũ vẫn phát/nhận JSON `quantity` bằng `[JsonPropertyName]`
+    để frontend hiện tại không vỡ; riêng `GET /management/inventory` phát `quanlity` (frontend `inventory.js`
+    đang đọc). **Không có migration** vì DB thật đã là `Quanlity`.
 
 ---
 
@@ -227,7 +235,7 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 Với mỗi giai đoạn:
 
 1. Chạy `dotnet build` → không được tăng số warning/error.
-2. Chạy `dotnet test` → **232/232 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
+2. Chạy `dotnet test` → **242/242 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
 3. Với thay đổi có chạm controller/response shape: so sánh route + verb + status code + JSON
    với bảng ở mục 1 (baseline này).
 4. Với thay đổi có chạm schema: **dừng lại**, xin phê duyệt (xem mục 2, điểm 12).
