@@ -120,8 +120,10 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 | 6a ✅ | Thêm package JWT + config; `TokenService`; `AuthService` nạp role của user; `LoginResponse` thêm `roles`+`token` | Không (chỉ thêm field) |
 | 6b ✅ | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
 | 6c ✅ | Actor lấy từ claim, bỏ qua field body | Không |
-| 6d | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
-| 6e | Test HTTP-level 401/403 — **phụ thuộc GĐ8** (tách `Migrate()`+seed khỏi `Program.cs`) | Không |
+| 6d ⏸ | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
+| 6e ⏸ | Test HTTP-level 401/403 — **phụ thuộc GĐ8** (tách `Migrate()`+seed khỏi `Program.cs`) | Không |
+
+**GĐ6 tạm chốt ở 6c** theo quyết định của chủ dự án. 6d/6e chuyển sang mục 5 (deferred).
 
 ### 4.7 Test cần thêm cho GĐ6
 
@@ -134,7 +136,9 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 ## 5. Chưa làm (deferred, cần duyệt riêng)
 
 - GĐ7: DTO hoá response, bỏ trả entity EF ở orders/payments/`/api/management/*` — **đổi hợp đồng JSON**, phải phối hợp frontend.
-- GĐ8: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e.
+- GĐ8: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi ⇒ an toàn để làm tiếp.**
+- GĐ6d: siết `register` (đã gắn `AdminOnly` ở 6b), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema — **đổi hành vi khi enforce**.
+- GĐ6e: test HTTP-level 401/403 — phụ thuộc GĐ8.
 - Sửa quirk GET-all-bàn-không-ghi-DB (đổi hành vi).
 - `Category.DisplayOrder` bool → int (đổi schema, cần migration).
 - Refresh token / revocation, rate-limit login, audit log, đổi/quên mật khẩu.
@@ -144,7 +148,7 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 ## 6. Cách tiếp tục ở phiên sau
 
 1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 156 test.
-2. **6a + 6b + 6c(bước 1) đã xong.** Bước kế tiếp: **6d** (siết register, policy mật khẩu, thống nhất error shape, Swagger security schema).
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1).** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ8** trước (không đổi hành vi, mở đường cho 6e), rồi **GĐ7** (đổi JSON, cần phối hợp frontend).
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa).
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
