@@ -2,11 +2,11 @@
 
 [ApiController]
 [Route("api/users")]
-public class UserRolesController : ControllerBase
+public class UsersController : ControllerBase
 {
     private readonly AuthService _authService;
 
-    public UserRolesController(AuthService authService)
+    public UsersController(AuthService authService)
     {
         _authService = authService;
     }
