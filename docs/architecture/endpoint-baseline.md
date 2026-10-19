@@ -8,7 +8,7 @@ Mọi giai đoạn sau (GĐ1–GĐ8) phải giữ nguyên các hợp đồng dư
 - Solution: `RestaurantFoodManagerSystem.sln` (1 project web + 1 project test)
 - Build baseline: `Build succeeded` — **16 warnings CS8618, 0 errors**
   (toàn bộ là non-nullable property trong entity/DTO, không phải lỗi)
-- Test baseline: **105/105 pass**
+- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **199/199** sau Nhóm B `62f5d44`)*
 
 ## Cách chạy lưới an toàn
 
@@ -26,7 +26,7 @@ Test dùng **SQLite in-memory** (`EnsureCreated`, không dùng migrations) nên:
 SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementService` mở transaction tường minh
 (InMemory provider không hỗ trợ transaction).
 
-## Phạm vi đã pin bằng test (105 test)
+## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 199)
 
 | Nhóm | File | Nội dung được khóa |
 |---|---|---|
@@ -107,10 +107,10 @@ Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) �
 |---|---|---|---|---|
 | GET | `/api/restaurant-tables` | – | `200` `RestaurantTableDto[]` | – |
 | GET | `/api/restaurant-tables/{id:int}` | – | `200` `RestaurantTableDto` | `404` (body rỗng) hoặc `404` `{message}` |
-| POST | `/api/restaurant-tables` | `RestaurantTableDto` | `200` `{message, data}` | `400` `{message}` |
-| PUT | `/api/restaurant-tables/{id:int}` | `RestaurantTableDto` | `200` `{message}` | `400` `{message}`, `404` `{message}` |
-| DELETE | `/api/restaurant-tables/{id:int}` | – | `200` `{message}` | `400` `{message}`, `404` `{message}` |
-| PATCH | `/api/restaurant-tables/{id:int}/maintenance?enabled` | – | `204` | `404` (body rỗng) |
+| POST | `/api/restaurant-tables` | `RestaurantTableDto` | `200` `{message, data}` | `400` `{message}`, `409` `{message}` (xung đột ghi) |
+| PUT | `/api/restaurant-tables/{id:int}` | `RestaurantTableDto` | `200` `{message}` | `400` `{message}`, `404` `{message}`, `409` `{message}` (xung đột ghi) |
+| DELETE | `/api/restaurant-tables/{id:int}` | – | `200` `{message}` | `400` `{message}`, `404` `{message}`, `409` `{message}` (xung đột ghi) |
+| PATCH | `/api/restaurant-tables/{id:int}/maintenance?enabled` | – | `204` | `404` (body rỗng), `409` `{message}` (xung đột ghi) |
 
 ## 1.4 Orders, payments, menu
 
@@ -120,7 +120,7 @@ Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) �
 | POST | `/api/orders` | `CreateOrderRequest` | `200` **`Order` entity** | `400` `"..."` (KeyNotFound), `409` `"..."` (InvalidOperation) |
 | PATCH | `/api/orders/{id:int}/status` | `UpdateOrderStatusRequest` | `204` | `400` `"..."` (rỗng/không hợp lệ), `404`, `409` `"..."` (đã Paid/Cancelled) |
 | PATCH | `/api/orders/{id:int}/promotion/{promotionId:int}` | – | `204` | `400` `"Order or promotion is invalid"` |
-| POST | `/api/payments` | `CreatePaymentRequest` | `200` **`Payment` entity** | `404` (body rỗng), `409` `"..."` |
+| POST | `/api/payments` | `CreatePaymentRequest` | `200` **`Payment` entity** | `404` (body rỗng), `409` `"..."` (đơn đã Paid/Cancelled hoặc tổng ≤ 0) |
 | GET | `/api/payments/order/{orderId:int}` | – | `200` **`Payment[]` entity** | – |
 | GET | `/api/menu` | – | `200` anonymous projection | – |
 
@@ -139,10 +139,10 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 | PUT | `/api/management/suppliers/{id:int}` | `SupplierRequest` | `204` | `404` |
 | DELETE | `/api/management/suppliers/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/inventory` | – | `200` **`Inventory[]` entity** | – |
-| POST | `/api/management/inventory/{ingredientId:int}/adjust` | `InventoryAdjustmentRequest` | `204` | `404`, `400` `"..."` |
+| POST | `/api/management/inventory/{ingredientId:int}/adjust` | `InventoryAdjustmentRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
 | GET | `/api/management/purchase-orders` | – | `200` **`PurchaseOrder[]` entity** | – |
 | POST | `/api/management/purchase-orders` | `PurchaseOrderRequest` | `200` **`PurchaseOrder` entity** | `400` `"..."` |
-| POST | `/api/management/purchase-orders/{id:int}/receive` | `ReceivePurchaseRequest` | `204` | `404` |
+| POST | `/api/management/purchase-orders/{id:int}/receive` | `ReceivePurchaseRequest` | `204` | `404`, `409` `"..."` (xung đột ghi) |
 | GET | `/api/management/promotions` | – | `200` **`Promotion[]` entity** | – |
 | POST | `/api/management/promotions` | `PromotionRequest` | `200` **`Promotion` entity** | `400` `"..."` |
 | PUT | `/api/management/promotions/{id:int}` | `PromotionRequest` | `204` | `404` |
@@ -150,13 +150,13 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 | DELETE | `/api/management/promotions/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/recipes` | – | `200` **`RecipeSummaryResponse[]`** (mọi field `Recipe` cũ + `ingredientCount`) | – |
 | GET | `/api/management/recipes/{id:int}` | – | `200` `RecipeResponse` (thêm `foodName`/`sizeName`) | `404` |
-| POST | `/api/management/recipes` | `RecipeRequest` | `200` **`Recipe` entity** | `400` `"..."` |
-| PUT | `/api/management/recipes/{id:int}` | `RecipeRequest` | `204` | `404`, `400` `"..."` |
+| POST | `/api/management/recipes` | `RecipeRequest` | `200` **`Recipe` entity** | `400` `"..."`, `409` `"..."` (size đã có công thức active) |
+| PUT | `/api/management/recipes/{id:int}` | `RecipeRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (size đã có công thức active) |
 | DELETE | `/api/management/recipes/{id:int}` | – | `204` | `404` |
 | GET | `/api/management/kitchen/orders` | – | `200` **`KitchenOrder[]` entity** | – |
 | GET | `/api/management/kitchen/orders/{id:int}/items` | – | `200` **`KitchenItemResponse[]`** (mọi field `KitchenOrderItem` cũ kể cả `quanlity` + `foodName`/`sizeName`/`quantity`) | – |
-| PATCH | `/api/management/kitchen/orders/{id:int}/status` | `KitchenStatusRequest` | `204` | `404`, `400` `"..."` |
-| PATCH | `/api/management/kitchen/items/{id:int}/status` | `KitchenItemStatusRequest` | `204` | `404`, `400` `"..."` |
+| PATCH | `/api/management/kitchen/orders/{id:int}/status` | `KitchenStatusRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
+| PATCH | `/api/management/kitchen/items/{id:int}/status` | `KitchenItemStatusRequest` | `204` | `404`, `400` `"..."`, `409` `"..."` (xung đột ghi) |
 
 ---
 
@@ -186,8 +186,9 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 10. **GET bàn theo id có side-effect ghi DB** (tracked entity + `SaveChanges`);
     **GET all bàn thì không ghi DB** (do repository dùng `AsNoTracking`).
     (Đã pin bằng 2 test `GetById_ComputesOccupied_AndPersistsIt` và `GetAll_ComputesStatus_ButDoesNotPersistIt`.)
-11. **Soft delete + unique index**: `toppings.ToppingName` có unique index không lọc `IsActive`,
-    nên không thể tạo lại topping cùng tên sau khi soft delete. (Đã pin bằng test.)
+11. **Soft delete + unique index**: trước đây `toppings.ToppingName` (và category/size/ingredient/table) unique
+    **không** lọc `IsActive` nên không tạo lại được cùng tên sau soft delete. **Đã sửa ở Nhóm B6 (`62f5d44`)**:
+    index có filter `[IsActive] = 1`. **Ngoại lệ:** `users.UserName`/`UserEmail` vẫn unique toàn cục (định danh đăng nhập).
 12. **`Category.DisplayOrder` là `bool`** (entity + DTO) → không thể biểu diễn thứ tự hiển thị thật.
     Đổi sang `int` là **thay đổi schema**, cần phê duyệt riêng.
 13. **`GET /api/menu` trả anonymous types** (`Task<object>`), không có DTO.
@@ -202,6 +203,18 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 18. **Tạo ingredient / purchase order (B4)**: chèn header + dòng là **nguyên tử** (transaction).
 19. **Dọn dữ liệu (B8)**: `Order.Items` null → `400` (không NRE); `.Trim()` null-safe ở recipe/promotion; `UserService`/`AuthService` dùng `UtcNow`.
 
+### Thay đổi hành vi có chủ ý (Nhóm B — phần schema, `62f5d44`)
+
+20. **Thanh toán trùng (B3)**: unique index lọc trên `payments.OrderId` với `[Status] = 'Paid'` ⇒ mỗi đơn chỉ
+    có **một** payment `Paid`; nhiều payment `Failed`/chưa thanh toán vẫn hợp lệ. `POST /api/payments` trả
+    `409 "Order is already paid"` khi vi phạm. Đơn `TotalAmount <= 0` bị chặn (`409 "Order total must be greater than zero"`).
+21. **Công thức (B5)**: mỗi `SizeId` chỉ có **một** recipe `IsActive=1` (unique index lọc + kiểm tra trong
+    `CreateAsync`/`UpdateAsync`) ⇒ `POST`/`PUT /api/management/recipes` trả `409 "This size already has an active recipe"`.
+    Công thức đã soft-delete không chiếm size, nên tạo lại được.
+22. **Đồng thời (B7)**: `orders`/`inventory`/`restaurant_tables` có `RowVersion` (`rowversion` trên SQL Server).
+    Request ghi dựa trên dữ liệu cũ ⇒ `409 "Dữ liệu vừa bị thay đổi bởi thao tác khác..."` thay vì ghi đè im lặng.
+    `RefreshStatusForTableAsync` (side-effect sau khi transaction chính commit) **retry** tối đa 2 lần thay vì trả 409.
+
 ---
 
 # 3. Cách dùng baseline để gate refactor
@@ -209,7 +222,7 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 Với mỗi giai đoạn:
 
 1. Chạy `dotnet build` → không được tăng số warning/error.
-2. Chạy `dotnet test` → **105/105 phải pass**.
+2. Chạy `dotnet test` → **199/199 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
 3. Với thay đổi có chạm controller/response shape: so sánh route + verb + status code + JSON
    với bảng ở mục 1 (baseline này).
 4. Với thay đổi có chạm schema: **dừng lại**, xin phê duyệt (xem mục 2, điểm 12).

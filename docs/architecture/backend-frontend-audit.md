@@ -20,7 +20,7 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 
 **Nhóm C (field hiển thị thiếu) đã được bổ sung ở commit `46a18e9`** — chỉ **thêm** field, không xoá; xem mục 4.
 
-**Nhóm B (lỗi nghiệp vụ, phần không đổi schema) đã sửa ở commit `29c01d1`** — B1/B2/B4/B8; xem mục 6 & 8.
+**Nhóm B (lỗi nghiệp vụ) đã sửa xong:** phần không đổi schema ở `29c01d1` (B1/B2/B4/B8) và phần đổi schema ở `62f5d44` (B3/B5/B6/B7); xem mục 6 & 8.
 
 | Mục trong tài liệu này | Trạng thái |
 |---|---|
@@ -28,10 +28,10 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 | 5.1 — CORS `FrontendPolicy` vô hiệu | ✅ **Đã bật `app.UseCors`** (`afa4664`) |
 | 4 — field hiển thị thiếu (Nhóm C/GĐ7) | ✅ **Đã bổ sung 4/4** (`46a18e9`), trừ #5 (dormant, xem 4.1) |
 | 5 — frontend không gửi `Authorization` | ⏳ Chưa (việc phía frontend) |
-| 6.1 — defect nghiệp vụ (Nhóm B) | ◑ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7 chờ duyệt (đổi schema)** |
+| 6.1 — defect nghiệp vụ (Nhóm B) | ✅ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7** (`62f5d44`) |
 | 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**.
 
 ---
 
@@ -56,8 +56,8 @@ Entity **không có navigation property** (không `ICollection<OrderItem>`), nê
 | Cổng | Kết quả | Baseline trong docs |
 |---|---|---|
 | `dotnet build --no-incremental` | **14 warning / 0 error** | 14 / 0 ✅ |
-| `dotnet test` | **156/156 pass** | 156/156 ✅ |
-| `has-pending-model-changes` | **No changes** | No changes ✅ |
+| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **199/199**)* | 156/156 ✅ |
+| `has-pending-model-changes` | **No changes** *(vẫn "No changes" sau migration Nhóm B `62f5d44`)* | No changes ✅ |
 
 Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy. Vẫn là test **tầng service + DbContext** (SQLite in-memory), **chưa có test tầng HTTP**.
 
@@ -208,12 +208,14 @@ Chú thích: **[C]** = tôi đọc code và xác nhận; **[P]** = đúng theo c
 | 8 | TB | `OrderService.cs:148-155` | `[C]` `UpdateStatusAsync` nhận **mọi chuỗi** trạng thái: không allow-list, không kiểm transition, không guard rỗng/null. |
 | 9 | TB | `PaymentService.cs:20-25` | `[C]` Không kiểm trạng thái đơn ⇒ **đơn `Cancelled` vẫn thanh toán được**; `Amount = order.TotalAmount` có thể = 0. |
 
-> **Trạng thái sau `29c01d1` (Nhóm B, không đổi schema):**
+> **Trạng thái sau `29c01d1` (Nhóm B, không đổi schema) + `62f5d44` (Nhóm B, schema):**
 > ✅ #1 (ánh xạ `Cancelled` → đơn `Cancelled`), #8 (allow-list + chặn trạng thái cuối).
-> ◑ #2 (đã thêm **transaction**; **unique index** `Payment.OrderId` còn chờ duyệt — đổi schema),
-> ◑ #9 (đã chặn thanh toán đơn `Cancelled`; `Amount = 0` chưa xử lý).
+> ✅ #2 (transaction + **unique index lọc** `payments.OrderId` khi `Status='Paid'` + map lỗi trùng thành `409 "Order is already paid"`),
+> ✅ #9 (chặn thanh toán đơn `Cancelled`; `TotalAmount <= 0` nay bị chặn).
+> ✅ #7 (chặn nhiều recipe active/1 size + unique index lọc `recipes.SizeId`).
 > ⏳ #3 (kiểm tồn kho trước transaction), #4 (`InventoryService`), #5 (`PurchaseOrderService.Receive`),
-> #6 (`MenuService` N+1), #7 (nhiều recipe active — B5, đổi schema).
+> #6 (`MenuService` N+1) — **B7 đã thêm `RowVersion` cho `Inventory`/`Order` nên lost-update bị chặn (409)**, nhưng
+> các luồng này vẫn chưa khoá/kiểm lại tồn kho trong transaction.
 > ✅ (mục 6.2) #13 `IngredientService` + #14 `PurchaseOrderService.CreateAsync` nay đã **có transaction**.
 > ✅ (mục 6.2) #15 `DateTime.Now` → `UtcNow` và (6.3) #22–#24 null-guard `.Trim()`/`Items` đã sửa.
 
@@ -308,11 +310,11 @@ Xếp theo "giá trị / rủi ro", tách rõ nhóm **không đổi hành vi** v
 
 - B1. ✅ `KitchenService.cs:34-36` — sửa ánh xạ `Cancelled`/`Pending`/`Accepted`. (`29c01d1`)
 - B2. ✅ Allow-list + chặn trạng thái cuối cho `OrderService.UpdateStatusAsync`. (`29c01d1`)
-- B3. ◑ **Còn:** chặn đơn `Cancelled`/`Paid` thanh toán sai ✅ (chặn `Cancelled` ở `29c01d1`); **còn** thêm **unique index** `Payment.OrderId` (⇒ **đổi schema**).
+- B3. ✅ **Xong** (`62f5d44`): chặn đơn `Cancelled`/`Paid` thanh toán sai (chặn `Cancelled` ở `29c01d1`); unique index lọc `payments.OrderId` (`Status='Paid'`); chặn `TotalAmount <= 0`; lỗi trùng → `409 "Order is already paid"`.
 - B4. ✅ Bọc transaction cho `PaymentService`, `IngredientService`, `PurchaseOrderService.CreateAsync`. (`29c01d1`)
-- B5. ⏳ **Còn:** chặn nhiều recipe active / 1 size (`RecipeService`) + cân nhắc unique index (**đổi schema**).
-- B6. ⏳ **Còn:** `HasFilter` cho unique index soft-delete (**đổi schema**).
-- B7. ⏳ **Còn:** Concurrency token/`rowversion` cho `Inventory`/`RestaurantTable`/`Order` (**đổi schema**) — quyết định lớn.
+- B5. ✅ **Xong** (`62f5d44`): chặn nhiều recipe active/1 size (`RecipeService` create/update) + unique index lọc `recipes.SizeId` (`IsActive=1`).
+- B6. ✅ **Xong** (`62f5d44`): `HasFilter(IsActive=1)` cho `categories.CategoryName`, `food_sizes(FoodId,SizeName)`, `toppings.ToppingName`, `ingredients.Name`, `restaurant_tables.TableNumber`. **Ngoại lệ:** `users.UserName`/`UserEmail` giữ unique toàn cục.
+- B7. ✅ **Xong** (`62f5d44`): `RowVersion` (`rowversion`) cho `Inventory`/`RestaurantTable`/`Order`; `DbUpdateConcurrencyException` → `ConcurrencyConflictException` → HTTP **409**; refresh trạng thái bàn retry thay vì 409.
 - B8. ✅ `DateTime.Now` → `UtcNow`; guard null cho các `.Trim()` + `Order.Items`. (`29c01d1`)
 
 ### Nhóm C — đổi hợp đồng JSON (cần phối hợp frontend) = GĐ7
