@@ -93,7 +93,6 @@ builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<MenuService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentService>();
-builder.Services.AddScoped<ManagementService>();
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SupplierService>();

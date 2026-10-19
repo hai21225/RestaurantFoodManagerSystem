@@ -16,9 +16,9 @@ public class FoodToppingService
     // ============================
 
     public async Task<List<ToppingResponseDto>>
-        GetToppingsByFoodIdAsync(int foodId)
+        GetToppingsByFoodIdAsync(int foodId, CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
@@ -28,7 +28,7 @@ public class FoodToppingService
         var foodToppings = await _db.FoodToppings
             .AsNoTracking()
             .Where(x => x.FoodId == foodId)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         if (!foodToppings.Any())
         {
@@ -44,7 +44,7 @@ public class FoodToppingService
             .Where(x =>
                 toppingIds.Contains(x.ToppingId) &&
                 x.IsActive)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return toppings.Select(x => new ToppingResponseDto
         {
@@ -64,9 +64,10 @@ public class FoodToppingService
 
     public async Task<bool> AssignAsync(
         int foodId,
-        int toppingId)
+        int toppingId,
+        CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
@@ -74,7 +75,7 @@ public class FoodToppingService
         }
 
         var topping = await _db.Toppings
-            .FindAsync(toppingId);
+            .FindAsync([toppingId], ct);
 
         if (topping == null || !topping.IsActive)
         {
@@ -83,7 +84,7 @@ public class FoodToppingService
 
         var exists = await _db.FoodToppings.AnyAsync(x =>
             x.FoodId == foodId &&
-            x.ToppingId == toppingId);
+            x.ToppingId == toppingId, ct);
 
         if (exists)
         {
@@ -98,9 +99,9 @@ public class FoodToppingService
             ToppingId = toppingId
         };
 
-        await _db.FoodToppings.AddAsync(foodTopping);
+        await _db.FoodToppings.AddAsync(foodTopping, ct);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
@@ -110,13 +111,14 @@ public class FoodToppingService
 
     public async Task<bool> RemoveAsync(
         int foodId,
-        int toppingId)
+        int toppingId,
+        CancellationToken ct = default)
     {
         var foodTopping = await _db.FoodToppings
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.FoodId == foodId &&
-                x.ToppingId == toppingId);
+                x.ToppingId == toppingId, ct);
 
         if (foodTopping == null)
         {
@@ -125,6 +127,6 @@ public class FoodToppingService
 
         _db.FoodToppings.Remove(foodTopping);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 }

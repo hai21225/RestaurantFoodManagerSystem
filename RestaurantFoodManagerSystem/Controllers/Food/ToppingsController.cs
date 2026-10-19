@@ -18,10 +18,11 @@ public class ToppingsController : ControllerBase
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] bool includeInactive = false)
+        [FromQuery] bool includeInactive = false,
+        CancellationToken ct = default)
     {
         var toppings = await _toppingService
-            .GetAllAsync(includeInactive);
+            .GetAllAsync(includeInactive, ct);
 
         return Ok(toppings);
     }
@@ -30,9 +31,9 @@ public class ToppingsController : ControllerBase
     // GET /api/toppings/1
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
-        var topping = await _toppingService.GetByIdAsync(id);
+        var topping = await _toppingService.GetByIdAsync(id, ct);
 
         if (topping == null)
         {
@@ -50,12 +51,13 @@ public class ToppingsController : ControllerBase
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
-        [FromBody] CreateToppingRequest request)
+        [FromBody] CreateToppingRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var topping = await _toppingService
-                .CreateAsync(request);
+                .CreateAsync(request, ct);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -78,12 +80,13 @@ public class ToppingsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
-        [FromBody] UpdateToppingRequest request)
+        [FromBody] UpdateToppingRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var topping = await _toppingService
-                .UpdateAsync(id, request);
+                .UpdateAsync(id, request, ct);
 
             if (topping == null)
             {
@@ -110,12 +113,14 @@ public class ToppingsController : ControllerBase
     [HttpPatch("{id:int}/availability")]
     public async Task<IActionResult> UpdateAvailability(
         int id,
-        [FromBody] UpdateToppingAvailabilityRequest request)
+        [FromBody] UpdateToppingAvailabilityRequest request,
+        CancellationToken ct = default)
     {
         var result = await _toppingService
             .UpdateAvailabilityAsync(
                 id,
-                request.IsAvailable
+                request.IsAvailable,
+                ct
             );
 
         if (!result)
@@ -136,9 +141,9 @@ public class ToppingsController : ControllerBase
     // DELETE /api/toppings/1
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        var result = await _toppingService.DeleteAsync(id);
+        var result = await _toppingService.DeleteAsync(id, ct);
 
         if (!result)
         {

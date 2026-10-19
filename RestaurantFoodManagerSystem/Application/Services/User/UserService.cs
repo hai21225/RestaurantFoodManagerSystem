@@ -10,7 +10,7 @@ public class UserService
         _db = db;
     }
 
-    public async Task<UserDto?> FindUserByUsernameAsync(string username)
+    public async Task<UserDto?> FindUserByUsernameAsync(string username, CancellationToken ct = default)
     {
         var normalizedUsername = username?.Trim() ?? string.Empty;
         if (string.IsNullOrWhiteSpace(normalizedUsername))
@@ -20,7 +20,7 @@ public class UserService
 
         var user = await _db.Users
             .AsNoTracking()
-            .FirstOrDefaultAsync(u => u.UserName == normalizedUsername);
+            .FirstOrDefaultAsync(u => u.UserName == normalizedUsername, ct);
 
         if (user == null)
         {
@@ -75,7 +75,7 @@ public class UserService
         }).ToList();
     }
 
-    public async Task<bool> AddUserAsync(UserDto userdto)
+    public async Task<bool> AddUserAsync(UserDto userdto, CancellationToken ct = default)
     {
         var username = userdto.UserName?.Trim();
         var email = userdto.Email?.Trim();
@@ -85,12 +85,12 @@ public class UserService
             throw new ArgumentException("Username and email are required");
         }
 
-        if (await _db.Users.AnyAsync(x => x.UserName == username))
+        if (await _db.Users.AnyAsync(x => x.UserName == username, ct))
         {
             throw new InvalidOperationException("Username already exists");
         }
 
-        if (await _db.Users.AnyAsync(x => x.UserEmail == email))
+        if (await _db.Users.AnyAsync(x => x.UserEmail == email, ct))
         {
             throw new InvalidOperationException("Email already exists");
         }
@@ -106,8 +106,8 @@ public class UserService
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
-        await _db.Users.AddAsync(user);
-        return await _db.SaveChangesAsync()>0;
+        await _db.Users.AddAsync(user, ct);
+        return await _db.SaveChangesAsync(ct)>0;
 
     }
 }

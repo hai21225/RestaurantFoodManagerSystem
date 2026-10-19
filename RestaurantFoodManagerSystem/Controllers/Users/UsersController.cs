@@ -83,13 +83,15 @@ public class UsersController : ControllerBase
     [HttpPost("{userId:int}/roles")]
     public async Task<IActionResult> AssignRole(
         int userId,
-        [FromBody] AssignRoleRequest request)
+        [FromBody] AssignRoleRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var result = await _authService.AssignRoleToUser(
                 userId,
-                request.RoleName
+                request.RoleName,
+                ct
             );
 
             if (!result)

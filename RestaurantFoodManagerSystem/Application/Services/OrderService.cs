@@ -183,7 +183,7 @@ public sealed class OrderService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
-        await _tables.RefreshStatusForTableAsync(order.TableId);
+        await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         return order;
     }
 

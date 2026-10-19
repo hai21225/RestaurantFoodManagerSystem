@@ -10,11 +10,11 @@ public class RoleService
         _db = db;
     }
 
-    public async Task<Roles> GetRoleByRoleNameAsync(string name)
+    public async Task<Roles> GetRoleByRoleNameAsync(string name, CancellationToken ct = default)
     {
         var role = await _db.Roles
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.RoleName == name);
+            .FirstOrDefaultAsync(x => x.RoleName == name, ct);
         if (role == null)
         {
             throw new Exception("Role not found");

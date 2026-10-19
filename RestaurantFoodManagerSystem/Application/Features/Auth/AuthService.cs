@@ -15,9 +15,9 @@ public class AuthService
         _roleService = roleService;
     }
 
-    public async Task<UserDto?> Login(string username, string password)
+    public async Task<UserDto?> Login(string username, string password, CancellationToken ct = default)
     {
-        var users = await _userService.FindUserByUsernameAsync(username);
+        var users = await _userService.FindUserByUsernameAsync(username, ct);
 
         if (users == null || users.IsActive != true || string.IsNullOrWhiteSpace(users.Password))
         {
@@ -34,9 +34,9 @@ public class AuthService
         return users;
     }
 
-    public async Task<bool> Register(UserDto userDto)
+    public async Task<bool> Register(UserDto userDto, CancellationToken ct = default)
     {
-        var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "");
+        var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "", ct);
         if (user != null)
         {
             throw new InvalidOperationException("Username already exists");
@@ -65,22 +65,22 @@ public class AuthService
             UpdatedAt = DateTime.UtcNow
         };
 
-        return await _userService.AddUserAsync(userdto);
+        return await _userService.AddUserAsync(userdto, ct);
     }
 
     /// <summary>
     /// Tên các role của user, dùng để nạp claim vào JWT khi login (GĐ6).
     /// Ở lát 6a chỉ đọc thêm, không đổi hành vi đăng nhập hiện tại.
     /// </summary>
-    public Task<List<string>> GetRoleNamesByUserIdAsync(int userId)
+    public Task<List<string>> GetRoleNamesByUserIdAsync(int userId, CancellationToken ct = default)
     {
-        return _userRoleService.GetRoleNamesByUserIdAsync(userId);
+        return _userRoleService.GetRoleNamesByUserIdAsync(userId, ct);
     }
 
-    public async Task<bool> AssignRoleToUser(int userid, string rolename)
+    public async Task<bool> AssignRoleToUser(int userid, string rolename, CancellationToken ct = default)
     {
 
-        var role = await _roleService.GetRoleByRoleNameAsync(rolename); 
+        var role = await _roleService.GetRoleByRoleNameAsync(rolename, ct);
 
 
         if (role == null)
@@ -91,7 +91,7 @@ public class AuthService
         {
             UserId = userid,
             RoleId = role.RoleId,
-        });
+        }, ct);
 
         return result;
     }
@@ -104,7 +104,7 @@ public class AuthService
     {
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-        var created = await Register(userDto);
+        var created = await Register(userDto, ct);
         if (!created)
         {
             await tx.RollbackAsync(ct);
@@ -113,14 +113,14 @@ public class AuthService
 
         if (!string.IsNullOrWhiteSpace(roleName))
         {
-            var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "");
+            var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "", ct);
             if (user is null)
             {
                 await tx.RollbackAsync(ct);
                 return false;
             }
 
-            await AssignRoleToUser(user.UserId, roleName.Trim());
+            await AssignRoleToUser(user.UserId, roleName.Trim(), ct);
         }
 
         await tx.CommitAsync(ct);

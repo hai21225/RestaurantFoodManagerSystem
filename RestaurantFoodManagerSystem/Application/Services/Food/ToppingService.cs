@@ -12,7 +12,8 @@ public class ToppingService
 
 
     public async Task<List<ToppingResponseDto>> GetAllAsync(
-        bool includeInactive = false)
+        bool includeInactive = false,
+        CancellationToken ct = default)
     {
         List<Topping> toppings;
 
@@ -20,14 +21,14 @@ public class ToppingService
         {
             toppings = await _db.Toppings
                 .AsNoTracking()
-                .ToListAsync();
+                .ToListAsync(ct);
         }
         else
         {
             toppings = await _db.Toppings
                 .AsNoTracking()
                 .Where(x => x.IsActive)
-                .ToListAsync();
+                .ToListAsync(ct);
         }
 
         return toppings
@@ -36,9 +37,9 @@ public class ToppingService
     }
 
 
-    public async Task<ToppingResponseDto?> GetByIdAsync(int id)
+    public async Task<ToppingResponseDto?> GetByIdAsync(int id, CancellationToken ct = default)
     {
-        var topping = await _db.Toppings.FindAsync(id);
+        var topping = await _db.Toppings.FindAsync([id], ct);
 
         if (topping == null)
         {
@@ -50,13 +51,14 @@ public class ToppingService
 
 
     public async Task<ToppingResponseDto> CreateAsync(
-        CreateToppingRequest request)
+        CreateToppingRequest request,
+        CancellationToken ct = default)
     {
         var name = request.ToppingName.Trim();
 
         var exists = await _db.Toppings.AnyAsync(x =>
             x.ToppingName == name &&
-            x.IsActive);
+            x.IsActive, ct);
 
         if (exists)
         {
@@ -71,9 +73,9 @@ public class ToppingService
             IsActive = true
         };
 
-        await _db.Toppings.AddAsync(topping);
+        await _db.Toppings.AddAsync(topping, ct);
 
-        var result = await _db.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
@@ -86,9 +88,10 @@ public class ToppingService
 
     public async Task<ToppingResponseDto?> UpdateAsync(
         int id,
-        UpdateToppingRequest request)
+        UpdateToppingRequest request,
+        CancellationToken ct = default)
     {
-        var topping = await _db.Toppings.FindAsync(id);
+        var topping = await _db.Toppings.FindAsync([id], ct);
 
         if (topping == null)
         {
@@ -100,7 +103,7 @@ public class ToppingService
         var duplicate = await _db.Toppings.AnyAsync(x =>
             x.ToppingId != id &&
             x.ToppingName == name &&
-            x.IsActive);
+            x.IsActive, ct);
 
         if (duplicate)
         {
@@ -113,7 +116,7 @@ public class ToppingService
 
         _db.Toppings.Update(topping);
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
 
         return MapToDto(topping);
     }
@@ -121,9 +124,10 @@ public class ToppingService
 
     public async Task<bool> UpdateAvailabilityAsync(
         int id,
-        bool isAvailable)
+        bool isAvailable,
+        CancellationToken ct = default)
     {
-        var topping = await _db.Toppings.FindAsync(id);
+        var topping = await _db.Toppings.FindAsync([id], ct);
 
         if (topping == null)
         {
@@ -134,13 +138,13 @@ public class ToppingService
 
         _db.Toppings.Update(topping);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
     {
-        var topping = await _db.Toppings.FindAsync(id);
+        var topping = await _db.Toppings.FindAsync([id], ct);
 
         if (topping == null)
         {
@@ -153,7 +157,7 @@ public class ToppingService
 
         _db.Toppings.Update(topping);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 

@@ -3,8 +3,7 @@ using Xunit;
 namespace RestaurantFoodManagerSystem.Tests;
 
 /// <summary>
-/// Pins the feature services (ingredients, inventory, suppliers, purchase orders, promotions, recipes)
-/// plus the retained ManagementService kitchen duplicate.
+/// Pins the feature services (ingredients, inventory, suppliers, purchase orders, promotions, recipes).
 /// </summary>
 public sealed class InventoryFlowTests : TestBase
 {
@@ -501,27 +500,5 @@ public sealed class InventoryFlowTests : TestBase
         Assert.Contains(all, x => x.RecipeId == active.RecipeId);
         Assert.DoesNotContain(all, x => x.RecipeId == removed.RecipeId);
         Assert.Equal(1, all.Single(x => x.RecipeId == active.RecipeId).IngredientCount);
-    }
-
-    // ============================ KITCHEN (ManagementService duplicate) ============================
-
-    [Fact]
-    public async Task ManagementKitchen_UpdateSetsTimestamps_ButDoesNotValidateStatus()
-    {
-        // Baseline: ManagementService.UpdateKitchen accepts any status string,
-        // unlike KitchenService which enforces an allow-list.
-        var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
-        Db.KitchenOrders.Add(new KitchenOrder { OrderId = order.OrderId, Status = "Pending", SentAt = DateTime.UtcNow, Priority = 0 });
-        Db.SaveChanges();
-        var kitchenOrderId = Db.KitchenOrders.Single().KitchenOrderId;
-
-        var all = await Management.Kitchen(CancellationToken.None);
-        Assert.Contains(all, x => x.KitchenOrderId == kitchenOrderId);
-
-        Assert.True(await Management.UpdateKitchen(kitchenOrderId, new KitchenStatusRequest { Status = "TotallyInvalid" }, CancellationToken.None));
-        Assert.Equal("TotallyInvalid", Db.KitchenOrders.Single(x => x.KitchenOrderId == kitchenOrderId).Status);
-
-        Assert.False(await Management.UpdateKitchen(999999, new KitchenStatusRequest { Status = "Ready" }, CancellationToken.None));
     }
 }

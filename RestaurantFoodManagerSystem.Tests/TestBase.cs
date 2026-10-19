@@ -92,7 +92,6 @@ public abstract class TestBase : IDisposable
     protected PromotionService Promotions => new(Db);
     protected RecipeService Recipes => new(Db);
     protected InventoryService InventorySvc => new(Db, CurrentUser, NullLogger<InventoryService>.Instance);
-    protected ManagementService Management => new(Db, Ingredients, Suppliers, InventorySvc, Purchases, Promotions, Recipes);
 
     // ==========================================================
     // Seeding helpers

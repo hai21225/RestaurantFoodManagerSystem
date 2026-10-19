@@ -12,9 +12,9 @@ public class FoodSizeService
 
 
     public async Task<List<FoodSizeResponseDto>>
-        GetByFoodIdAsync(int foodId)
+        GetByFoodIdAsync(int foodId, CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
@@ -26,7 +26,7 @@ public class FoodSizeService
             .Where(x =>
                 x.FoodId == foodId &&
                 x.IsActive)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return sizes
             .Select(MapToDto)
@@ -36,14 +36,15 @@ public class FoodSizeService
 
     public async Task<FoodSizeResponseDto?> GetByIdAsync(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var size = await _db.FoodSizes
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
-                x.IsActive);
+                x.IsActive, ct);
 
         if (size == null)
         {
@@ -56,9 +57,10 @@ public class FoodSizeService
 
     public async Task<FoodSizeResponseDto> CreateAsync(
         int foodId,
-        CreateFoodSizeRequest request)
+        CreateFoodSizeRequest request,
+        CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
@@ -70,7 +72,7 @@ public class FoodSizeService
         var duplicate = await _db.FoodSizes.AnyAsync(x =>
             x.FoodId == foodId &&
             x.SizeName == name &&
-            x.IsActive);
+            x.IsActive, ct);
 
         if (duplicate)
         {
@@ -83,7 +85,7 @@ public class FoodSizeService
         // bỏ default của size cũ
         if (request.IsDefault)
         {
-            await RemoveCurrentDefaultAsync(foodId);
+            await RemoveCurrentDefaultAsync(foodId, ct: ct);
         }
 
         var size = new FoodSize
@@ -99,9 +101,9 @@ public class FoodSizeService
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _db.FoodSizes.AddAsync(size);
+        await _db.FoodSizes.AddAsync(size, ct);
 
-        var result = await _db.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
@@ -115,14 +117,15 @@ public class FoodSizeService
     public async Task<FoodSizeResponseDto?> UpdateAsync(
         int foodId,
         int sizeId,
-        UpdateFoodSizeRequest request)
+        UpdateFoodSizeRequest request,
+        CancellationToken ct = default)
     {
         var size = await _db.FoodSizes
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
-                x.IsActive);
+                x.IsActive, ct);
 
         if (size == null)
         {
@@ -135,7 +138,7 @@ public class FoodSizeService
             x.FoodId == foodId &&
             x.SizeId != sizeId &&
             x.SizeName == name &&
-            x.IsActive);
+            x.IsActive, ct);
 
         if (duplicate)
         {
@@ -148,7 +151,8 @@ public class FoodSizeService
         {
             await RemoveCurrentDefaultAsync(
                 foodId,
-                sizeId
+                sizeId,
+                ct
             );
         }
 
@@ -159,7 +163,7 @@ public class FoodSizeService
 
         _db.FoodSizes.Update(size);
 
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
 
         return MapToDto(size);
     }
@@ -167,14 +171,15 @@ public class FoodSizeService
 
     public async Task<bool> SetDefaultAsync(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var size = await _db.FoodSizes
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
-                x.IsActive);
+                x.IsActive, ct);
 
         if (size == null)
         {
@@ -183,7 +188,8 @@ public class FoodSizeService
 
         await RemoveCurrentDefaultAsync(
             foodId,
-            sizeId
+            sizeId,
+            ct
         );
 
         size.IsDefault = true;
@@ -191,20 +197,21 @@ public class FoodSizeService
 
         _db.FoodSizes.Update(size);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
     public async Task<bool> DeleteAsync(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var size = await _db.FoodSizes
             .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.SizeId == sizeId &&
                 x.FoodId == foodId &&
-                x.IsActive);
+                x.IsActive, ct);
 
         if (size == null)
         {
@@ -217,13 +224,14 @@ public class FoodSizeService
 
         _db.FoodSizes.Update(size);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
     private async Task RemoveCurrentDefaultAsync(
         int foodId,
-        int? exceptSizeId = null)
+        int? exceptSizeId = null,
+        CancellationToken ct = default)
     {
         var defaults = await _db.FoodSizes
             .AsNoTracking()
@@ -233,7 +241,7 @@ public class FoodSizeService
                 x.IsActive &&
                 (!exceptSizeId.HasValue ||
                  x.SizeId != exceptSizeId.Value))
-            .ToListAsync();
+            .ToListAsync(ct);
 
         foreach (var size in defaults)
         {

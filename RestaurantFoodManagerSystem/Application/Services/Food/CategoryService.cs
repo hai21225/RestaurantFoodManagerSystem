@@ -12,9 +12,9 @@ public class CategoryService
 
 
     // GET BY ID
-    public async Task<CategoryDTO> GetCategoryByIdAsync(int id)
+    public async Task<CategoryDTO> GetCategoryByIdAsync(int id, CancellationToken ct = default)
     {
-        var category = await _db.Categories.FindAsync(id);
+        var category = await _db.Categories.FindAsync([id], ct);
 
         if (category == null)
         {
@@ -33,12 +33,12 @@ public class CategoryService
 
 
     // SEARCH BY NAME
-    public async Task<List<CategoryDTO>> GetCategoriesByNameAsync(string name)
+    public async Task<List<CategoryDTO>> GetCategoriesByNameAsync(string name, CancellationToken ct = default)
     {
         var categories = await _db.Categories
             .AsNoTracking()
             .Where(c => c.CategoryName.Contains(name))
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return categories.Select(category => new CategoryDTO
         {
@@ -53,11 +53,11 @@ public class CategoryService
 
 
     // GET ALL
-    public async Task<List<CategoryDTO>> GetAllCategoriesAsync()
+    public async Task<List<CategoryDTO>> GetAllCategoriesAsync(CancellationToken ct = default)
     {
         var categories = await _db.Categories
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return categories.Select(category => new CategoryDTO
         {
@@ -72,7 +72,7 @@ public class CategoryService
 
 
     // CREATE
-    public async Task<bool> CreateCategoryAsync(CategoryDTO categoryDTO)
+    public async Task<bool> CreateCategoryAsync(CategoryDTO categoryDTO, CancellationToken ct = default)
     {
         if (categoryDTO == null)
         {
@@ -92,14 +92,14 @@ public class CategoryService
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _db.Categories.AddAsync(category);
+        await _db.Categories.AddAsync(category, ct);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
     // UPDATE
-    public async Task<bool> UpdateCategoryAsync(CategoryDTO categoryDTO)
+    public async Task<bool> UpdateCategoryAsync(CategoryDTO categoryDTO, CancellationToken ct = default)
     {
         if (categoryDTO == null)
         {
@@ -107,7 +107,7 @@ public class CategoryService
         }
 
         var category = await _db.Categories
-            .FindAsync(categoryDTO.Id);
+            .FindAsync([categoryDTO.Id], ct);
 
         if (category == null)
         {
@@ -127,14 +127,14 @@ public class CategoryService
 
         _db.Categories.Update(category);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
     // DELETE - SOFT DELETE
-    public async Task<bool> DeleteCategoryAsync(int id)
+    public async Task<bool> DeleteCategoryAsync(int id, CancellationToken ct = default)
     {
-        var category = await _db.Categories.FindAsync(id);
+        var category = await _db.Categories.FindAsync([id], ct);
 
         if (category == null)
         {
@@ -146,6 +146,6 @@ public class CategoryService
 
         _db.Categories.Update(category);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 }

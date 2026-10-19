@@ -25,18 +25,19 @@ public class FoodsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int? categoryId,
-        [FromQuery] bool includeInactive = false)
+        [FromQuery] bool includeInactive = false,
+        CancellationToken ct = default)
     {
         if (categoryId.HasValue)
         {
             var foods = await _foodService
-                .GetFoodsByCategoryIdAsync(categoryId.Value);
+                .GetFoodsByCategoryIdAsync(categoryId.Value, ct);
 
             return Ok(foods);
         }
 
         var result = await _foodService
-            .GetAllFoodsAsync(includeInactive);
+            .GetAllFoodsAsync(includeInactive, ct);
 
         return Ok(result);
     }
@@ -48,10 +49,10 @@ public class FoodsController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
         var food = await _foodService
-            .GetFoodByIdAsync(id);
+            .GetFoodByIdAsync(id, ct);
 
         if (food == null)
         {
@@ -72,12 +73,13 @@ public class FoodsController : ControllerBase
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
-        [FromBody] CreateFoodRequest request)
+        [FromBody] CreateFoodRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var food = await _foodService
-                .AddFoodAsync(request);
+                .AddFoodAsync(request, ct);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -106,12 +108,13 @@ public class FoodsController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
-        [FromBody] UpdateFoodRequest request)
+        [FromBody] UpdateFoodRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var food = await _foodService
-                .UpdateFoodAsync(id, request);
+                .UpdateFoodAsync(id, request, ct);
 
             if (food == null)
             {
@@ -141,12 +144,14 @@ public class FoodsController : ControllerBase
     [HttpPatch("{id:int}/availability")]
     public async Task<IActionResult> UpdateAvailability(
         int id,
-        [FromBody] UpdateFoodAvailabilityRequest request)
+        [FromBody] UpdateFoodAvailabilityRequest request,
+        CancellationToken ct = default)
     {
         var result = await _foodService
             .UpdateAvailabilityAsync(
                 id,
-                request.IsAvailable
+                request.IsAvailable,
+                ct
             );
 
         if (!result)
@@ -175,12 +180,14 @@ public class FoodsController : ControllerBase
     [HttpPatch("{id:int}/active")]
     public async Task<IActionResult> UpdateActive(
         int id,
-        [FromBody] UpdateFoodActiveRequest request)
+        [FromBody] UpdateFoodActiveRequest request,
+        CancellationToken ct = default)
     {
         var result = await _foodService
             .UpdateActiveAsync(
                 id,
-                request.IsActive
+                request.IsActive,
+                ct
             );
 
         if (!result)
@@ -204,10 +211,10 @@ public class FoodsController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
         var result = await _foodService
-            .DeleteFoodAsync(id);
+            .DeleteFoodAsync(id, ct);
 
         if (!result)
         {

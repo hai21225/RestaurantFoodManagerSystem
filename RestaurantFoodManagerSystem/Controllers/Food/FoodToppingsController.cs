@@ -17,13 +17,13 @@ public class FoodToppingsController : ControllerBase
     // GET /api/foods/5/toppings
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
-    public async Task<IActionResult> GetAll(int foodId)
+    public async Task<IActionResult> GetAll(int foodId, CancellationToken ct = default)
     {
         try
         {
             var toppings =
                 await _foodToppingService
-                    .GetToppingsByFoodIdAsync(foodId);
+                    .GetToppingsByFoodIdAsync(foodId, ct);
 
             return Ok(toppings);
         }
@@ -42,14 +42,16 @@ public class FoodToppingsController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Assign(
         int foodId,
-        [FromBody] AssignFoodToppingRequest request)
+        [FromBody] AssignFoodToppingRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var result = await _foodToppingService
                 .AssignAsync(
                     foodId,
-                    request.ToppingId
+                    request.ToppingId,
+                    ct
                 );
 
             if (!result)
@@ -80,12 +82,14 @@ public class FoodToppingsController : ControllerBase
     [HttpDelete("{toppingId:int}")]
     public async Task<IActionResult> Remove(
         int foodId,
-        int toppingId)
+        int toppingId,
+        CancellationToken ct = default)
     {
         var result = await _foodToppingService
             .RemoveAsync(
                 foodId,
-                toppingId
+                toppingId,
+                ct
             );
 
         if (!result)

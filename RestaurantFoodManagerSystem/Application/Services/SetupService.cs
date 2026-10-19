@@ -60,7 +60,7 @@ public sealed class SetupService
             ConfirmPassword = request.ConfirmPassword,
             FullName = request.FullName,
             Phone = request.Phone
-        });
+        }, ct);
 
         if (!created)
         {
@@ -68,14 +68,14 @@ public sealed class SetupService
             throw new InvalidOperationException("Cannot create the first admin account");
         }
 
-        var user = await _userService.FindUserByUsernameAsync(request.UserName ?? "");
+        var user = await _userService.FindUserByUsernameAsync(request.UserName ?? "", ct);
         if (user is null)
         {
             await tx.RollbackAsync(ct);
             throw new InvalidOperationException("Cannot create the first admin account");
         }
 
-        await _authService.AssignRoleToUser(user.UserId, FirstAdminRole);
+        await _authService.AssignRoleToUser(user.UserId, FirstAdminRole, ct);
         await tx.CommitAsync(ct);
         return true;
     }

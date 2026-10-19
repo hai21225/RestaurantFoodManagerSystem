@@ -22,20 +22,21 @@ public class CategoriesController : ControllerBase
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(
-        [FromQuery] string? name)
+        [FromQuery] string? name,
+        CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(name))
         {
             var categories =
                 await _categoryService
-                    .GetCategoriesByNameAsync(name);
+                    .GetCategoriesByNameAsync(name, ct);
 
             return Ok(categories);
         }
 
         var result =
             await _categoryService
-                .GetAllCategoriesAsync();
+                .GetAllCategoriesAsync(ct);
 
         return Ok(result);
     }
@@ -47,13 +48,13 @@ public class CategoriesController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
-    public async Task<IActionResult> GetById(int id)
+    public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
         try
         {
             var category =
                 await _categoryService
-                    .GetCategoryByIdAsync(id);
+                    .GetCategoryByIdAsync(id, ct);
 
             return Ok(category);
         }
@@ -74,13 +75,14 @@ public class CategoriesController : ControllerBase
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
-        [FromBody] CategoryDTO dto)
+        [FromBody] CategoryDTO dto,
+        CancellationToken ct = default)
     {
         try
         {
             var result =
                 await _categoryService
-                    .CreateCategoryAsync(dto);
+                    .CreateCategoryAsync(dto, ct);
 
             if (!result)
             {
@@ -113,7 +115,8 @@ public class CategoriesController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
-        [FromBody] CategoryDTO dto)
+        [FromBody] CategoryDTO dto,
+        CancellationToken ct = default)
     {
         try
         {
@@ -122,7 +125,7 @@ public class CategoriesController : ControllerBase
 
             var result =
                 await _categoryService
-                    .UpdateCategoryAsync(dto);
+                    .UpdateCategoryAsync(dto, ct);
 
             if (!result)
             {
@@ -153,13 +156,13 @@ public class CategoriesController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
-    public async Task<IActionResult> Delete(int id)
+    public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
         try
         {
             var result =
                 await _categoryService
-                    .DeleteCategoryAsync(id);
+                    .DeleteCategoryAsync(id, ct);
 
             if (!result)
             {

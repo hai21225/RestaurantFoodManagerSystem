@@ -17,12 +17,12 @@ public class FoodSizesController : ControllerBase
     // GET /api/foods/5/sizes
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
-    public async Task<IActionResult> GetAll(int foodId)
+    public async Task<IActionResult> GetAll(int foodId, CancellationToken ct = default)
     {
         try
         {
             var sizes = await _foodSizeService
-                .GetByFoodIdAsync(foodId);
+                .GetByFoodIdAsync(foodId, ct);
 
             return Ok(sizes);
         }
@@ -41,10 +41,11 @@ public class FoodSizesController : ControllerBase
     [HttpGet("{sizeId:int}")]
     public async Task<IActionResult> GetById(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var size = await _foodSizeService
-            .GetByIdAsync(foodId, sizeId);
+            .GetByIdAsync(foodId, sizeId, ct);
 
         if (size == null)
         {
@@ -63,12 +64,13 @@ public class FoodSizesController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(
         int foodId,
-        [FromBody] CreateFoodSizeRequest request)
+        [FromBody] CreateFoodSizeRequest request,
+        CancellationToken ct = default)
     {
         try
         {
             var size = await _foodSizeService
-                .CreateAsync(foodId, request);
+                .CreateAsync(foodId, request, ct);
 
             return CreatedAtAction(
                 nameof(GetById),
@@ -96,7 +98,8 @@ public class FoodSizesController : ControllerBase
     public async Task<IActionResult> Update(
         int foodId,
         int sizeId,
-        [FromBody] UpdateFoodSizeRequest request)
+        [FromBody] UpdateFoodSizeRequest request,
+        CancellationToken ct = default)
     {
         try
         {
@@ -104,7 +107,8 @@ public class FoodSizesController : ControllerBase
                 .UpdateAsync(
                     foodId,
                     sizeId,
-                    request
+                    request,
+                    ct
                 );
 
             if (size == null)
@@ -132,10 +136,11 @@ public class FoodSizesController : ControllerBase
     [HttpPatch("{sizeId:int}/default")]
     public async Task<IActionResult> SetDefault(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var result = await _foodSizeService
-            .SetDefaultAsync(foodId, sizeId);
+            .SetDefaultAsync(foodId, sizeId, ct);
 
         if (!result)
         {
@@ -157,10 +162,11 @@ public class FoodSizesController : ControllerBase
     [HttpDelete("{sizeId:int}")]
     public async Task<IActionResult> Delete(
         int foodId,
-        int sizeId)
+        int sizeId,
+        CancellationToken ct = default)
     {
         var result = await _foodSizeService
-            .DeleteAsync(foodId, sizeId);
+            .DeleteAsync(foodId, sizeId, ct);
 
         if (!result)
         {

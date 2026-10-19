@@ -16,7 +16,8 @@ public class FoodService
     // =========================
 
     public async Task<List<FoodResponseDto>> GetAllFoodsAsync(
-        bool includeInactive = false)
+        bool includeInactive = false,
+        CancellationToken ct = default)
     {
         List<Food> foods;
 
@@ -24,14 +25,14 @@ public class FoodService
         {
             foods = await _db.Foods
                 .AsNoTracking()
-                .ToListAsync();
+                .ToListAsync(ct);
         }
         else
         {
             foods = await _db.Foods
                 .AsNoTracking()
                 .Where(x => x.IsActive)
-                .ToListAsync();
+                .ToListAsync(ct);
         }
 
         return foods.Select(MapToDto).ToList();
@@ -42,9 +43,9 @@ public class FoodService
     // GET BY ID
     // =========================
 
-    public async Task<FoodResponseDto?> GetFoodByIdAsync(int id)
+    public async Task<FoodResponseDto?> GetFoodByIdAsync(int id, CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -60,14 +61,14 @@ public class FoodService
     // =========================
 
     public async Task<List<FoodResponseDto>>
-        GetFoodsByCategoryIdAsync(int categoryId)
+        GetFoodsByCategoryIdAsync(int categoryId, CancellationToken ct = default)
     {
         var foods = await _db.Foods
             .AsNoTracking()
             .Where(x =>
                 x.CategoryId == categoryId &&
                 x.IsActive)
-            .ToListAsync();
+            .ToListAsync(ct);
 
         return foods
             .Select(MapToDto)
@@ -80,10 +81,11 @@ public class FoodService
     // =========================
 
     public async Task<FoodResponseDto> AddFoodAsync(
-        CreateFoodRequest request)
+        CreateFoodRequest request,
+        CancellationToken ct = default)
     {
         var category = await _db.Categories
-            .FindAsync(request.CategoryId);
+            .FindAsync([request.CategoryId], ct);
 
         if (category == null)
         {
@@ -115,9 +117,9 @@ public class FoodService
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _db.Foods.AddAsync(food);
+        await _db.Foods.AddAsync(food, ct);
 
-        var result = await _db.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
@@ -134,9 +136,10 @@ public class FoodService
 
     public async Task<FoodResponseDto?> UpdateFoodAsync(
         int id,
-        UpdateFoodRequest request)
+        UpdateFoodRequest request,
+        CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -144,7 +147,7 @@ public class FoodService
         }
 
         var category = await _db.Categories
-            .FindAsync(request.CategoryId);
+            .FindAsync([request.CategoryId], ct);
 
         if (category == null)
         {
@@ -171,7 +174,7 @@ public class FoodService
 
         _db.Foods.Update(food);
 
-        var result = await _db.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
@@ -188,9 +191,10 @@ public class FoodService
 
     public async Task<bool> UpdateAvailabilityAsync(
         int id,
-        bool isAvailable)
+        bool isAvailable,
+        CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -202,7 +206,7 @@ public class FoodService
 
         _db.Foods.Update(food);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
@@ -212,9 +216,10 @@ public class FoodService
 
     public async Task<bool> UpdateActiveAsync(
         int id,
-        bool isActive)
+        bool isActive,
+        CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -233,7 +238,7 @@ public class FoodService
 
         _db.Foods.Update(food);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
@@ -241,9 +246,9 @@ public class FoodService
     // DELETE - SOFT DELETE
     // =========================
 
-    public async Task<bool> DeleteFoodAsync(int id)
+    public async Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default)
     {
-        var food = await _db.Foods.FindAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -259,7 +264,7 @@ public class FoodService
 
         _db.Foods.Update(food);
 
-        return await _db.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 

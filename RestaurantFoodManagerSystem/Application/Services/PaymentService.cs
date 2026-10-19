@@ -58,7 +58,7 @@ public sealed class PaymentService
             throw;
         }
 
-        await _tables.RefreshStatusForTableAsync(order.TableId);
+        await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         return payment;
     }
     public Task<List<Payment>> GetByOrderAsync(int orderId, CancellationToken ct) => _db.Payments.AsNoTracking().Where(x => x.OrderId == orderId).ToListAsync(ct);

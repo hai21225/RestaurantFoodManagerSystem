@@ -18,11 +18,14 @@ public class AuthController : ControllerBase
     // POST: /api/auth/login  (public)
     [AllowAnonymous]
     [HttpPost("login")]
-    public async Task<IActionResult> Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login(
+        [FromBody] LoginRequest request,
+        CancellationToken ct = default)
     {
         var user = await _authService.Login(
             request.UserName,
-            request.Password
+            request.Password,
+            ct
         );
 
         if (user == null)
@@ -33,7 +36,7 @@ public class AuthController : ControllerBase
             });
         }
 
-        var roles = await _authService.GetRoleNamesByUserIdAsync(user.UserId);
+        var roles = await _authService.GetRoleNamesByUserIdAsync(user.UserId, ct);
 
         var response = new LoginResponse
         {
@@ -57,7 +60,8 @@ public class AuthController : ControllerBase
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("register")]
     public async Task<IActionResult> Register(
-        [FromBody] RegisterRequest request)
+        [FromBody] RegisterRequest request,
+        CancellationToken ct = default)
     {
         if (request.Password != request.ConfirmPassword)
         {
@@ -79,7 +83,7 @@ public class AuthController : ControllerBase
                 Phone = request.Phone
             };
 
-            var result = await _authService.Register(userDto);
+            var result = await _authService.Register(userDto, ct);
 
             if (!result)
             {
