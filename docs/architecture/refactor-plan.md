@@ -1,6 +1,6 @@
 # Kế hoạch refactor backend — trạng thái & đầu việc tiếp theo
 
-Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`43b52e7`** (local, chưa push)
+Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`e7d7ab6`** (local, chưa push)
 
 Tài liệu liên quan:
 
@@ -31,7 +31,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ3 | Dọn cây `Controllers/`: `FoodController`→`Food`, `UserController`→`Users`, `RestaurantTableController`→`RestaurantTables`; đổi tên file cho khớp class | `94a6ae1` | Không |
 | GĐ4 | Chia logic `ManagementService` về 6 service theo feature (mỗi service nhận `AppDbContext`); `ManagementService` giữ lại làm facade mỏng; giữ cặp `Kitchen/UpdateKitchen` trùng | `e88011c` | Không |
 | GĐ5 | Bỏ `IRepository`/`IUnitOfWork`/`Repository<T>`/`UnitOfWork`; 9 service dùng `AppDbContext` trực tiếp, giữ nguyên semantics tracking | `77e5a78` | Không |
-| GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `43b52e7` | Không (chỉ thêm field) |
+| GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `e7d7ab6` | Không (chỉ thêm field) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
