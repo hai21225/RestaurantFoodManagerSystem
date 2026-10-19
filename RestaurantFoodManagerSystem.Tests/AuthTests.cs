@@ -153,4 +153,27 @@ public sealed class AuthTests : TestBase
 
         Assert.Equal("Role not found", ex.Message);
     }
+
+    [Fact]
+    public async Task GetRoleNamesByUserId_ReturnsAssignedRoleNames_Ordered()
+    {
+        var user = SeedUserWithPassword("secret123");
+        SeedRole("Chef");
+        SeedRole("Admin");
+
+        await Auth.AssignRoleToUser(user.Id, "Chef");
+        await Auth.AssignRoleToUser(user.Id, "Admin");
+
+        var names = await Auth.GetRoleNamesByUserIdAsync(user.Id);
+
+        Assert.Equal(new[] { "Admin", "Chef" }, names);
+    }
+
+    [Fact]
+    public async Task GetRoleNamesByUserId_ReturnsEmpty_WhenUserHasNoRoles()
+    {
+        var user = SeedUserWithPassword("secret123");
+
+        Assert.Empty(await Auth.GetRoleNamesByUserIdAsync(user.Id));
+    }
 }

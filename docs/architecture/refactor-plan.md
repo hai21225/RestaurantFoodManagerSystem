@@ -1,6 +1,6 @@
 # Kế hoạch refactor backend — trạng thái & đầu việc tiếp theo
 
-Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`77e5a78`**
+Cập nhật: 2026-10-19 · Nhánh: **`hai`** · Commit cuối: **`43b52e7`** (local, chưa push)
 
 Tài liệu liên quan:
 
@@ -17,7 +17,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **105/105**. Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **112/112** (105 gốc + 7 test thêm ở GĐ6a). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -31,6 +31,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ3 | Dọn cây `Controllers/`: `FoodController`→`Food`, `UserController`→`Users`, `RestaurantTableController`→`RestaurantTables`; đổi tên file cho khớp class | `94a6ae1` | Không |
 | GĐ4 | Chia logic `ManagementService` về 6 service theo feature (mỗi service nhận `AppDbContext`); `ManagementService` giữ lại làm facade mỏng; giữ cặp `Kitchen/UpdateKitchen` trùng | `e88011c` | Không |
 | GĐ5 | Bỏ `IRepository`/`IUnitOfWork`/`Repository<T>`/`UnitOfWork`; 9 service dùng `AppDbContext` trực tiếp, giữ nguyên semantics tracking | `77e5a78` | Không |
+| GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `43b52e7` | Không (chỉ thêm field) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -114,7 +115,7 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 | Lát | Nội dung | Phá vỡ? |
 |---|---|---|
-| 6a | Thêm package JWT + config; `TokenService`; `AuthService` nạp role của user; `LoginResponse` thêm `roles`+`token` | Không (chỉ thêm field) |
+| 6a ✅ | Thêm package JWT + config; `TokenService`; `AuthService` nạp role của user; `LoginResponse` thêm `roles`+`token` | Không (chỉ thêm field) |
 | 6b | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
 | 6c | Actor lấy từ claim, bỏ qua field body | Không |
 | 6d | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
@@ -140,9 +141,14 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 105 test.
-2. Làm **6a** trước (an toàn, chỉ thêm field + service mới), build + test.
-3. Sang **6b** nhưng để `Auth:Enforce=false`; chỉ bật `true` khi frontend đã gửi `Authorization: Bearer`.
-4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 112 test.
+2. **6a đã xong.** Sang **6b** nhưng để `Auth:Enforce=false`; chỉ bật `true` khi frontend đã gửi `Authorization: Bearer`.
+3. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
+
+Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
+`Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.
+Khi khóa trống, `TokenService` trả `null` và login **vẫn chạy** (chưa enforce) — token chỉ có giá trị khi đã cấu hình khóa.
+
+**Lưu ý phiên này:** không `git push` (theo yêu cầu chủ dự án); commit chỉ ở máy local.
 
 Ghi chú môi trường: `.opencode/skills/restaurant-backend/SKILL.md` có thay đổi line-ending **từ trước phiên refactor**, cố ý không commit.

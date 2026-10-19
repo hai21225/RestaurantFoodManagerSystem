@@ -57,7 +57,7 @@ Quy ước cột:
 | POST | `/api/auth/register` | `RegisterRequest` | `200` `{message:"Register successful"}` | `400` `{message}` (mismatch / `"Register failed"` / `ex.Message`) |
 | POST | `/api/users/{userId:int}/roles` | `AssignRoleRequest` | `200` `{message}` | `400` `{message}` |
 
-`LoginResponse` = `{UserId, UserName, Email, FullName}`.
+`LoginResponse` = `{UserId, UserName, Email, FullName, Roles, Token}`. Hai field `Roles`/`Token` được **thêm ở GĐ6 (lát 6a)** — chỉ thêm, không phá JSON cũ. `Token` có thể là `null` khi chưa cấu hình khóa ký (`Authentication:Jwt:Key`).
 Controller cho `/api/users` có tên class là `UserRolesController` (file `UsersController.cs`) — **lệch tên**, cần sửa ở GĐ1 nhưng giữ nguyên route.
 
 ## 1.2 Food catalog

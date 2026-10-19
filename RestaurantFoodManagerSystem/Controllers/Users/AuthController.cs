@@ -6,10 +6,12 @@ using Microsoft.AspNetCore.Mvc;
 public class AuthController : ControllerBase
 {
     private readonly AuthService _authService;
+    private readonly TokenService _tokenService;
 
-    public AuthController(AuthService authService)
+    public AuthController(AuthService authService, TokenService tokenService)
     {
         _authService = authService;
+        _tokenService = tokenService;
     }
 
     // POST: /api/auth/login
@@ -29,12 +31,16 @@ public class AuthController : ControllerBase
             });
         }
 
+        var roles = await _authService.GetRoleNamesByUserIdAsync(user.UserId);
+
         var response = new LoginResponse
         {
             UserId = user.UserId,
             UserName = user.UserName,
             Email = user.Email,
-            FullName = user.FullName
+            FullName = user.FullName,
+            Roles = roles,
+            Token = _tokenService.CreateToken(user, roles)
         };
 
         return Ok(new

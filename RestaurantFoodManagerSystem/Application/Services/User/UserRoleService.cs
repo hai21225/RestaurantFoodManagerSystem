@@ -38,6 +38,21 @@ public class UserRoleService
         return userRoleDtos;
     }
 
+    /// <summary>Tên các role gán cho một user (dùng để nạp claim khi đăng nhập — GĐ6).</summary>
+    public async Task<List<string>> GetRoleNamesByUserIdAsync(int userId)
+    {
+        return await _db.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.UserId == userId)
+            .Join(
+                _db.Roles.AsNoTracking(),
+                ur => ur.RoleId,
+                r => r.RoleId,
+                (ur, r) => r.RoleName)
+            .OrderBy(name => name)
+            .ToListAsync();
+    }
+
     public async Task<bool> AddUserRoleAsync(UserRoleDto userRoleDto)
     {
         if (userRoleDto == null)

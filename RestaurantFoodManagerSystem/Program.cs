@@ -26,6 +26,12 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// GĐ6 (lát 6a): cấu hình + service sinh JWT. Khóa ký nạp ngoài repo
+// (Authentication__Jwt__Key hoặc user-secrets), không commit.
+builder.Services.AddSingleton(
+    builder.Configuration.GetSection("Authentication:Jwt").Get<JwtOptions>() ?? new JwtOptions());
+builder.Services.AddScoped<TokenService>();
+
 builder.Services.AddScoped<FoodService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<FoodSizeService>();

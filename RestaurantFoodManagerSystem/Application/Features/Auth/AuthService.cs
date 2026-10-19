@@ -63,6 +63,15 @@
         return await _userService.AddUserAsync(userdto);
     }
 
+    /// <summary>
+    /// Tên các role của user, dùng để nạp claim vào JWT khi login (GĐ6).
+    /// Ở lát 6a chỉ đọc thêm, không đổi hành vi đăng nhập hiện tại.
+    /// </summary>
+    public Task<List<string>> GetRoleNamesByUserIdAsync(int userId)
+    {
+        return _userRoleService.GetRoleNamesByUserIdAsync(userId);
+    }
+
     public async Task<bool> AssignRoleToUser(int userid, string rolename)
     {
 
