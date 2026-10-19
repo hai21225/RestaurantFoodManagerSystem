@@ -58,7 +58,7 @@ Quy ước cột:
 | POST | `/api/users/{userId:int}/roles` | `AssignRoleRequest` | `200` `{message}` | `400` `{message}` |
 
 `LoginResponse` = `{UserId, UserName, Email, FullName, Roles, Token}`. Hai field `Roles`/`Token` được **thêm ở GĐ6 (lát 6a)** — chỉ thêm, không phá JSON cũ. `Token` có thể là `null` khi chưa cấu hình khóa ký (`Authentication:Jwt:Key`).
-Controller cho `/api/users` có tên class là `UserRolesController` (file `UsersController.cs`) — **lệch tên**, cần sửa ở GĐ1 nhưng giữ nguyên route.
+Controller cho `/api/users` là `UsersController` (file `UsersController.cs`) — tên class đã sửa ở GĐ1, giữ nguyên route.
 
 ## 1.2 Food catalog
 
@@ -153,8 +153,10 @@ Error body của `OrdersController` / `PaymentsController` là **JSON string tr�
 
 Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). Nếu muốn đổi → phải là giai đoạn gated (GĐ5+).
 
-1. **Không có authentication/authorization**: không `AddAuthentication`, không `[Authorize]`,
-   `app.UseAuthorization()` không có scheme. Toàn bộ API đang anonymous.
+1. **Phân quyền chưa được enforce ở dev** (GĐ6b): đã có `AddAuthentication` (JwtBearer) +
+   `AddAuthorization` + `[Authorize]` theo ma trận, `app.UseAuthentication()` + `app.UseAuthorization()`.
+   Nhưng `Auth:Enforce=false` (mặc định) ⇒ `EnforceableAuthorizationPolicyProvider` trả policy cho-qua
+   nên **toàn bộ API vẫn anonymous**. Chỉ khi bật `Auth:Enforce=true` mới có 401/403 (thay đổi hành vi, đã duyệt).
 2. **Actor do client gửi**: `CreatedBy`, `ChangedBy`, `ReceivedBy` lấy từ body.
 3. **CORS**: policy `FrontendPolicy` được đăng ký nhưng **không** `app.UseCors(...)` → policy vô hiệu.
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.

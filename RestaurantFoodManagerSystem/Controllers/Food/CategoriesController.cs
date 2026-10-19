@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/categories")]
@@ -18,6 +19,7 @@ public class CategoriesController : ControllerBase
     // GET /api/categories?name=drink
     // ===================================================
 
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? name)
@@ -43,6 +45,7 @@ public class CategoriesController : ControllerBase
     // GET /api/categories/5
     // ===================================================
 
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -68,6 +71,7 @@ public class CategoriesController : ControllerBase
     // POST /api/categories
     // ===================================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CategoryDTO dto)
@@ -105,6 +109,7 @@ public class CategoriesController : ControllerBase
     // PUT /api/categories/5
     // ===================================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -146,6 +151,7 @@ public class CategoriesController : ControllerBase
     // DELETE /api/categories/5
     // ===================================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

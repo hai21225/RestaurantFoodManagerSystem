@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/toppings")]
@@ -14,6 +15,7 @@ public class ToppingsController : ControllerBase
 
     // GET /api/toppings
     // GET /api/toppings?includeInactive=true
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] bool includeInactive = false)
@@ -26,6 +28,7 @@ public class ToppingsController : ControllerBase
 
 
     // GET /api/toppings/1
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -44,6 +47,7 @@ public class ToppingsController : ControllerBase
 
 
     // POST /api/toppings
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateToppingRequest request)
@@ -70,6 +74,7 @@ public class ToppingsController : ControllerBase
 
 
     // PUT /api/toppings/1
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -101,6 +106,7 @@ public class ToppingsController : ControllerBase
 
 
     // PATCH /api/toppings/1/availability
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("{id:int}/availability")]
     public async Task<IActionResult> UpdateAvailability(
         int id,
@@ -128,6 +134,7 @@ public class ToppingsController : ControllerBase
 
 
     // DELETE /api/toppings/1
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

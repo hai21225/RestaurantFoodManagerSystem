@@ -17,7 +17,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **112/112** (105 gốc + 7 test thêm ở GĐ6a). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **145/145** (105 gốc + 7 test GĐ6a + 33 test GĐ6b). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -32,6 +32,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ4 | Chia logic `ManagementService` về 6 service theo feature (mỗi service nhận `AppDbContext`); `ManagementService` giữ lại làm facade mỏng; giữ cặp `Kitchen/UpdateKitchen` trùng | `e88011c` | Không |
 | GĐ5 | Bỏ `IRepository`/`IUnitOfWork`/`Repository<T>`/`UnitOfWork`; 9 service dùng `AppDbContext` trực tiếp, giữ nguyên semantics tracking | `77e5a78` | Không |
 | GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `e7d7ab6` | Không (chỉ thêm field) |
+| GĐ6b | `AddAuthentication`/`AddAuthorization` + 7 policy + `app.UseAuthentication()`; gắn `[Authorize]` theo ma trận mục 4.4; công tắc `Auth:Enforce` (dev mặc định `false`) qua `EnforceableAuthorizationPolicyProvider`; +33 test | `GĐ6B_COMMIT` | Có, **chỉ khi** `Auth:Enforce=true` |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -39,7 +40,7 @@ Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain`
 
 Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 
-1. Không authentication/authorization (sẽ đổi ở GĐ6 — có duyệt).
+1. Enforcement phân quyền **đang tắt** ở dev: GĐ6a sinh token, GĐ6b gắn `[Authorize]` + policy nhưng `Auth:Enforce=false` mặc định ⇒ API vẫn anonymous; bật `true` mới trả 401/403 (có duyệt).
 2. Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`) lấy từ **body** (sẽ đổi ở GĐ6).
 3. CORS policy `FrontendPolicy` đăng ký nhưng **không** `UseCors` ⇒ vô hiệu.
 4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`.
@@ -116,7 +117,7 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 | Lát | Nội dung | Phá vỡ? |
 |---|---|---|
 | 6a ✅ | Thêm package JWT + config; `TokenService`; `AuthService` nạp role của user; `LoginResponse` thêm `roles`+`token` | Không (chỉ thêm field) |
-| 6b | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
+| 6b ✅ | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
 | 6c | Actor lấy từ claim, bỏ qua field body | Không |
 | 6d | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
 | 6e | Test HTTP-level 401/403 — **phụ thuộc GĐ8** (tách `Migrate()`+seed khỏi `Program.cs`) | Không |
@@ -141,9 +142,18 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 112 test.
-2. **6a đã xong.** Sang **6b** nhưng để `Auth:Enforce=false`; chỉ bật `true` khi frontend đã gửi `Authorization: Bearer`.
-3. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 145 test.
+2. **6a + 6b đã xong.** Bước kế tiếp: **6c** (actor lấy từ claim `sub`, bỏ qua field body) rồi **6d** (siết register, policy mật khẩu, thống nhất error shape, Swagger security schema).
+3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa).
+4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
+
+Chi tiết 6b đã triển khai:
+
+- 7 policy ở `Infrastructure/Auth/AuthorizationServiceCollectionExtensions.cs` (nguồn chung cho app + test):
+  `Authenticated`, `AdminOnly`, `PosOperator`, `CashierDesk`, `KitchenDesk`, `WarehouseDesk`, `PosOrCashier`.
+- `EnforceableAuthorizationPolicyProvider` trả policy "cho qua" khi `Auth:Enforce=false`; khi `true` mới uỷ quyền cho provider mặc định ⇒ bật/tắt không cần sửa controller.
+- Gắn `[Authorize]` theo ma trận 4.4; `POST /api/auth/login` để `[AllowAnonymous]`.
+- `Auth:Enforce` mặc định `false` trong `appsettings.json`.
 
 Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
 `Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.

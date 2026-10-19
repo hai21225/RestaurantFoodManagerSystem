@@ -1,7 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/users")]
+[Authorize(Policy = AuthPolicies.AdminOnly)]
 public class UsersController : ControllerBase
 {
     private readonly AuthService _authService;

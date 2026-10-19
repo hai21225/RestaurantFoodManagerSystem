@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController, Route("api/menu")]
+[Authorize(Policy = AuthPolicies.Authenticated)]
 public sealed class MenuController : ControllerBase
 {
     [HttpGet]

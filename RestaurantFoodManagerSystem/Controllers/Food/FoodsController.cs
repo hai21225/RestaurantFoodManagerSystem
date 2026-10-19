@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/foods")]
@@ -20,6 +21,7 @@ public class FoodsController : ControllerBase
     // GET /api/foods?includeInactive=true
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int? categoryId,
@@ -44,6 +46,7 @@ public class FoodsController : ControllerBase
     // GET /api/foods/5
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -66,6 +69,7 @@ public class FoodsController : ControllerBase
     // POST /api/foods
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] CreateFoodRequest request)
@@ -98,6 +102,7 @@ public class FoodsController : ControllerBase
     // PUT /api/foods/5
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -132,6 +137,7 @@ public class FoodsController : ControllerBase
     // PATCH /api/foods/5/availability
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("{id:int}/availability")]
     public async Task<IActionResult> UpdateAvailability(
         int id,
@@ -162,6 +168,7 @@ public class FoodsController : ControllerBase
     // DELETE /api/foods/5
     // ========================================
 
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

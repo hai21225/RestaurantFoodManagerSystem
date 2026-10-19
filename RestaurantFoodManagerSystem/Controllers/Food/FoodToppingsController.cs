@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/foods/{foodId:int}/toppings")]
@@ -14,6 +15,7 @@ public class FoodToppingsController : ControllerBase
 
 
     // GET /api/foods/5/toppings
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(int foodId)
     {
@@ -36,6 +38,7 @@ public class FoodToppingsController : ControllerBase
 
 
     // POST /api/foods/5/toppings
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Assign(
         int foodId,
@@ -73,6 +76,7 @@ public class FoodToppingsController : ControllerBase
 
 
     // DELETE /api/foods/5/toppings/2
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{toppingId:int}")]
     public async Task<IActionResult> Remove(
         int foodId,

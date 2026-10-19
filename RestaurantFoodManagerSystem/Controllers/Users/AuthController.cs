@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity.Data;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
@@ -14,7 +15,8 @@ public class AuthController : ControllerBase
         _tokenService = tokenService;
     }
 
-    // POST: /api/auth/login
+    // POST: /api/auth/login  (public)
+    [AllowAnonymous]
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
@@ -51,7 +53,8 @@ public class AuthController : ControllerBase
     }
 
 
-    // POST: /api/auth/register
+    // POST: /api/auth/register  (AdminOnly)
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("register")]
     public async Task<IActionResult> Register(
         [FromBody] RegisterRequest request)

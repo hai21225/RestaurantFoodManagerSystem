@@ -1,4 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using RestaurantFoodManagerSystem.Infrastructure.Auth;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,9 +32,42 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 // GĐ6 (lát 6a): cấu hình + service sinh JWT. Khóa ký nạp ngoài repo
 // (Authentication__Jwt__Key hoặc user-secrets), không commit.
-builder.Services.AddSingleton(
-    builder.Configuration.GetSection("Authentication:Jwt").Get<JwtOptions>() ?? new JwtOptions());
+var jwtOptions = builder.Configuration.GetSection("Authentication:Jwt").Get<JwtOptions>() ?? new JwtOptions();
+var authOptions = builder.Configuration.GetSection("Auth").Get<AuthOptions>() ?? new AuthOptions();
+
+if (authOptions.Enforce && string.IsNullOrWhiteSpace(jwtOptions.Key))
+{
+    throw new InvalidOperationException(
+        "Auth:Enforce=true nhưng chưa cấu hình khóa ký JWT (Authentication:Jwt:Key). " +
+        "Đặt qua biến môi trường Authentication__Jwt__Key hoặc user-secrets.");
+}
+
+builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddScoped<TokenService>();
+
+// GĐ6 (lát 6b): JWT authentication + policy phân quyền. Enforcement bật/tắt bằng Auth:Enforce
+// (dev mặc định false ⇒ [Authorize] chưa chặn cho tới khi frontend gửi Bearer token).
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = !string.IsNullOrWhiteSpace(jwtOptions.Issuer),
+            ValidIssuer = jwtOptions.Issuer,
+            ValidateAudience = !string.IsNullOrWhiteSpace(jwtOptions.Audience),
+            ValidAudience = jwtOptions.Audience,
+            ValidateIssuerSigningKey = !string.IsNullOrWhiteSpace(jwtOptions.Key),
+            IssuerSigningKey = string.IsNullOrWhiteSpace(jwtOptions.Key)
+                ? null
+                : new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtOptions.Key)),
+            ValidateLifetime = true,
+            // Khi chưa cấu hình khóa (dev), đừng đòi token phải ký để tránh lỗi "no keys".
+            RequireSignedTokens = !string.IsNullOrWhiteSpace(jwtOptions.Key),
+            ClockSkew = TimeSpan.FromMinutes(1),
+        };
+    });
+
+builder.Services.AddRestaurantAuthorization(authOptions);
 
 builder.Services.AddScoped<FoodService>();
 builder.Services.AddScoped<CategoryService>();
@@ -69,6 +106,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

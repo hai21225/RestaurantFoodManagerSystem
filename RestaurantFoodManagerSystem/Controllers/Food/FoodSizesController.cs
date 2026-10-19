@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/foods/{foodId:int}/sizes")]
@@ -14,6 +15,7 @@ public class FoodSizesController : ControllerBase
 
 
     // GET /api/foods/5/sizes
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
     public async Task<IActionResult> GetAll(int foodId)
     {
@@ -35,6 +37,7 @@ public class FoodSizesController : ControllerBase
 
 
     // GET /api/foods/5/sizes/2
+    [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{sizeId:int}")]
     public async Task<IActionResult> GetById(
         int foodId,
@@ -56,6 +59,7 @@ public class FoodSizesController : ControllerBase
 
 
     // POST /api/foods/5/sizes
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost]
     public async Task<IActionResult> Create(
         int foodId,
@@ -87,6 +91,7 @@ public class FoodSizesController : ControllerBase
 
 
     // PUT /api/foods/5/sizes/2
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("{sizeId:int}")]
     public async Task<IActionResult> Update(
         int foodId,
@@ -123,6 +128,7 @@ public class FoodSizesController : ControllerBase
 
 
     // PATCH /api/foods/5/sizes/2/default
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("{sizeId:int}/default")]
     public async Task<IActionResult> SetDefault(
         int foodId,
@@ -147,6 +153,7 @@ public class FoodSizesController : ControllerBase
 
 
     // DELETE /api/foods/5/sizes/2
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{sizeId:int}")]
     public async Task<IActionResult> Delete(
         int foodId,

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 [ApiController]
 [Route("api/restaurant-tables")]
@@ -13,6 +14,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // GET: /api/restaurant-tables
+    [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -23,6 +25,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // GET: /api/restaurant-tables/5
+    [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id)
     {
@@ -42,6 +45,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // POST: /api/restaurant-tables
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] RestaurantTableDto dto)
@@ -65,6 +69,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // PUT: /api/restaurant-tables/5
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -98,6 +103,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // DELETE: /api/restaurant-tables/5
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -129,6 +135,7 @@ public class RestaurantTablesController : ControllerBase
     }
 
     // Status is calculated by the system. This endpoint only marks/unmarks maintenance.
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPatch("{id:int}/maintenance")]
     public async Task<IActionResult> Maintenance(int id, [FromQuery] bool enabled)
         => await _restaurantTableService.SetMaintenanceAsync(id, enabled) ? NoContent() : NotFound();
