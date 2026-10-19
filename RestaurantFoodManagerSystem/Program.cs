@@ -128,25 +128,16 @@ app.MapControllers();
 
 
 
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    var context = services.GetRequiredService<AppDbContext>();
-    context.Database.Migrate();
+// GĐ8: migrate + seed tách khỏi Program.cs (Infrastructure/Persistence/DatabaseInitializer.cs)
+// để host test (WebApplicationFactory) dựng được mà không chạm DB SQL Server thật.
+// Mặc định cả hai cờ bật ⇒ hành vi khởi động không đổi.
+var databaseInitOptions = builder.Configuration
+    .GetSection(DatabaseInitializationOptions.SectionName)
+    .Get<DatabaseInitializationOptions>() ?? new DatabaseInitializationOptions();
 
-
-    if(!context.Roles.Any())
-    {
-        context.Roles.AddRange(
-            new Roles { RoleName = "Admin",RoleDescription ="Người quản lí cấp cao" },
-            new Roles { RoleName = "WarehouseManager", RoleDescription="Nhân viên quản lí kho" },
-            new Roles { RoleName = "Chef", RoleDescription="Nhân viên bếp" },
-            new Roles { RoleName = "Cashier", RoleDescription="Nhân viên thu ngân" },
-            new Roles { RoleName = "Waiter", RoleDescription="Nhân viên phục vụ" }
-                                         );
-        context.SaveChanges();
-    }
-
-}
+await DatabaseInitializer.InitializeAsync(app.Services, databaseInitOptions);
 
 app.Run();
+
+// GĐ8: cần cho WebApplicationFactory<Program> (test HTTP-level, mở đường cho GĐ6e).
+public partial class Program { }
