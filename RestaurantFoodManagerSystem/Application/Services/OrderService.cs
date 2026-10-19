@@ -5,7 +5,16 @@ public sealed class OrderService
 {
     private readonly AppDbContext _db;
     private readonly RestaurantTableService _tables;
-    public OrderService(AppDbContext db, RestaurantTableService tables) { _db = db; _tables = tables; }
+    private readonly ICurrentUser _currentUser;
+    private readonly ILogger<OrderService> _logger;
+
+    public OrderService(AppDbContext db, RestaurantTableService tables, ICurrentUser currentUser, ILogger<OrderService> logger)
+    {
+        _db = db;
+        _tables = tables;
+        _currentUser = currentUser;
+        _logger = logger;
+    }
 
     public async Task<Order?> GetAsync(int id, CancellationToken ct) => await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == id, ct);
 
@@ -57,7 +66,8 @@ public sealed class OrderService
         }
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
-        var order = new Order { TableId = request.TableId, CreatedBy = request.CreatedBy, Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
+        var createdBy = _currentUser.ResolveActorId(request.CreatedBy, _logger, nameof(request.CreatedBy));
+        var order = new Order { TableId = request.TableId, CreatedBy = createdBy, Status = "Pending", CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow };
         _db.Orders.Add(order); await _db.SaveChangesAsync(ct);
         foreach (var itemRequest in request.Items)
         {
@@ -124,7 +134,7 @@ public sealed class OrderService
                 ReferenceType = "Order",
                 ReferenceId = order.OrderId,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = request.CreatedBy,
+                CreatedBy = createdBy,
                 Note = "Automatically deducted when order was sent to kitchen"
             });
         }
@@ -139,7 +149,8 @@ public sealed class OrderService
     {
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == id, ct); if (order is null) return false;
         var old = order.Status; order.Status = request.Status.Trim(); order.UpdatedAt = DateTime.UtcNow;
-        _db.OrderStatusHistories.Add(new OrderStatusHistory { OrderId = id, OldStatus = old, NewStatus = order.Status, ChangedBy = request.ChangedBy, Note = request.Note, CreatedAt = DateTime.UtcNow });
+        var changedBy = _currentUser.ResolveActorId(request.ChangedBy, _logger, nameof(request.ChangedBy));
+        _db.OrderStatusHistories.Add(new OrderStatusHistory { OrderId = id, OldStatus = old, NewStatus = order.Status, ChangedBy = changedBy, Note = request.Note, CreatedAt = DateTime.UtcNow });
         await _db.SaveChangesAsync(ct); return true;
     }
 

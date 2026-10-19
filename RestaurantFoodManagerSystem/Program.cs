@@ -69,6 +69,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddRestaurantAuthorization(authOptions);
 
+// GĐ6c: actor (Users.Id) lấy từ claim "sub" của token; khi chưa xác thực thì fallback về body.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, HttpContextCurrentUser>();
+
 builder.Services.AddScoped<FoodService>();
 builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<FoodSizeService>();

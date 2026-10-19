@@ -157,7 +157,7 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
    `AddAuthorization` + `[Authorize]` theo ma trận, `app.UseAuthentication()` + `app.UseAuthorization()`.
    Nhưng `Auth:Enforce=false` (mặc định) ⇒ `EnforceableAuthorizationPolicyProvider` trả policy cho-qua
    nên **toàn bộ API vẫn anonymous**. Chỉ khi bật `Auth:Enforce=true` mới có 401/403 (thay đổi hành vi, đã duyệt).
-2. **Actor do client gửi**: `CreatedBy`, `ChangedBy`, `ReceivedBy` lấy từ body.
+2. **Actor** (`CreatedBy`, `ChangedBy`, `ReceivedBy`): GĐ6c bước 1 — khi có token thì lấy từ claim `sub` (bỏ qua body, log cảnh báo nếu lệch); khi chưa xác thực (`Auth:Enforce=false`, dev) thì vẫn dùng giá trị body. Field vẫn còn trong DTO.
 3. **CORS**: policy `FrontendPolicy` được đăng ký nhưng **không** `app.UseCors(...)` → policy vô hiệu.
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.
 5. **Hai kiểu trả lỗi**: `{message}` (controller cũ) và JSON string trần (controller mới).

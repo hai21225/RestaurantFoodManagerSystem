@@ -17,7 +17,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **145/145** (105 gốc + 7 test GĐ6a + 33 test GĐ6b). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **156/156** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -33,6 +33,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ5 | Bỏ `IRepository`/`IUnitOfWork`/`Repository<T>`/`UnitOfWork`; 9 service dùng `AppDbContext` trực tiếp, giữ nguyên semantics tracking | `77e5a78` | Không |
 | GĐ6a | Thêm package `JwtBearer` 8.0.32 + `JwtOptions`/`TokenService`; `AuthService`/`UserRoleService` nạp tên role của user; `LoginResponse` thêm `Roles`+`Token`; login sinh token (trả `null` nếu chưa cấu hình khóa); +7 test | `e7d7ab6` | Không (chỉ thêm field) |
 | GĐ6b | `AddAuthentication`/`AddAuthorization` + 7 policy + `app.UseAuthentication()`; gắn `[Authorize]` theo ma trận mục 4.4; công tắc `Auth:Enforce` (dev mặc định `false`) qua `EnforceableAuthorizationPolicyProvider`; +33 test | `038007c` | Có, **chỉ khi** `Auth:Enforce=true` |
+| GĐ6c | Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`) lấy từ claim `sub` khi có token, fallback body khi chưa xác thực (`ICurrentUser` + `CurrentUserExtensions`); +11 test | `GĐ6C_COMMIT` | Không (giữ field body, chỉ đổi nguồn khi có token) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -41,7 +42,7 @@ Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain`
 Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 
 1. Enforcement phân quyền **đang tắt** ở dev: GĐ6a sinh token, GĐ6b gắn `[Authorize]` + policy nhưng `Auth:Enforce=false` mặc định ⇒ API vẫn anonymous; bật `true` mới trả 401/403 (có duyệt).
-2. Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`) lấy từ **body** (sẽ đổi ở GĐ6).
+2. Actor (`CreatedBy`/`ChangedBy`/`ReceivedBy`): **GĐ6c bước 1 đã làm** — nếu có token thì luôn lấy claim `sub` (bỏ qua body, log cảnh báo nếu lệch); nếu chưa xác thực (dev, `Auth:Enforce=false`) thì vẫn dùng body. Bước 2 (xoá field khỏi DTO) để sau.
 3. CORS policy `FrontendPolicy` đăng ký nhưng **không** `UseCors` ⇒ vô hiệu.
 4. `UserService`/`AuthService` dùng `DateTime.Now`; service khác dùng `DateTime.UtcNow`.
 5. Hai kiểu body lỗi: `{message}` (controller cũ) và JSON string trần (`Orders`/`Payments`).
@@ -109,7 +110,7 @@ Chi tiết đầy đủ ở `endpoint-baseline.md` mục 2. Nổi bật:
 
 Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaymentRequest.CreatedBy`, `PurchaseOrderRequest.CreatedBy`, `ReceivePurchaseRequest.ReceivedBy`, `InventoryAdjustmentRequest.CreatedBy` → claim `sub`.
 
-1. **Bước 1:** giữ field trong DTO nhưng bỏ qua giá trị body, luôn dùng claim (log cảnh báo nếu lệch) ⇒ frontend không vỡ.
+1. **Bước 1 ✅ (GĐ6c):** giữ field trong DTO nhưng bỏ qua giá trị body, luôn dùng claim (log cảnh báo nếu lệch) ⇒ frontend không vỡ. Thực hiện qua `ICurrentUser` (Application) + `HttpContextCurrentUser` (Infrastructure đọc claim `sub`, fallback `ClaimTypes.NameIdentifier`) và `CurrentUserExtensions.ResolveActorId`; khi chưa có token thì fallback về body.
 2. **Bước 2 (sau GĐ6):** xoá field khỏi DTO khi frontend đã bỏ.
 
 ### 4.6 Các lát triển khai
@@ -118,7 +119,7 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 |---|---|---|
 | 6a ✅ | Thêm package JWT + config; `TokenService`; `AuthService` nạp role của user; `LoginResponse` thêm `roles`+`token` | Không (chỉ thêm field) |
 | 6b ✅ | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
-| 6c | Actor lấy từ claim, bỏ qua field body | Không |
+| 6c ✅ | Actor lấy từ claim, bỏ qua field body | Không |
 | 6d | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
 | 6e | Test HTTP-level 401/403 — **phụ thuộc GĐ8** (tách `Migrate()`+seed khỏi `Program.cs`) | Không |
 
@@ -142,8 +143,8 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 145 test.
-2. **6a + 6b đã xong.** Bước kế tiếp: **6c** (actor lấy từ claim `sub`, bỏ qua field body) rồi **6d** (siết register, policy mật khẩu, thống nhất error shape, Swagger security schema).
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 156 test.
+2. **6a + 6b + 6c(bước 1) đã xong.** Bước kế tiếp: **6d** (siết register, policy mật khẩu, thống nhất error shape, Swagger security schema).
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa).
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
@@ -154,6 +155,14 @@ Chi tiết 6b đã triển khai:
 - `EnforceableAuthorizationPolicyProvider` trả policy "cho qua" khi `Auth:Enforce=false`; khi `true` mới uỷ quyền cho provider mặc định ⇒ bật/tắt không cần sửa controller.
 - Gắn `[Authorize]` theo ma trận 4.4; `POST /api/auth/login` để `[AllowAnonymous]`.
 - `Auth:Enforce` mặc định `false` trong `appsettings.json`.
+
+Chi tiết 6c (bước 1) đã triển khai:
+
+- `Application/Common/ICurrentUser.cs` (abstraction) + `CurrentUserExtensions.ResolveActorId` (chọn claim khi có, fallback body khi chưa).
+- `Infrastructure/Auth/HttpContextCurrentUser.cs` đọc claim `sub` (fallback `ClaimTypes.NameIdentifier`).
+- 4 service nhận `ICurrentUser` + `ILogger<T>`: `OrderService`, `PaymentService`, `PurchaseOrderService`, `InventoryService`.
+- `Program.cs`: `AddHttpContextAccessor()` + `AddScoped<ICurrentUser, HttpContextCurrentUser>()`.
+- **Chưa** xoá field actor khỏi DTO (đó là bước 2).
 
 Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
 `Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.

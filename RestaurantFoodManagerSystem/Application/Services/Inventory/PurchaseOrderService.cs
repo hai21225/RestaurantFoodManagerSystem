@@ -4,8 +4,15 @@ using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 public sealed class PurchaseOrderService
 {
     private readonly AppDbContext _db;
+    private readonly ICurrentUser _currentUser;
+    private readonly ILogger<PurchaseOrderService> _logger;
 
-    public PurchaseOrderService(AppDbContext db) => _db = db;
+    public PurchaseOrderService(AppDbContext db, ICurrentUser currentUser, ILogger<PurchaseOrderService> logger)
+    {
+        _db = db;
+        _currentUser = currentUser;
+        _logger = logger;
+    }
 
     public Task<List<PurchaseOrder>> GetAllAsync(CancellationToken ct) =>
         _db.PurchaseOrders.AsNoTracking().OrderByDescending(x => x.OrderedAt).ToListAsync(ct);
@@ -18,7 +25,7 @@ public sealed class PurchaseOrderService
         var p = new PurchaseOrder
         {
             SupplierId = r.SupplierId,
-            CreatedBy = r.CreatedBy,
+            CreatedBy = _currentUser.ResolveActorId(r.CreatedBy, _logger, nameof(r.CreatedBy)),
             Status = "Draft",
             OrderedAt = DateTime.UtcNow
         };
@@ -73,7 +80,7 @@ public sealed class PurchaseOrderService
                 ReferenceType = "PurchaseOrder",
                 ReferenceId = id,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = r.ReceivedBy
+                CreatedBy = _currentUser.ResolveActorId(r.ReceivedBy, _logger, nameof(r.ReceivedBy))
             });
         }
 

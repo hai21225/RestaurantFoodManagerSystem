@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 namespace RestaurantFoodManagerSystem.Tests;
@@ -55,6 +56,17 @@ public abstract class TestBase : IDisposable
     // Wiring (mirrors the real DI registrations one-to-one)
     // ==========================================================
 
+    /// <summary>
+    /// Người dùng "đang đăng nhập" giả lập (GĐ6c). <c>UserId = null</c> (mặc định) = chưa xác thực
+    /// ⇒ service fallback về actor trong body, giữ nguyên hành vi trước GĐ6.
+    /// </summary>
+    protected TestCurrentUser CurrentUser { get; } = new();
+
+    protected sealed class TestCurrentUser : ICurrentUser
+    {
+        public int? UserId { get; set; }
+    }
+
     protected AuthService Auth => new(new UserService(Db),
                                       new UserRoleService(Db),
                                       new RoleService(Db));
@@ -66,17 +78,17 @@ public abstract class TestBase : IDisposable
     protected FoodToppingService FoodToppings => new(Db);
     protected RestaurantTableService Tables => new(Db);
 
-    protected OrderService Orders => new(Db, Tables);
-    protected PaymentService Payments => new(Db, Tables);
+    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance);
+    protected PaymentService Payments => new(Db, Tables, CurrentUser, NullLogger<PaymentService>.Instance);
     protected KitchenService Kitchen => new(Db);
     protected MenuService Menu => new(Db);
 
     protected IngredientService Ingredients => new(Db);
     protected SupplierService Suppliers => new(Db);
-    protected PurchaseOrderService Purchases => new(Db);
+    protected PurchaseOrderService Purchases => new(Db, CurrentUser, NullLogger<PurchaseOrderService>.Instance);
     protected PromotionService Promotions => new(Db);
     protected RecipeService Recipes => new(Db);
-    protected InventoryService InventorySvc => new(Db);
+    protected InventoryService InventorySvc => new(Db, CurrentUser, NullLogger<InventoryService>.Instance);
     protected ManagementService Management => new(Db, Ingredients, Suppliers, InventorySvc, Purchases, Promotions, Recipes);
 
     // ==========================================================
