@@ -1,6 +1,132 @@
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Nhập hàng - Restaurant Food Manager</title><link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css"><link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/management.css"></head><body><div class="app-shell">
-<aside class="sidebar" aria-label="Điều hướng chính"><div class="brand"><span class="brand-mark">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div><nav class="main-nav"><button class="nav-item" data-page="../index.html">Tổng quan</button><button class="nav-item" data-page="tables.html">Bàn ăn</button><button class="nav-item" data-page="order.html">Đặt món</button><button class="nav-item" data-page="kitchen.html">Bếp</button><button class="nav-item" data-page="payment.html">Thanh toán</button><button class="nav-item" data-page="foods.html">Món ăn</button><button class="nav-item" data-page="employees.html">Nhân viên</button><button class="nav-item" data-page="roles.html">Phân quyền</button><button class="nav-item" data-page="inventory.html">Kho hàng</button><button class="nav-item is-active" data-page="purchases.html">Nhập hàng</button><button class="nav-item" data-page="reports.html">Báo cáo</button><button class="nav-item" data-page="account.html">Tài khoản</button></nav></aside>
-<div class="workspace"><header class="topbar"><div><p class="eyebrow">Nghiệp vụ kho</p><h1>Nhập hàng</h1></div><div class="operator"><span class="operator-role">Nhân viên kho</span><strong>Chưa đăng nhập</strong></div></header><main class="content"><section aria-labelledby="pageTitle"><div class="section-heading"><div><p class="eyebrow">Phiếu nhập</p><h2 id="pageTitle">Danh sách nhập hàng</h2></div><button class="primary-action" data-feedback="Biểu mẫu tạo phiếu nhập sẽ mở sau khi kết nối dữ liệu.">Tạo phiếu nhập</button></div>
-<div class="management-summary"><article class="summary-tile"><span>Chờ duyệt</span><strong>0</strong></article><article class="summary-tile"><span>Đã duyệt</span><strong>0</strong></article><article class="summary-tile"><span>Đã nhận hàng</span><strong>0</strong></article><article class="summary-tile"><span>Tổng chi tháng</span><strong>0đ</strong></article></div>
-<section class="panel management-toolbar"><label class="field"><span class="field-label">Tìm phiếu nhập</span><input data-filter-input type="search" placeholder="Mã phiếu hoặc nhà cung cấp"></label><label class="field"><span class="field-label">Trạng thái</span><select data-filter-input><option>Tất cả trạng thái</option><option>Nháp</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Đã nhận hàng</option></select></label><label class="field"><span class="field-label">Thời gian</span><input data-filter-input type="month"></label></section>
-<div class="management-grid"><section class="panel management-list"><div class="panel-header"><h3>Phiếu nhập gần đây</h3><span id="purchaseCount">0 phiếu</span></div><div id="purchaseList" class="empty-workspace"><div><strong>Đang tải phiếu nhập</strong></div></div></section><aside class="panel"><div class="panel-header"><h3>Quy trình</h3></div><div class="settings-list"><span>1. Tạo phiếu và chọn nhà cung cấp</span><span>2. Thêm nguyên liệu, số lượng, giá nhập</span><span>3. Quản lý duyệt phiếu</span><span>4. Xác nhận nhận hàng vào kho</span></div><p id="uiMessage" class="ui-message" role="status"></p></aside></div></section></main></div></div><script src="../js/common/navigation.js"></script><script src="../js/common/api.js"></script><script src="../js/common/management.js"></script><script src="../js/pages/purchases.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhập hàng - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css">
+    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/management.css">
+    <link rel="stylesheet" href="../css/pages/purchases.css">
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div><strong>Restaurant</strong><span>POS nội bộ</span></div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item is-active" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div><p class="eyebrow">Nghiệp vụ kho</p><h1>Nhập hàng</h1></div>
+                <div class="operator"><span class="operator-role">Nhân viên kho</span><strong>Chưa đăng nhập</strong></div>
+            </header>
+            <main class="content">
+                <section aria-labelledby="pageTitle">
+                    <div class="section-heading">
+                        <div><p class="eyebrow">Phiếu nhập</p><h2 id="pageTitle">Danh sách nhập hàng</h2></div>
+                        <button class="primary-action" id="addPurchaseButton" type="button">Tạo phiếu nhập</button>
+                    </div>
+                    <p id="uiMessage" class="ui-message" role="status"></p>
+                    <div class="management-summary">
+                        <article class="summary-tile"><span>Chờ duyệt</span><strong>0</strong></article>
+                        <article class="summary-tile"><span>Đã duyệt</span><strong>0</strong></article>
+                        <article class="summary-tile"><span>Đã nhận hàng</span><strong>0</strong></article>
+                        <article class="summary-tile"><span>Tổng chi tháng</span><strong>0đ</strong></article>
+                    </div>
+                    <section class="panel management-toolbar" aria-label="Bộ lọc phiếu nhập">
+                        <label class="field"><span class="field-label">Tìm phiếu nhập</span><input data-filter-input type="search" placeholder="Mã phiếu hoặc nhà cung cấp"></label>
+                        <label class="field"><span class="field-label">Trạng thái</span><select data-filter-input><option>Tất cả trạng thái</option><option>Nháp</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Đã nhận hàng</option></select></label>
+                        <label class="field"><span class="field-label">Thời gian</span><input data-filter-input type="month"></label>
+                    </section>
+                    <div class="management-grid">
+                        <section class="panel management-list" aria-labelledby="purchaseListTitle">
+                            <div class="panel-header"><h3 id="purchaseListTitle">Phiếu nhập gần đây</h3><span id="purchaseCount">0 phiếu</span></div>
+                            <div id="purchaseList" class="empty-workspace"><div><strong>Đang tải phiếu nhập</strong></div></div>
+                        </section>
+                        <aside class="panel" aria-labelledby="purchaseProcessTitle">
+                            <div class="panel-header"><h3 id="purchaseProcessTitle">Quy trình</h3></div>
+                            <div class="settings-list">
+                                <span>1. Tạo phiếu và chọn nhà cung cấp</span>
+                                <span>2. Thêm nguyên liệu, số lượng, giá nhập</span>
+                                <span>3. Quản lý duyệt phiếu</span>
+                                <span>4. Xác nhận nhận hàng vào kho</span>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <dialog id="purchaseDialog" class="form-dialog purchase-dialog" aria-labelledby="purchaseDialogTitle">
+        <div class="form-dialog-header">
+            <div><h2 id="purchaseDialogTitle">Tạo phiếu nhập</h2><p>Phiếu mới sẽ được lưu ở trạng thái Nháp.</p></div>
+            <button class="dialog-close-button" type="button" data-close-purchase-dialog aria-label="Đóng">×</button>
+        </div>
+        <form id="purchaseForm" class="dialog-form">
+            <div class="purchase-supplier-line">
+                <label class="form-field">
+                    <span>Nhà cung cấp</span>
+                    <select id="purchaseSupplier" name="supplierId" required></select>
+                </label>
+                <button id="addSupplierButton" class="secondary-action" type="button">Thêm nhà cung cấp</button>
+            </div>
+            <div class="purchase-items-header">
+                <strong>Nguyên liệu</strong>
+                <button id="addPurchaseItemButton" class="secondary-action" type="button">Thêm dòng</button>
+            </div>
+            <div id="purchaseItemRows" class="purchase-item-rows"></div>
+            <a id="purchaseIngredientLink" class="purchase-ingredient-link" href="recipes.html" hidden>Thêm nguyên liệu ở Công thức</a>
+            <p id="purchaseTotal" class="purchase-total">Tổng tiền: 0đ</p>
+            <p id="purchaseFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-purchase-dialog>Hủy</button>
+                <button id="purchaseSubmit" class="primary-action" type="submit">Tạo phiếu nhập</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="supplierDialog" class="form-dialog" aria-labelledby="supplierDialogTitle">
+        <div class="form-dialog-header">
+            <div><h2 id="supplierDialogTitle">Thêm nhà cung cấp</h2></div>
+            <button class="dialog-close-button" type="button" data-close-supplier-dialog aria-label="Đóng">×</button>
+        </div>
+        <form id="supplierForm" class="dialog-form">
+            <div class="dialog-form-grid">
+                <label class="form-field is-full"><span>Tên nhà cung cấp</span><input name="name" type="text" maxlength="150" required></label>
+                <label class="form-field"><span>Số điện thoại</span><input name="phone" type="tel" maxlength="20" required></label>
+                <label class="form-field"><span>Email</span><input name="email" type="email" maxlength="150" required></label>
+                <label class="form-field is-full"><span>Địa chỉ</span><input name="address" type="text" maxlength="250" required></label>
+            </div>
+            <p id="supplierFormMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-supplier-dialog>Hủy</button>
+                <button id="supplierSubmit" class="primary-action" type="submit">Lưu nhà cung cấp</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/api.js"></script>
+    <script src="../js/common/management.js"></script>
+    <script src="../js/pages/purchases.js"></script>
+</body>
+</html>
