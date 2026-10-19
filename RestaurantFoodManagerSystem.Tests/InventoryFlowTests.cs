@@ -3,8 +3,8 @@ using Xunit;
 namespace RestaurantFoodManagerSystem.Tests;
 
 /// <summary>
-/// Pins ManagementService (ingredients, inventory, suppliers, purchase orders, promotions, recipes, kitchen)
-/// and the thin pass-through services that wrap it.
+/// Pins the feature services (ingredients, inventory, suppliers, purchase orders, promotions, recipes)
+/// plus the retained ManagementService kitchen duplicate.
 /// </summary>
 public sealed class InventoryFlowTests : TestBase
 {

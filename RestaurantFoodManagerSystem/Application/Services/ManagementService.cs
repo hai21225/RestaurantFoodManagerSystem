@@ -1,37 +1,101 @@
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
+/// <summary>
+/// Compatibility facade kept from the pre-refactor "god service".
+///
+/// Phase 4 moved the real inventory/supply/purchase/promotion/recipe logic into the
+/// dedicated feature services (IngredientService, SupplierService, InventoryService,
+/// PurchaseOrderService, PromotionService, RecipeService). This type now only forwards
+/// to them so existing callers keep working; it no longer owns any of that logic.
+///
+/// The kitchen pair (<see cref="Kitchen"/>, <see cref="UpdateKitchen"/>) is intentionally
+/// retained for now: it is a duplicate of KitchenService and is not reachable from any
+/// controller, but it must not be deleted until the frontend mock-up work is finished
+/// and a decision is made about the duplicate kitchen behaviour.
+/// </summary>
 public sealed class ManagementService
 {
     private readonly AppDbContext _db;
-    public ManagementService(AppDbContext db) => _db = db;
+    private readonly IngredientService _ingredients;
+    private readonly SupplierService _suppliers;
+    private readonly InventoryService _inventory;
+    private readonly PurchaseOrderService _purchaseOrders;
+    private readonly PromotionService _promotions;
+    private readonly RecipeService _recipes;
 
-    public Task<List<Ingredient>> Ingredients(CancellationToken ct) => _db.Ingredients.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
-    public async Task<Ingredient> CreateIngredient(IngredientRequest r, CancellationToken ct) { var x = new Ingredient { Name = r.Name.Trim(), Unit = r.Unit.Trim(), MinimumStock = r.MinimumStock, IsActive = true }; _db.Ingredients.Add(x); await _db.SaveChangesAsync(ct); _db.Inventories.Add(new Inventory { IngredientId = x.IngredientId, Quanlity = 0, UpdatedAt = DateTime.UtcNow }); await _db.SaveChangesAsync(ct); return x; }
-    public async Task<bool> DeleteIngredient(int id, CancellationToken ct) { var x = await _db.Ingredients.FindAsync([id], ct); if (x is null) return false; x.IsActive = false; await _db.SaveChangesAsync(ct); return true; }
-    public async Task<bool> UpdateIngredient(int id, IngredientRequest r, CancellationToken ct) { var x=await _db.Ingredients.FindAsync([id],ct); if(x is null)return false; x.Name=r.Name.Trim(); x.Unit=r.Unit.Trim(); x.MinimumStock=r.MinimumStock; await _db.SaveChangesAsync(ct); return true; }
+    public ManagementService(
+        AppDbContext db,
+        IngredientService ingredients,
+        SupplierService suppliers,
+        InventoryService inventory,
+        PurchaseOrderService purchaseOrders,
+        PromotionService promotions,
+        RecipeService recipes)
+    {
+        _db = db;
+        _ingredients = ingredients;
+        _suppliers = suppliers;
+        _inventory = inventory;
+        _purchaseOrders = purchaseOrders;
+        _promotions = promotions;
+        _recipes = recipes;
+    }
 
-    public Task<List<Supplier>> Suppliers(CancellationToken ct) => _db.Suppliers.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
-    public async Task<Supplier> CreateSupplier(SupplierRequest r, CancellationToken ct) { var x = new Supplier { Name = r.Name.Trim(), Phone = r.Phone.Trim(), Email = r.Email.Trim(), Address = r.Address.Trim(), IsActive = true }; _db.Suppliers.Add(x); await _db.SaveChangesAsync(ct); return x; }
-    public async Task<bool> DeleteSupplier(int id, CancellationToken ct) { var x = await _db.Suppliers.FindAsync([id], ct); if (x is null) return false; x.IsActive = false; await _db.SaveChangesAsync(ct); return true; }
-    public async Task<bool> UpdateSupplier(int id, SupplierRequest r, CancellationToken ct) { var x=await _db.Suppliers.FindAsync([id],ct); if(x is null)return false; x.Name=r.Name.Trim(); x.Phone=r.Phone.Trim(); x.Email=r.Email.Trim(); x.Address=r.Address.Trim(); await _db.SaveChangesAsync(ct); return true; }
+    // ---- ingredients ----
 
-    public Task<List<Inventory>> Inventory(CancellationToken ct) => _db.Inventories.AsNoTracking().OrderBy(x => x.IngredientId).ToListAsync(ct);
-    public async Task<bool> AdjustInventory(int ingredientId, InventoryAdjustmentRequest r, CancellationToken ct) { var x=await _db.Inventories.FirstOrDefaultAsync(i=>i.IngredientId==ingredientId,ct); if(x is null)return false; var before=x.Quanlity; if(before+r.Quantity<0)throw new InvalidOperationException("Inventory cannot become negative"); x.Quanlity+=r.Quantity; x.UpdatedAt=DateTime.UtcNow; _db.InventoryTransactions.Add(new InventoryTransaction{IngredientId=ingredientId,Type=r.Quantity>=0?"AdjustmentIn":"AdjustmentOut",Quanlity=Math.Abs(r.Quantity),QuanlityBefore=before,QuanlityAfter=x.Quanlity,Note=r.Note,CreatedAt=DateTime.UtcNow,CreatedBy=r.CreatedBy}); await _db.SaveChangesAsync(ct); return true; }
-    public async Task<List<PurchaseOrder>> Purchases(CancellationToken ct) => await _db.PurchaseOrders.AsNoTracking().OrderByDescending(x => x.OrderedAt).ToListAsync(ct);
-    public async Task<PurchaseOrder> CreatePurchase(PurchaseOrderRequest r, CancellationToken ct) { if (!await _db.Suppliers.AnyAsync(x => x.SupplierId == r.SupplierId && x.IsActive, ct)) throw new KeyNotFoundException("Supplier not found"); var p = new PurchaseOrder { SupplierId = r.SupplierId, CreatedBy = r.CreatedBy, Status = "Draft", OrderedAt = DateTime.UtcNow }; foreach (var i in r.Items) { if (!await _db.Ingredients.AnyAsync(x => x.IngredientId == i.IngredientId && x.IsActive, ct)) throw new KeyNotFoundException("Ingredient not found"); p.TotalAmount += i.Quantity * i.UnitPrice; } _db.PurchaseOrders.Add(p); await _db.SaveChangesAsync(ct); foreach (var i in r.Items) _db.PurchaseOrderItems.Add(new PurchaseOrderItem { PurchaseOrderId = p.Id, IngredientId = i.IngredientId, Quanlity = i.Quantity, UnitPrice = i.UnitPrice, TotalPrice = i.Quantity * i.UnitPrice }); await _db.SaveChangesAsync(ct); return p; }
-    public async Task<bool> ReceivePurchase(int id, ReceivePurchaseRequest r, CancellationToken ct) { await using var tx = await _db.Database.BeginTransactionAsync(ct); var p = await _db.PurchaseOrders.FirstOrDefaultAsync(x => x.Id == id, ct); if (p is null || p.Status == "Received") return false; var items = await _db.PurchaseOrderItems.Where(x => x.PurchaseOrderId == id).ToListAsync(ct); foreach (var item in items) { var stock = await _db.Inventories.FirstAsync(x => x.IngredientId == item.IngredientId, ct); var before = stock.Quanlity; stock.Quanlity += item.Quanlity; stock.UpdatedAt = DateTime.UtcNow; _db.InventoryTransactions.Add(new InventoryTransaction { IngredientId = item.IngredientId, Type = "Purchase", Quanlity = item.Quanlity, QuanlityBefore = before, QuanlityAfter = stock.Quanlity, ReferenceType = "PurchaseOrder", ReferenceId = id, CreatedAt = DateTime.UtcNow, CreatedBy = r.ReceivedBy }); } p.Status = "Received"; p.ReceivedAt = DateTime.UtcNow; await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return true; }
+    public Task<List<Ingredient>> Ingredients(CancellationToken ct) => _ingredients.GetAllAsync(ct);
+    public Task<Ingredient> CreateIngredient(IngredientRequest r, CancellationToken ct) => _ingredients.CreateAsync(r, ct);
+    public Task<bool> UpdateIngredient(int id, IngredientRequest r, CancellationToken ct) => _ingredients.UpdateAsync(id, r, ct);
+    public Task<bool> DeleteIngredient(int id, CancellationToken ct) => _ingredients.DeleteAsync(id, ct);
 
-    public Task<List<Promotion>> Promotions(CancellationToken ct) => _db.Promotions.AsNoTracking().OrderByDescending(x => x.StartAt).ToListAsync(ct);
-    public async Task<Promotion> CreatePromotion(PromotionRequest r, CancellationToken ct) { if (r.EndAt <= r.StartAt) throw new ArgumentException("EndAt must be after StartAt"); var x = new Promotion { Name = r.Name.Trim(), Description = r.Description.Trim(), DiscountType = r.DiscountType.Trim(), DiscountValue = r.DiscountValue, StartAt = r.StartAt, EndAt = r.EndAt, MinimumOrderAmount = r.MinimumOrderAmount, MaxDiscountAmount = r.MaxDiscountAmount, IsActive = true }; _db.Promotions.Add(x); await _db.SaveChangesAsync(ct); return x; }
-    public async Task<bool> TogglePromotion(int id, bool active, CancellationToken ct) { var x = await _db.Promotions.FindAsync([id], ct); if (x is null) return false; x.IsActive = active; await _db.SaveChangesAsync(ct); return true; }
-    public async Task<bool> UpdatePromotion(int id, PromotionRequest r, CancellationToken ct) { var x=await _db.Promotions.FindAsync([id],ct); if(x is null)return false; if(r.EndAt<=r.StartAt)throw new ArgumentException("EndAt must be after StartAt"); x.Name=r.Name.Trim(); x.Description=r.Description.Trim(); x.DiscountType=r.DiscountType.Trim(); x.DiscountValue=r.DiscountValue; x.StartAt=r.StartAt; x.EndAt=r.EndAt; x.MinimumOrderAmount=r.MinimumOrderAmount; x.MaxDiscountAmount=r.MaxDiscountAmount; await _db.SaveChangesAsync(ct); return true; }
-    public async Task<bool> DeletePromotion(int id, CancellationToken ct) { var x=await _db.Promotions.FindAsync([id],ct); if(x is null)return false; x.IsActive=false; await _db.SaveChangesAsync(ct); return true; }
+    // ---- suppliers ----
 
-    public Task<List<Recipe>> Recipes(CancellationToken ct) => _db.Recipes.AsNoTracking().Where(x => x.IsActive).ToListAsync(ct);
-    public async Task<Recipe> CreateRecipe(RecipeRequest r, CancellationToken ct) { if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct)) throw new KeyNotFoundException("Food size not found"); if (r.Ingredients.Count == 0) throw new ArgumentException("Recipe must contain at least one ingredient"); var ids=r.Ingredients.Select(i=>i.IngredientId).ToList(); if(ids.Count!=ids.Distinct().Count()) throw new ArgumentException("An ingredient cannot be repeated in the same recipe"); var valid=await _db.Ingredients.CountAsync(i=>ids.Contains(i.IngredientId)&&i.IsActive,ct); if(valid!=ids.Count) throw new KeyNotFoundException("One or more ingredients not found"); await using var tx=await _db.Database.BeginTransactionAsync(ct); var x = new Recipe { SizeId = r.SizeId, Name = r.Name.Trim(), Version = r.Version.Trim(), IsActive = true }; _db.Recipes.Add(x); await _db.SaveChangesAsync(ct); foreach (var i in r.Ingredients) _db.RecipeIngredients.Add(new RecipeIngredient { RecipeId = x.RecipeId, IngredientId = i.IngredientId, Quanlity = i.Quantity }); await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct); return x; }
-    public async Task<RecipeResponse?> GetRecipeDetails(int id, CancellationToken ct) { var recipe=await _db.Recipes.AsNoTracking().FirstOrDefaultAsync(x=>x.RecipeId==id,ct); if(recipe is null)return null; var ingredients=await (from ri in _db.RecipeIngredients join i in _db.Ingredients on ri.IngredientId equals i.IngredientId where ri.RecipeId==id select new RecipeIngredientResponse{IngredientId=i.IngredientId,IngredientName=i.Name,Unit=i.Unit,Quantity=ri.Quanlity}).ToListAsync(ct); return new RecipeResponse{RecipeId=recipe.RecipeId,SizeId=recipe.SizeId,Name=recipe.Name,Version=recipe.Version,IsActive=recipe.IsActive,Ingredients=ingredients}; }
-    public async Task<bool> DeleteRecipe(int id, CancellationToken ct) { var x=await _db.Recipes.FindAsync([id],ct); if(x is null)return false; x.IsActive=false; await _db.SaveChangesAsync(ct); return true; }
-    public Task<List<KitchenOrder>> Kitchen(CancellationToken ct) => _db.KitchenOrders.AsNoTracking().OrderBy(x => x.Priority).ThenBy(x => x.SentAt).ToListAsync(ct);
-    public async Task<bool> UpdateKitchen(int id, KitchenStatusRequest r, CancellationToken ct) { var x = await _db.KitchenOrders.FindAsync([id], ct); if (x is null) return false; x.Status = r.Status.Trim(); if (x.Status.Equals("Preparing", StringComparison.OrdinalIgnoreCase)) x.StartedAt ??= DateTime.UtcNow; if (x.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase)) x.CompletedAt = DateTime.UtcNow; await _db.SaveChangesAsync(ct); return true; }
+    public Task<List<Supplier>> Suppliers(CancellationToken ct) => _suppliers.GetAllAsync(ct);
+    public Task<Supplier> CreateSupplier(SupplierRequest r, CancellationToken ct) => _suppliers.CreateAsync(r, ct);
+    public Task<bool> UpdateSupplier(int id, SupplierRequest r, CancellationToken ct) => _suppliers.UpdateAsync(id, r, ct);
+    public Task<bool> DeleteSupplier(int id, CancellationToken ct) => _suppliers.DeleteAsync(id, ct);
+
+    // ---- inventory ----
+
+    public Task<List<Inventory>> Inventory(CancellationToken ct) => _inventory.GetAllAsync(ct);
+    public Task<bool> AdjustInventory(int ingredientId, InventoryAdjustmentRequest r, CancellationToken ct) => _inventory.AdjustAsync(ingredientId, r, ct);
+
+    // ---- purchase orders ----
+
+    public Task<List<PurchaseOrder>> Purchases(CancellationToken ct) => _purchaseOrders.GetAllAsync(ct);
+    public Task<PurchaseOrder> CreatePurchase(PurchaseOrderRequest r, CancellationToken ct) => _purchaseOrders.CreateAsync(r, ct);
+    public Task<bool> ReceivePurchase(int id, ReceivePurchaseRequest r, CancellationToken ct) => _purchaseOrders.ReceiveAsync(id, r, ct);
+
+    // ---- promotions ----
+
+    public Task<List<Promotion>> Promotions(CancellationToken ct) => _promotions.GetAllAsync(ct);
+    public Task<Promotion> CreatePromotion(PromotionRequest r, CancellationToken ct) => _promotions.CreateAsync(r, ct);
+    public Task<bool> UpdatePromotion(int id, PromotionRequest r, CancellationToken ct) => _promotions.UpdateAsync(id, r, ct);
+    public Task<bool> TogglePromotion(int id, bool active, CancellationToken ct) => _promotions.SetActiveAsync(id, active, ct);
+    public Task<bool> DeletePromotion(int id, CancellationToken ct) => _promotions.DeleteAsync(id, ct);
+
+    // ---- recipes ----
+
+    public Task<List<Recipe>> Recipes(CancellationToken ct) => _recipes.GetAllAsync(ct);
+    public Task<Recipe> CreateRecipe(RecipeRequest r, CancellationToken ct) => _recipes.CreateAsync(r, ct);
+    public Task<RecipeResponse?> GetRecipeDetails(int id, CancellationToken ct) => _recipes.GetDetailsAsync(id, ct);
+    public Task<bool> DeleteRecipe(int id, CancellationToken ct) => _recipes.DeleteAsync(id, ct);
+
+    // ---- kitchen (duplicate of KitchenService, kept on purpose for now) ----
+
+    public Task<List<KitchenOrder>> Kitchen(CancellationToken ct) =>
+        _db.KitchenOrders.AsNoTracking().OrderBy(x => x.Priority).ThenBy(x => x.SentAt).ToListAsync(ct);
+
+    public async Task<bool> UpdateKitchen(int id, KitchenStatusRequest r, CancellationToken ct)
+    {
+        var x = await _db.KitchenOrders.FindAsync([id], ct);
+        if (x is null) return false;
+
+        x.Status = r.Status.Trim();
+        if (x.Status.Equals("Preparing", StringComparison.OrdinalIgnoreCase)) x.StartedAt ??= DateTime.UtcNow;
+        if (x.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase)) x.CompletedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

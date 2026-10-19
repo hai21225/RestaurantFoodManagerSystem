@@ -14,7 +14,7 @@ namespace RestaurantFoodManagerSystem.Tests;
 /// - The real SQL Server database is never touched.
 /// - The schema is created from the EF model (EnsureCreated), so migrations/schema are untouched.
 /// - SQLite is used instead of the InMemory provider because several services
-///   (OrderService, ManagementService) open explicit transactions, which InMemory does not support.
+///   (OrderService, PurchaseOrderService, RecipeService) open explicit transactions, which InMemory does not support.
 /// </summary>
 public abstract class TestBase : IDisposable
 {
@@ -74,13 +74,13 @@ public abstract class TestBase : IDisposable
     protected KitchenService Kitchen => new(Db);
     protected MenuService Menu => new(Db);
 
-    protected ManagementService Management => new(Db);
-    protected IngredientService Ingredients => new(Management);
-    protected SupplierService Suppliers => new(Management);
-    protected PurchaseOrderService Purchases => new(Management);
-    protected PromotionService Promotions => new(Management);
-    protected RecipeService Recipes => new(Management);
-    protected InventoryService InventorySvc => new(Management);
+    protected IngredientService Ingredients => new(Db);
+    protected SupplierService Suppliers => new(Db);
+    protected PurchaseOrderService Purchases => new(Db);
+    protected PromotionService Promotions => new(Db);
+    protected RecipeService Recipes => new(Db);
+    protected InventoryService InventorySvc => new(Db);
+    protected ManagementService Management => new(Db, Ingredients, Suppliers, InventorySvc, Purchases, Promotions, Recipes);
 
     // ==========================================================
     // Seeding helpers
