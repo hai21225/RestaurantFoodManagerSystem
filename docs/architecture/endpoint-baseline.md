@@ -8,7 +8,7 @@ Mọi giai đoạn sau (GĐ1–GĐ8) phải giữ nguyên các hợp đồng dư
 - Solution: `RestaurantFoodManagerSystem.sln` (1 project web + 1 project test)
 - Build baseline: `Build succeeded` — **16 warnings CS8618, 0 errors**
   (toàn bộ là non-nullable property trong entity/DTO, không phải lỗi)
-- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **206/206**, sau GĐ8)*
+- Test baseline: **105/105 pass** *(tại thời điểm ghi baseline; hiện tại **232/232**, sau GĐ6e)*
 
 ## Cách chạy lưới an toàn
 
@@ -26,7 +26,7 @@ Test dùng **SQLite in-memory** (`EnsureCreated`, không dùng migrations) nên:
 SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementService` mở transaction tường minh
 (InMemory provider không hỗ trợ transaction).
 
-## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 206)
+## Phạm vi đã pin bằng test (105 test lúc ghi baseline, hiện 232)
 
 | Nhóm | File | Nội dung được khóa |
 |---|---|---|
@@ -39,6 +39,7 @@ SQLite được chọn thay vì EF InMemory vì `OrderService` và `ManagementSe
 | Tables | `RestaurantTableTests.cs` | trùng số bàn, tính trạng thái occupied, side-effect đọc, maintenance, soft delete |
 | Menu | `MenuTests.cs` | lọc category/food/size/topping, thứ tự category |
 | Khởi động/host | `DatabaseInitializerTests.cs`, `ApiHostSmokeTests.cs` | seed 5 role idempotent, cờ `Database:MigrateOnStartup`/`SeedOnStartup`, host dựng bằng `WebApplicationFactory` trên SQLite in-memory |
+| Auth HTTP | `AuthHttpTests.cs`, `AuthDisabledHttpTests.cs` | 401 thiếu/sai token, 403 sai role, 200 đúng role (đủ 6 policy + Admin), `[AllowAnonymous]` vẫn 200; baseline enforce=false vẫn anonymous |
 
 ---
 
@@ -169,6 +170,8 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
    `AddAuthorization` + `[Authorize]` theo ma trận, `app.UseAuthentication()` + `app.UseAuthorization()`.
    Nhưng `Auth:Enforce=false` (mặc định) ⇒ `EnforceableAuthorizationPolicyProvider` trả policy cho-qua
    nên **toàn bộ API vẫn anonymous**. Chỉ khi bật `Auth:Enforce=true` mới có 401/403 (thay đổi hành vi, đã duyệt).
+   **Đã pin ở mức HTTP (GĐ6e):** `AuthDisabledHttpTests` giữ baseline anonymous; `AuthHttpTests` xác nhận
+   401/403/200 khi enforce bật.
 2. **Actor** (`CreatedBy`, `ChangedBy`, `ReceivedBy`): GĐ6c bước 1 — khi có token thì lấy từ claim `sub` (bỏ qua body, log cảnh báo nếu lệch); khi chưa xác thực (`Auth:Enforce=false`, dev) thì vẫn dùng giá trị body. Field vẫn còn trong DTO.
 3. **CORS**: policy `FrontendPolicy` **đã được áp** vào pipeline ở GĐ6-A (`afa4664`): `app.UseCors("FrontendPolicy")`, origin `http://localhost:5500` / `5501` / `3000`. Trước GĐ6-A policy đăng ký nhưng vô hiệu.
 4. **Thời gian**: `UserService/AuthService` dùng `DateTime.Now`; các service khác dùng `DateTime.UtcNow`.
@@ -224,15 +227,17 @@ Các mục này **phải giữ nguyên** trong refactor thuần (GĐ1–GĐ4). N
 Với mỗi giai đoạn:
 
 1. Chạy `dotnet build` → không được tăng số warning/error.
-2. Chạy `dotnet test` → **206/206 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
+2. Chạy `dotnet test` → **232/232 phải pass** (105 lúc ghi baseline + test các giai đoạn sau).
 3. Với thay đổi có chạm controller/response shape: so sánh route + verb + status code + JSON
    với bảng ở mục 1 (baseline này).
 4. Với thay đổi có chạm schema: **dừng lại**, xin phê duyệt (xem mục 2, điểm 12).
 
 ## Giới hạn đã biết của lưới an toàn hiện tại
 
-- Test phần lớn chạy ở **tầng service + DbContext**. Từ **GĐ8** đã có thêm host test
-  (`WebApplicationFactory` + `RestaurantApiFactory`, SQLite in-memory) — hạ tầng cho test HTTP-level/401/403 (GĐ6e).
-- **Status code HTTP và error body shape** vẫn được khóa chủ yếu bằng tài liệu (mục 1); mới có 1 smoke test
-  (`GET /api/setup/status` → 200) ở tầng HTTP.
-- Muốn mở rộng test HTTP: dùng `RestaurantApiFactory` (đặt `Database:MigrateOnStartup=false`) rồi `CreateClient()`.
+- Test phần lớn chạy ở **tầng service + DbContext**. Từ **GĐ8** đã có host test
+  (`WebApplicationFactory` + `RestaurantApiFactory`, SQLite in-memory); **GĐ6e** dùng nó để khoá 401/403/200
+  cho toàn bộ ma trận policy (kể cả baseline `Auth:Enforce=false`).
+- **Status code nghiệp vụ** (400/404/409…) vẫn được khóa chủ yếu bằng tài liệu (mục 1); tầng HTTP mới phủ auth +
+  smoke `GET /api/setup/status`.
+- Muốn mở rộng test HTTP: dùng `RestaurantApiFactory` / `EnforcedRestaurantApiFactory`
+  (`Database:MigrateOnStartup=false`) rồi `CreateClient()`.

@@ -31,7 +31,7 @@ Tài liệu liên quan: `endpoint-baseline.md` (hợp đồng API + quirk), `dat
 | 6.1 — defect nghiệp vụ (Nhóm B) | ✅ **B1/B2/B4/B8 + chặn pay đơn huỷ** (`29c01d1`); **B3/B5/B6/B7** (`62f5d44`) |
 | 6.2–6.3 — vệ sinh code (phân trang, `CancellationToken`, dead code…) | ⏳ Chưa làm |
 
-Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**.
+Các số liệu ở mục 1 (156 test) là **tại thời điểm audit**; sau `afa4664` là **176**, sau `46a18e9` là **178**, sau `29c01d1` là **185 test**, sau `62f5d44` là **199 test**, sau GĐ8 là **206 test**, sau GĐ6e là **232 test**.
 
 ---
 
@@ -56,10 +56,10 @@ Entity **không có navigation property** (không `ICollection<OrderItem>`), nê
 | Cổng | Kết quả | Baseline trong docs |
 |---|---|---|
 | `dotnet build --no-incremental` | **14 warning / 0 error** | 14 / 0 ✅ |
-| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **206/206**)* | 156/156 ✅ |
+| `dotnet test` | **156/156 pass** *(số tại thời điểm audit; hiện **232/232**)* | 156/156 ✅ |
 | `has-pending-model-changes` | **No changes** *(vẫn "No changes" sau migration Nhóm B `62f5d44`)* | No changes ✅ |
 
-Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy. Vẫn là test **tầng service + DbContext** (SQLite in-memory), **chưa có test tầng HTTP**.
+Test: 128 attribute `[Fact]/[Theory]` → 156 case khi chạy *(số tại thời điểm audit)*. Phần lớn là test **tầng service + DbContext** (SQLite in-memory); từ **GĐ6e** đã có thêm test tầng HTTP (`AuthHttpTests`, `ApiHostSmokeTests`) trên `WebApplicationFactory`.
 
 ---
 
@@ -172,6 +172,7 @@ GĐ6 đã làm xong phần backend (token, policy, actor), nhưng **end-to-end c
 | Frontend lưu token | ✅ `login.js:132` (`result.data` vào `sessionStorage`) |
 | Frontend **gửi** token | ❌ `api.js:5-11` **không bao giờ** set `Authorization` |
 | Backend enforce | ⏸ `Auth:Enforce=false` (mặc định) |
+| Test 401/403 mức HTTP | ✅ GĐ6e (`AuthHttpTests` + `AuthDisabledHttpTests`) |
 | Frontend chặn route theo role | ❌ `navigation.js` không có role-gating/auth-guard |
 
 Hệ quả trực tiếp:

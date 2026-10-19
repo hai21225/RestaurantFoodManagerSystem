@@ -12,13 +12,13 @@ Tài liệu liên quan:
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln --no-incremental   # hiện: 14 warning, 0 error
-dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 206/206 pass
+dotnet test  RestaurantFoodManagerSystem.sln                    # hiện: 232/232 pass
 dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj
 ```
 
 - Test dùng **SQLite in-memory** + `EnsureCreated` ⇒ không chạm SQL Server, không chạm `Migrations/`.
 - Warning baseline: **14** (toàn bộ CS8618 trong entity/DTO). Không được tăng.
-- Test baseline: **206/206** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema + 5 GĐ8 initializer + 2 GĐ8 host). Nếu giảm số lượng test thì phải nói rõ lý do.
+- Test baseline: **232/232** (105 gốc + 7 GĐ6a + 33 GĐ6b + 11 GĐ6c + 20 GĐ6-A + 2 GĐ7-C + 7 GĐ7-B + 14 Nhóm B schema + 5 GĐ8 initializer + 2 GĐ8 host + 26 GĐ6e HTTP auth). Nếu giảm số lượng test thì phải nói rõ lý do.
 
 **Quy tắc bất di bất dịch:** không đụng `frontend/`, `wwwroot/`, không sửa/xoá migration, không đổi schema khi chưa được duyệt, không đổi route/JSON mà không duyệt.
 
@@ -40,6 +40,7 @@ dotnet ef migrations has-pending-model-changes --project RestaurantFoodManagerSy
 | GĐ7-B | Sửa lỗi nghiệp vụ **không đổi schema**: B1 ánh xạ trạng thái bếp (`Cancelled`→`Cancelled`, không còn mở lại đơn); B2 allow-list + chặn sửa trạng thái cuối cho order status (controller trả 400/409); B4 transaction cho `PaymentService`/`IngredientService.CreateAsync`/`PurchaseOrderService.CreateAsync`; B8 chặn `Items=null`, `.Trim()` null-safe, `DateTime.Now`→`UtcNow`; chặn thanh toán đơn `Cancelled`; thêm hằng `OrderStatuses`; +7 test (2 test baseline được cập nhật chủ ý) | `29c01d1` | **Có** (thêm validate + transaction) |
 | Nhóm B schema | Hoàn tất **B3/B5/B6/B7** (đổi schema, đã duyệt): unique index lọc `payments.OrderId` (`Status='Paid'`) + chặn `TotalAmount<=0`; unique index lọc `recipes.SizeId` (`IsActive=1`) + chặn trùng công thức active; `HasFilter(IsActive=1)` cho `categories.CategoryName`, `food_sizes(FoodId,SizeName)`, `toppings.ToppingName`, `ingredients.Name`, `restaurant_tables.TableNumber` (**users giữ unique toàn cục**); `RowVersion` (`rowversion`) cho `orders`/`inventory`/`restaurant_tables` + map xung đột ghi → 409; migration `20261019090127_NhomB_DataIntegrity` đã áp xuống DB thật; +14 test | `62f5d44` | **Có** (schema + 409 mới) |
 | GĐ8 | Tách migrate + seed khỏi `Program.cs` → `Infrastructure/Persistence/DatabaseInitializer.cs`; thêm `DatabaseInitializationOptions` (`MigrateOnStartup`/`SeedOnStartup`, mặc định `true`); `public partial class Program` cho `WebApplicationFactory`; thêm package test `Microsoft.AspNetCore.Mvc.Testing` 8.0.32 + factory SQLite in-memory; +7 test (5 initializer + 2 host) | `1f93733` | Không (mặc định giữ nguyên migrate + seed lúc khởi động) |
+| GĐ6e | Test phân quyền ở **mức HTTP** trên `WebApplicationFactory`: `RestaurantApiFactory` thêm cờ `enforce` + `EnforcedRestaurantApiFactory` (enforce + JWT key test); 401 thiếu/sai token, 403 sai role, 200 đúng role cho đủ 6 policy + Admin, `[AllowAnonymous]` vẫn 200; khoá baseline `Auth:Enforce=false`; +26 case | `272fe75` | Không (chỉ test; production vẫn `Enforce=false`) |
 
 Kết quả: cả backend chỉ còn **một** phong cách data-access; `Domain` không còn phụ thuộc EF Core.
 
@@ -129,15 +130,15 @@ Map: `CreateOrderRequest.CreatedBy`, `OrderStatusHistory.ChangedBy`, `CreatePaym
 | 6b ✅ | `AddAuthentication`/`AddAuthorization` + policy + `app.UseAuthentication()` + gắn `[Authorize]`, **bật/tắt bằng `Auth:Enforce`** (dev mặc định `false` đến khi frontend xong) | Có, khi bật |
 | 6c ✅ | Actor lấy từ claim, bỏ qua field body | Không |
 | 6d ⏸ | Siết `register` (AdminOnly), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema | Có |
-| 6e ⏸ | Test HTTP-level 401/403 — hạ tầng `WebApplicationFactory` đã sẵn từ **GĐ8** | Không |
+| 6e ✅ | Test HTTP-level 401/403 trên `WebApplicationFactory` (thiếu token → 401, sai role → 403, đúng role → 200, `AllowAnonymous` vẫn 200); khoá luôn baseline `Auth:Enforce=false` | Không |
 
-**GĐ6 tạm chốt ở 6c** theo quyết định của chủ dự án. 6d/6e chuyển sang mục 5 (deferred).
+**GĐ6 đã hoàn tất 6a + 6b + 6c(bước 1) + 6e**; **6d** (siết register/mật khẩu, thống nhất error shape, Swagger security) vẫn deferred ở mục 5.
 
 ### 4.7 Test cần thêm cho GĐ6
 
 - `TokenService` sinh đúng claim `sub`/`role`.
 - Ma trận policy: quét (nhóm endpoint × 5 role) bằng `IAuthorizationService`, khẳng định allow/deny.
-- 401 khi thiếu token, 403 khi sai role (ở 6e).
+- ✅ 401 khi thiếu token, 403 khi sai role (GĐ6e — `AuthHttpTests`, chạy trên host thật).
 - Actor trong DB đến từ claim chứ không từ body.
 - `dotnet ef migrations has-pending-model-changes` phải vẫn "No changes" (GĐ6 **không** đổi schema).
 
@@ -161,7 +162,7 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 - GĐ7: DTO hoá response, bỏ trả entity EF ở orders/payments/`/api/management/*` — **đổi hợp đồng JSON**, phải phối hợp frontend.
 - GĐ8 ✅: tách seed/`Migrate()` khỏi `Program.cs` để test HTTP-level (`WebApplicationFactory`) — điều kiện cần cho 6e. **Không đổi hành vi** (cờ `Database:MigrateOnStartup`/`SeedOnStartup` mặc định `true`).
 - GĐ6d: siết `register` (đã gắn `AdminOnly` ở 6b), policy mật khẩu tối thiểu, thống nhất error shape, Swagger security schema — **đổi hành vi khi enforce**.
-- GĐ6e: test HTTP-level 401/403 — hạ tầng `RestaurantApiFactory` (GĐ8) đã cho phép; chỉ còn viết test.
+- GĐ6e ✅: test HTTP-level 401/403 đã có (`AuthHttpTests`, dùng `EnforcedRestaurantApiFactory` từ GĐ8).
 - Sửa quirk GET-all-bàn-không-ghi-DB (đổi hành vi).
 - `Category.DisplayOrder` bool → int (đổi schema, cần migration).
 - Refresh token / revocation, rate-limit login, audit log, đổi/quên mật khẩu.
@@ -170,8 +171,8 @@ Còn lại (theo thứ tự gợi ý trong `backend-frontend-audit.md` mục 8):
 
 ## 6. Cách tiếp tục ở phiên sau
 
-1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 206 test.
-2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1); GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7; GĐ8 tách migrate/seed khỏi `Program.cs` (host test `WebApplicationFactory` đã chạy).** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **GĐ6e** (test 401/403 ở mức HTTP — hạ tầng đã sẵn), rồi **DTO hoá GĐ7** (phần còn lại).
+1. `git pull` (nhánh `hai`), rồi chạy mục 1 để xác nhận 14 warning / 232 test.
+2. **GĐ6 đã chốt ở 6a + 6b + 6c(bước 1) + 6e; GĐ6-A (`afa4664`) bù 6 endpoint + bật CORS; GĐ7-C (`46a18e9`) bù field hiển thị; GĐ7-B (`29c01d1`) sửa lỗi nghiệp vụ không đổi schema; Nhóm B schema (`62f5d44`) hoàn tất B3/B5/B6/B7; GĐ8 tách migrate/seed khỏi `Program.cs`; GĐ6e có test 401/403 mức HTTP.** Các việc ưu tiên tiếp theo ở mục 5; gợi ý: **DTO hoá GĐ7** (phần còn lại), rồi **GĐ6d** khi frontend gửi Bearer token.
 3. Giữ `Auth:Enforce=false` ở dev cho tới khi frontend gửi `Authorization: Bearer`; chỉ bật `true` khi đã cấu hình khóa ký (app sẽ **fail-fast** nếu bật enforce mà thiếu khóa). **Frontend hiện vẫn chưa gửi token** (`frontend/js/common/api.js` không set header `Authorization`) — đây là việc phía frontend, xem `backend-frontend-audit.md` mục 5.
 4. Mọi thay đổi đụng route/JSON/schema phải hỏi trước.
 
@@ -206,6 +207,19 @@ Chi tiết GĐ8 đã triển khai:
 - Đã chạy app thật (`dotnet run --launch-profile http`) trên `HAI2\SQLEXPRESS`: log
   `No migrations were applied. The database is already up to date.`; seed bỏ qua vì bảng `roles` đã có;
   `GET /api/setup/status` → `200 {"requiresSetup":false}`.
+
+Chi tiết GĐ6e đã triển khai:
+
+- `ApiHostSmokeTests.cs`: `RestaurantApiFactory` nhận cờ `enforce`; thêm `EnforcedRestaurantApiFactory`
+  (`Auth:Enforce=true` + `Authentication:Jwt:Key` test). `UseSetting` áp **trước** khi `Program.cs` đọc cấu hình
+  nên cặp enforce/key có hiệu lực ngay, không cần sửa `Program.cs`.
+- `AuthHttpTests.cs` (26 case, `IClassFixture<EnforcedRestaurantApiFactory>`):
+  401 cho 7 route đại diện đủ 6 policy + token sai định dạng; 403 cho 5 cặp sai role; 200 cho đúng role
+  (gồm Admin cho mọi policy); `GET /api/setup/status` vẫn 200 (`[AllowAnonymous]`).
+  Token sinh bằng chính `TokenService` ⇒ test luôn pipeline claim `sub`/`role` của JwtBearer.
+- `AuthDisabledHttpTests.cs` (4 case, `IClassFixture<RestaurantApiFactory>`): khoá baseline dev
+  `Auth:Enforce=false` — không token vẫn 200 và token hợp lệ vẫn được parse.
+- Không đụng `Program.cs`, route, JSON hay schema.
 
 Cấu hình khóa ký ở dev (không commit): đặt `Authentication:Jwt:Key` qua biến môi trường
 `Authentication__Jwt__Key` hoặc `dotnet user-secrets set "Authentication:Jwt:Key" "<>=32 ký tự>"`.
