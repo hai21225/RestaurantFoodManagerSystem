@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace RestaurantFoodManagerSystem.Domain.AppDbContext
+namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 {
     public class AppDbContext : DbContext
     {

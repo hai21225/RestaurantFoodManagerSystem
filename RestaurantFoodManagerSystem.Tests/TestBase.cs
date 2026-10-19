@@ -1,6 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using RestaurantFoodManagerSystem.Domain.AppDbContext;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 namespace RestaurantFoodManagerSystem.Tests;
 

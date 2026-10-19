@@ -1,5 +1,5 @@
 ﻿
-using RestaurantFoodManagerSystem.Domain.AppDbContext;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {

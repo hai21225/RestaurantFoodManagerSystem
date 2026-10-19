@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RestaurantFoodManagerSystem.Domain.AppDbContext;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public sealed class PaymentService
 {

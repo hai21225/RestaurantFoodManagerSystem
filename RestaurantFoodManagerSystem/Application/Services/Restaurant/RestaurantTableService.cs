@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using RestaurantFoodManagerSystem.Domain.AppDbContext;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public static class RestaurantTableStatuses { public const string Available="Available"; public const string Occupied="Occupied"; public const string Maintenance="Maintenance"; }
 
