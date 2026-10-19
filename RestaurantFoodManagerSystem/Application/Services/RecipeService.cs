@@ -7,8 +7,21 @@ public sealed class RecipeService
 
     public RecipeService(AppDbContext db) => _db = db;
 
-    public Task<List<Recipe>> GetAllAsync(CancellationToken ct) =>
-        _db.Recipes.AsNoTracking().Where(x => x.IsActive).ToListAsync(ct);
+    /// <summary>
+    /// Danh sách công thức đang hoạt động (Nhóm C/GĐ7). Bổ sung <c>ingredientCount</c> so với entity thô.
+    /// </summary>
+    public Task<List<RecipeSummaryResponse>> GetAllAsync(CancellationToken ct) =>
+        (from r in _db.Recipes.AsNoTracking()
+         where r.IsActive
+         select new RecipeSummaryResponse
+         {
+             RecipeId = r.RecipeId,
+             SizeId = r.SizeId,
+             Name = r.Name,
+             Version = r.Version,
+             IsActive = r.IsActive,
+             IngredientCount = _db.RecipeIngredients.Count(ri => ri.RecipeId == r.RecipeId)
+         }).ToListAsync(ct);
 
     public async Task<Recipe> CreateAsync(RecipeRequest r, CancellationToken ct)
     {
@@ -67,6 +80,12 @@ public sealed class RecipeService
                                      Quantity = ri.Quanlity
                                  }).ToListAsync(ct);
 
+        // Nhóm C/GĐ7: join tên món/cỡ để tiêu đề chi tiết công thức hiển thị đúng.
+        var sizeInfo = await (from fs in _db.FoodSizes.AsNoTracking()
+                              join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId
+                              where fs.SizeId == recipe.SizeId
+                              select new { f.FoodName, fs.SizeName }).FirstOrDefaultAsync(ct);
+
         return new RecipeResponse
         {
             RecipeId = recipe.RecipeId,
@@ -74,6 +93,8 @@ public sealed class RecipeService
             Name = recipe.Name,
             Version = recipe.Version,
             IsActive = recipe.IsActive,
+            FoodName = sizeInfo?.FoodName ?? string.Empty,
+            SizeName = sizeInfo?.SizeName ?? string.Empty,
             Ingredients = ingredients
         };
     }

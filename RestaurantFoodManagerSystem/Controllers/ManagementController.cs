@@ -49,7 +49,7 @@ public sealed class ManagementController : ControllerBase
     // --- Công thức => WarehouseDesk ---
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
-    [HttpGet("recipes")] public Task<List<Recipe>> Recipes([FromServices] RecipeService s, CancellationToken ct) => s.GetAllAsync(ct);
+    [HttpGet("recipes")] public Task<List<RecipeSummaryResponse>> Recipes([FromServices] RecipeService s, CancellationToken ct) => s.GetAllAsync(ct);
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("recipes/{id:int}")] public async Task<IActionResult> RecipeDetails(int id, [FromServices] RecipeService s, CancellationToken ct) => (await s.GetDetailsAsync(id,ct)) is { } x ? Ok(x) : NotFound();
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
@@ -64,7 +64,7 @@ public sealed class ManagementController : ControllerBase
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpGet("kitchen/orders")] public Task<List<KitchenOrder>> Kitchen([FromServices] KitchenService s, CancellationToken ct) => s.GetOrdersAsync(ct);
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
-    [HttpGet("kitchen/orders/{id:int}/items")] public Task<List<KitchenOrderItem>> KitchenItems(int id, [FromServices] KitchenService s, CancellationToken ct) => s.GetItemsAsync(id, ct);
+    [HttpGet("kitchen/orders/{id:int}/items")] public Task<List<KitchenItemResponse>> KitchenItems(int id, [FromServices] KitchenService s, CancellationToken ct) => s.GetItemsAsync(id, ct);
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPatch("kitchen/orders/{id:int}/status")] public async Task<IActionResult> KitchenStatus(int id, KitchenStatusRequest r, [FromServices] KitchenService s, CancellationToken ct) { try { return await s.UpdateOrderStatusAsync(id, r, ct) ? NoContent() : NotFound(); } catch (ArgumentException e) { return BadRequest(e.Message); } }
     [Authorize(Policy = AuthPolicies.KitchenDesk)]

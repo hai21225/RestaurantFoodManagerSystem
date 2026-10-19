@@ -77,7 +77,7 @@ public sealed class ManagementService
 
     // ---- recipes ----
 
-    public Task<List<Recipe>> Recipes(CancellationToken ct) => _recipes.GetAllAsync(ct);
+    public Task<List<RecipeSummaryResponse>> Recipes(CancellationToken ct) => _recipes.GetAllAsync(ct);
     public Task<Recipe> CreateRecipe(RecipeRequest r, CancellationToken ct) => _recipes.CreateAsync(r, ct);
     public Task<RecipeResponse?> GetRecipeDetails(int id, CancellationToken ct) => _recipes.GetDetailsAsync(id, ct);
     public Task<bool> DeleteRecipe(int id, CancellationToken ct) => _recipes.DeleteAsync(id, ct);

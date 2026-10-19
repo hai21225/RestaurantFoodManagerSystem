@@ -420,6 +420,8 @@ public sealed class InventoryFlowTests : TestBase
         var details = await Recipes.GetDetailsAsync(recipe.RecipeId, CancellationToken.None);
         Assert.NotNull(details);
         Assert.Equal(size.SizeId, details!.SizeId);
+        Assert.Equal(food.FoodName, details.FoodName);
+        Assert.Equal(size.SizeName, details.SizeName);
         var detailIngredient = Assert.Single(details.Ingredients);
         Assert.Equal(ingredient.IngredientId, detailIngredient.IngredientId);
         Assert.Equal(2.5m, detailIngredient.Quantity);
@@ -457,6 +459,7 @@ public sealed class InventoryFlowTests : TestBase
 
         Assert.Contains(all, x => x.RecipeId == active.RecipeId);
         Assert.DoesNotContain(all, x => x.RecipeId == removed.RecipeId);
+        Assert.Equal(1, all.Single(x => x.RecipeId == active.RecipeId).IngredientCount);
     }
 
     // ============================ KITCHEN (ManagementService duplicate) ============================

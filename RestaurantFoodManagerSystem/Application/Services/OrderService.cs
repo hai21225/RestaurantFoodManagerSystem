@@ -16,7 +16,46 @@ public sealed class OrderService
         _logger = logger;
     }
 
-    public async Task<Order?> GetAsync(int id, CancellationToken ct) => await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == id, ct);
+    /// <summary>
+    /// Chi tiết đơn hàng cho <c>GET /api/orders/{id}</c> (Nhóm C/GĐ7).
+    /// Bổ sung <c>items[]</c> (kèm tên món/cỡ) so với entity <c>Order</c> thô; mọi field cũ được giữ nguyên.
+    /// </summary>
+    public async Task<OrderDetailResponse?> GetAsync(int id, CancellationToken ct)
+    {
+        var order = await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == id, ct);
+        if (order is null) return null;
+
+        var items = await (from oi in _db.OrderItems.AsNoTracking()
+                           join fs in _db.FoodSizes on oi.SizeId equals fs.SizeId
+                           join f in _db.Foods on fs.FoodId equals f.FoodId
+                           where oi.OrderId == id
+                           select new OrderItemDetailResponse
+                           {
+                               Id = oi.Id,
+                               SizeId = oi.SizeId,
+                               FoodName = f.FoodName,
+                               SizeName = fs.SizeName,
+                               Quantity = oi.Quanlity,
+                               UnitPrice = oi.UnitPrice,
+                               Note = oi.Note,
+                               Status = oi.Status
+                           }).ToListAsync(ct);
+
+        return new OrderDetailResponse
+        {
+            OrderId = order.OrderId,
+            TableId = order.TableId,
+            Status = order.Status,
+            Subtotal = order.Subtotal,
+            DiscountAmount = order.DiscountAmount,
+            TaxAmount = order.TaxAmount,
+            TotalAmount = order.TotalAmount,
+            CreatedBy = order.CreatedBy,
+            CreatedAt = order.CreatedAt,
+            UpdatedAt = order.UpdatedAt,
+            Items = items
+        };
+    }
 
     public async Task<Order> CreateAsync(CreateOrderRequest request, CancellationToken ct)
     {

@@ -185,6 +185,30 @@ public sealed class OrdersFlowTests : TestBase
     }
 
     [Fact]
+    public async Task Get_IncludesItemDetails_WithFoodAndSizeNames()
+    {
+        var s = SeedOrderScenario(sizePrice: 50m);
+        var order = await Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId, quantity: 3),
+            CancellationToken.None);
+
+        var detail = await Orders.GetAsync(order.OrderId, CancellationToken.None);
+
+        Assert.NotNull(detail);
+        Assert.Equal(order.OrderId, detail!.OrderId);
+        Assert.Equal(order.Subtotal, detail.Subtotal);
+        Assert.Equal(order.TotalAmount, detail.TotalAmount);
+
+        var item = Assert.Single(detail.Items);
+        Assert.Equal(s.Food.FoodName, item.FoodName);
+        Assert.Equal(s.Size.SizeName, item.SizeName);
+        Assert.Equal(3, item.Quantity);
+        Assert.Equal(50m, item.UnitPrice);
+        Assert.Equal("no onion", item.Note);
+        Assert.Equal("Pending", item.Status);
+    }
+
+    [Fact]
     public async Task UpdateStatus_TrimsStatus_AndWritesHistory()
     {
         var s = SeedOrderScenario();

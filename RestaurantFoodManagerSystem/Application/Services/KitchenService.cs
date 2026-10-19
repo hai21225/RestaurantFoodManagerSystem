@@ -9,8 +9,28 @@ public sealed class KitchenService
     public Task<List<KitchenOrder>> GetOrdersAsync(CancellationToken ct) =>
         _db.KitchenOrders.AsNoTracking().OrderBy(x => x.Priority).ThenBy(x => x.SentAt).ToListAsync(ct);
 
-    public Task<List<KitchenOrderItem>> GetItemsAsync(int kitchenOrderId, CancellationToken ct) =>
-        _db.KitchenOrderItems.AsNoTracking().Where(x => x.KitchenOrderId == kitchenOrderId).ToListAsync(ct);
+    /// <summary>
+    /// Danh sách món của phiếu bếp (Nhóm C/GĐ7). Bổ sung <c>foodName</c>/<c>sizeName</c>/<c>quantity</c>
+    /// (join từ order item) và giữ nguyên <c>quanlity</c> cũ.
+    /// </summary>
+    public Task<List<KitchenItemResponse>> GetItemsAsync(int kitchenOrderId, CancellationToken ct) =>
+        (from ki in _db.KitchenOrderItems.AsNoTracking()
+         join oi in _db.OrderItems on ki.OrderItemId equals oi.Id
+         join fs in _db.FoodSizes on oi.SizeId equals fs.SizeId
+         join f in _db.Foods on fs.FoodId equals f.FoodId
+         where ki.KitchenOrderId == kitchenOrderId
+         select new KitchenItemResponse
+         {
+             Id = ki.Id,
+             KitchenOrderId = ki.KitchenOrderId,
+             OrderItemId = ki.OrderItemId,
+             Quanlity = ki.Quanlity,
+             Quantity = ki.Quanlity,
+             Status = ki.Status,
+             Note = ki.Note,
+             FoodName = f.FoodName,
+             SizeName = fs.SizeName
+         }).ToListAsync(ct);
 
     public async Task<bool> UpdateOrderStatusAsync(int id, KitchenStatusRequest request, CancellationToken ct)
     {

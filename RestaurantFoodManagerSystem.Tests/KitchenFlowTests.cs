@@ -78,6 +78,46 @@ public sealed class KitchenFlowTests : TestBase
     }
 
     [Fact]
+    public async Task GetItems_IncludesFoodAndSizeNames_AndCorrectlySpelledQuantity()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: "SentToKitchen");
+        var kitchenOrder = new KitchenOrder { OrderId = order.OrderId, Status = "Pending", SentAt = DateTime.UtcNow, Priority = 0 };
+        Db.KitchenOrders.Add(kitchenOrder);
+        Db.SaveChanges();
+
+        var orderItem = new OrderItem
+        {
+            OrderId = order.OrderId,
+            SizeId = s.Size.SizeId,
+            Quanlity = 4,
+            UnitPrice = 12m,
+            Status = "Pending",
+            CreatedAt = DateTime.UtcNow
+        };
+        Db.OrderItems.Add(orderItem);
+        Db.SaveChanges();
+
+        Db.KitchenOrderItems.Add(new KitchenOrderItem
+        {
+            KitchenOrderId = kitchenOrder.KitchenOrderId,
+            OrderItemId = orderItem.Id,
+            Quanlity = 4,
+            Status = "Pending",
+            Note = "extra"
+        });
+        Db.SaveChanges();
+
+        var item = Assert.Single(await Kitchen.GetItemsAsync(kitchenOrder.KitchenOrderId, CancellationToken.None));
+
+        Assert.Equal(s.Food.FoodName, item.FoodName);
+        Assert.Equal(s.Size.SizeName, item.SizeName);
+        Assert.Equal(4, item.Quantity);
+        Assert.Equal(4, item.Quanlity); // legacy alias kept
+        Assert.Equal("extra", item.Note);
+    }
+
+    [Fact]
     public async Task UpdateOrderStatus_RejectsStatusOutsideAllowList()
     {
         var scenario = SeedKitchen();
