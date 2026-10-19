@@ -101,6 +101,21 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         {
             base.OnModelCreating(modelBuilder);
 
+            // =====================================================
+            // NHÓM B6 — UNIQUE INDEX + SOFT DELETE
+            // =====================================================
+            // Các bảng dùng soft delete (IsActive=false) và có unique index trên tên. Index cũ
+            // không lọc nên bản ghi đã "xoá" vẫn chiếm tên ⇒ tạo lại cùng tên bị 500. Filter dưới
+            // đây chỉ áp unique cho bản ghi đang hoạt động.
+            //
+            // Ngoại lệ: users.UserName/UserEmail vẫn unique toàn cục (xem khối ACCOUNT).
+            //
+            // Cú pháp filter khác nhau giữa SQL Server và SQLite (test dùng SQLite in-memory),
+            // nên chọn theo provider đang build model. Mỗi tiến trình chỉ dùng một provider
+            // (app = SQL Server, test = SQLite) nên model cache không bị trộn.
+            var isSqlServer = Database.IsSqlServer();
+            var activeFilter = isSqlServer ? "[IsActive] = 1" : "\"IsActive\" = 1";
+
 
             // =====================================================
             // ACCOUNT
@@ -135,6 +150,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired()
                     .HasMaxLength(20);
 
+                // Users: giữ unique TOÀN CỤC (không lọc IsActive) vì UserName/UserEmail là định danh
+                // đăng nhập; tài khoản bị vô hiệu hoá vẫn phải chiếm tên để tránh trùng danh tính.
                 entity.HasIndex(x => x.UserName)
                     .IsUnique();
 
@@ -210,7 +227,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired();
 
                 entity.HasIndex(x => x.CategoryName)
-                    .IsUnique();
+                    .IsUnique()
+                    .HasFilter(activeFilter);
             });
 
 
@@ -301,7 +319,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     x.FoodId,
                     x.SizeName
                 })
-                .IsUnique();
+                .IsUnique()
+                .HasFilter(activeFilter);
             });
 
 
@@ -329,7 +348,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired();
 
                 entity.HasIndex(x => x.ToppingName)
-                    .IsUnique();
+                    .IsUnique()
+                    .HasFilter(activeFilter);
             });
 
 
@@ -386,7 +406,10 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired();
 
                 entity.HasIndex(x => x.TableNumber)
-                    .IsUnique();
+                    .IsUnique()
+                    .HasFilter(activeFilter);
+
+                ConfigureRowVersion(entity);
             });
 
 
@@ -437,6 +460,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.HasIndex(x => x.TableId);
                 entity.HasIndex(x => x.CreatedBy);
                 entity.HasIndex(x => x.Status);
+
+                ConfigureRowVersion(entity);
 
                 // IMPORTANT:
                 // KHÔNG unique TableId.
@@ -666,7 +691,9 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .HasForeignKey(x => x.CreatedBy)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(x => x.OrderId);
+                entity.HasIndex(x => x.OrderId)
+                    .IsUnique()
+                    .HasFilter(isSqlServer ? "[Status] = 'Paid'" : "\"Status\" = 'Paid'");
                 entity.HasIndex(x => x.TransactionCode);
             });
 
@@ -796,7 +823,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired();
 
                 entity.HasIndex(x => x.Name)
-                    .IsUnique();
+                    .IsUnique()
+                    .HasFilter(activeFilter);
             });
 
 
@@ -824,6 +852,8 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 // Một ingredient chỉ có một inventory record
                 entity.HasIndex(x => x.IngredientId)
                     .IsUnique();
+
+                ConfigureRowVersion(entity);
             });
 
 
@@ -1007,7 +1037,11 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .HasForeignKey(x => x.SizeId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                entity.HasIndex(x => x.SizeId);
+                // Nhóm B5: mỗi size chỉ được có tối đa MỘT công thức đang hoạt động.
+                // Index lọc theo IsActive để vẫn giữ được lịch sử công thức đã ngừng dùng.
+                entity.HasIndex(x => x.SizeId)
+                    .IsUnique()
+                    .HasFilter(activeFilter);
             });
 
 
@@ -1039,6 +1073,78 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .HasForeignKey(x => x.IngredientId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+        }
+
+        /// <summary>
+        /// Nhóm B7 — concurrency token cho <see cref="Order"/>/<see cref="Inventory"/>/
+        /// <see cref="RestaurantTable"/>.
+        ///
+        /// Trên SQL Server dùng cột <c>rowversion</c> thật (<c>IsRowVersion</c>): DB tự tăng sau mỗi
+        /// lần UPDATE nên EF phát hiện được lost update. SQLite (test in-memory) không có rowversion,
+        /// nên dùng <c>IsConcurrencyToken</c> + giá trị mới sinh trong <see cref="SaveChangesAsync"/>
+        /// để vẫn kiểm chứng được cơ chế chặn ghi đè.
+        /// </summary>
+        private void ConfigureRowVersion<TEntity>(Microsoft.EntityFrameworkCore.Metadata.Builders.EntityTypeBuilder<TEntity> entity)
+            where TEntity : class
+        {
+            var property = entity.Property<byte[]>(nameof(Order.RowVersion));
+
+            if (Database.IsSqlServer())
+                property.IsRowVersion();
+            else
+                property.IsConcurrencyToken();
+        }
+
+        /// <summary>
+        /// Sinh giá trị mới cho concurrency token ở provider không có rowversion (SQLite trong test).
+        /// Trên SQL Server, DB tự làm việc này nên bỏ qua.
+        /// Đồng thời dịch <see cref="DbUpdateConcurrencyException"/> thành
+        /// <see cref="ConcurrencyConflictException"/> để tầng API trả 409 thay vì 500.
+        /// </summary>
+        public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+        {
+            if (!Database.IsSqlServer())
+            {
+                foreach (var entry in ChangeTracker.Entries()
+                             .Where(e => e.State == EntityState.Modified &&
+                                         e.Metadata.FindProperty(nameof(Order.RowVersion)) is not null))
+                {
+                    entry.Property(nameof(Order.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
+                }
+            }
+
+            try
+            {
+                return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                throw new ConcurrencyConflictException(
+                    "Dữ liệu vừa bị thay đổi bởi thao tác khác. Vui lòng tải lại và thử lại.", ex);
+            }
+        }
+
+        public override int SaveChanges(bool acceptAllChangesOnSuccess)
+        {
+            if (!Database.IsSqlServer())
+            {
+                foreach (var entry in ChangeTracker.Entries()
+                             .Where(e => e.State == EntityState.Modified &&
+                                         e.Metadata.FindProperty(nameof(Order.RowVersion)) is not null))
+                {
+                    entry.Property(nameof(Order.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
+                }
+            }
+
+            try
+            {
+                return base.SaveChanges(acceptAllChangesOnSuccess);
+            }
+            catch (DbUpdateConcurrencyException ex)
+            {
+                throw new ConcurrencyConflictException(
+                    "Dữ liệu vừa bị thay đổi bởi thao tác khác. Vui lòng tải lại và thử lại.", ex);
+            }
         }
     }
 }

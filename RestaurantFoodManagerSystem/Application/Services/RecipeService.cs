@@ -37,6 +37,10 @@ public sealed class RecipeService
         var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
         if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
 
+        // Nhóm B5: mỗi size chỉ có một công thức đang hoạt động.
+        if (await _db.Recipes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
+            throw new InvalidOperationException("This size already has an active recipe");
+
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var x = new Recipe
@@ -132,6 +136,10 @@ public sealed class RecipeService
 
         var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
         if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
+
+        // Nhóm B5: không cho chuyển sang size đã có công thức đang hoạt động khác.
+        if (await _db.Recipes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive && x.RecipeId != id, ct))
+            throw new InvalidOperationException("This size already has an active recipe");
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 

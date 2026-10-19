@@ -55,7 +55,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("CategoryId");
 
                     b.HasIndex("CategoryName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("categories", (string)null);
                 });
@@ -144,7 +145,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("SizeId");
 
                     b.HasIndex("FoodId", "SizeName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("food_sizes", (string)null);
                 });
@@ -192,7 +194,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("IngredientId");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("ingredients", (string)null);
                 });
@@ -211,6 +214,12 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<decimal>("Quanlity")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -368,6 +377,12 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<decimal>("DiscountAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -555,7 +570,9 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("CreatedBy");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Paid'");
 
                     b.HasIndex("TransactionCode");
 
@@ -760,7 +777,9 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasKey("RecipeId");
 
-                    b.HasIndex("SizeId");
+                    b.HasIndex("SizeId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("recipes", (string)null);
                 });
@@ -798,6 +817,12 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -811,7 +836,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("TableId");
 
                     b.HasIndex("TableNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("restaurant_tables", (string)null);
                 });
@@ -906,7 +932,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("ToppingId");
 
                     b.HasIndex("ToppingName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("toppings", (string)null);
                 });

@@ -377,18 +377,23 @@ public sealed class FoodCatalogTests : TestBase
     }
 
     [Fact]
-    public async Task Topping_CannotBeRecreatedWithSameNameAfterSoftDelete_UniqueIndexStillApplies()
+    public async Task Topping_CanBeRecreatedWithSameNameAfterSoftDelete_FilteredUniqueIndex()
     {
-        // Baseline behaviour: the unique index on toppings.ToppingName is NOT filtered by IsActive,
-        // so a soft-deleted topping still blocks recreating the same name at the database level.
+        // Nhóm B6: unique index trên toppings.ToppingName nay có HasFilter(IsActive=1),
+        // nên bản ghi đã soft-delete không còn chiếm tên.
         var topping = await Toppings.CreateAsync(new CreateToppingRequest { ToppingName = "Recycled", ToppingPrice = 1m });
         await Toppings.DeleteAsync(topping.ToppingId);
 
-        await Assert.ThrowsAsync<DbUpdateException>(() => Toppings.CreateAsync(new CreateToppingRequest
+        var recreated = await Toppings.CreateAsync(new CreateToppingRequest
         {
             ToppingName = "Recycled",
             ToppingPrice = 2m
-        }));
+        });
+
+        Assert.NotEqual(topping.ToppingId, recreated.ToppingId);
+        Assert.Equal("Recycled", recreated.ToppingName);
+        Assert.Equal(2m, recreated.ToppingPrice);
+        Assert.True(recreated.IsActive);
     }
 
     // ============================ FOOD TOPPING ============================

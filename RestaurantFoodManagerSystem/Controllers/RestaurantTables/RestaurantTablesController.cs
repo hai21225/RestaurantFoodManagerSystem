@@ -60,6 +60,7 @@ public class RestaurantTablesController : ControllerBase
 
         RestaurantTableDto created;
         try { created = await _restaurantTableService.AddRestaurantTableAsync(dto); }
+        catch (ConcurrencyConflictException ex) { return Conflict(new { message = ex.Message }); }
         catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
 
         return Ok(new
@@ -91,6 +92,13 @@ public class RestaurantTablesController : ControllerBase
             return Ok(new
             {
                 message = "Restaurant table updated successfully"
+            });
+        }
+        catch (ConcurrencyConflictException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
             });
         }
         catch (Exception ex)
@@ -125,6 +133,13 @@ public class RestaurantTablesController : ControllerBase
                 message = "Restaurant table deleted successfully"
             });
         }
+        catch (ConcurrencyConflictException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
         catch (Exception ex)
         {
             return NotFound(new
@@ -138,5 +153,14 @@ public class RestaurantTablesController : ControllerBase
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPatch("{id:int}/maintenance")]
     public async Task<IActionResult> Maintenance(int id, [FromQuery] bool enabled)
-        => await _restaurantTableService.SetMaintenanceAsync(id, enabled) ? NoContent() : NotFound();
+    {
+        try
+        {
+            return await _restaurantTableService.SetMaintenanceAsync(id, enabled) ? NoContent() : NotFound();
+        }
+        catch (ConcurrencyConflictException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
 }

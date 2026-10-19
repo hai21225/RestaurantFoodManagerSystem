@@ -30,8 +30,36 @@ public sealed class PaymentService
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var createdBy = _currentUser.ResolveActorId(request.CreatedBy, _logger, nameof(request.CreatedBy));
+
+        // Nhóm B3: đơn tổng 0đ không phải là một khoản thu; tránh tạo payment "Paid" vô nghĩa.
+        if (order.TotalAmount <= 0)
+            throw new InvalidOperationException("Order total must be greater than zero");
+
         var payment = new Payment { OrderId = order.OrderId, Amount = order.TotalAmount, PaymentMethod = request.PaymentMethod.Trim(), TransactionCode = request.TransactionCode ?? string.Empty, Status = OrderStatuses.Paid, PaidAt = DateTime.UtcNow, CreatedBy = createdBy };
-        _db.Payments.Add(payment); order.Status = OrderStatuses.Paid; order.UpdatedAt = DateTime.UtcNow; await _db.SaveChangesAsync(ct); await tx.CommitAsync(ct); await _tables.RefreshStatusForTableAsync(order.TableId); return payment;
+        _db.Payments.Add(payment); order.Status = OrderStatuses.Paid; order.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch (DbUpdateException ex)
+        {
+            // Nhóm B3: unique index lọc (OrderId, Status='Paid') là chốt chặn cuối khi hai request
+            // đồng thời cùng vượt qua kiểm tra phía trên. Phân biệt lỗi trùng thanh toán với lỗi
+            // khác (FK...) bằng cách truy vấn lại sau khi rollback.
+            try { await tx.RollbackAsync(ct); } catch (InvalidOperationException) { /* tx đã đóng */ }
+
+            _db.ChangeTracker.Clear();
+
+            if (await _db.Payments.AsNoTracking().AnyAsync(x => x.OrderId == order.OrderId && x.Status == OrderStatuses.Paid, ct))
+                throw new InvalidOperationException("Order is already paid", ex);
+
+            throw;
+        }
+
+        await _tables.RefreshStatusForTableAsync(order.TableId);
+        return payment;
     }
     public Task<List<Payment>> GetByOrderAsync(int orderId, CancellationToken ct) => _db.Payments.AsNoTracking().Where(x => x.OrderId == orderId).ToListAsync(ct);
 }

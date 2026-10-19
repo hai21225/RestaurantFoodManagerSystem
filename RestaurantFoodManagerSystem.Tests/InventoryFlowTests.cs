@@ -478,7 +478,8 @@ public sealed class InventoryFlowTests : TestBase
     {
         var category = SeedCategory();
         var food = SeedFood(category.CategoryId);
-        var size = SeedSize(food.FoodId, 10m);
+        var size = SeedSize(food.FoodId, 10m, name: "M");
+        var otherSize = SeedSize(food.FoodId, 12m, isDefault: false, name: "L");
         var ingredient = SeedIngredient(10m);
         var active = await Recipes.CreateAsync(new RecipeRequest
         {
@@ -486,9 +487,10 @@ public sealed class InventoryFlowTests : TestBase
             Name = "active",
             Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
         }, CancellationToken.None);
+        // Nhóm B5: mỗi size chỉ có một công thức active ⇒ công thức thứ hai dùng size khác.
         var removed = await Recipes.CreateAsync(new RecipeRequest
         {
-            SizeId = size.SizeId,
+            SizeId = otherSize.SizeId,
             Name = "removed",
             Ingredients = { new RecipeIngredientRequest { IngredientId = ingredient.IngredientId, Quantity = 1m } }
         }, CancellationToken.None);
