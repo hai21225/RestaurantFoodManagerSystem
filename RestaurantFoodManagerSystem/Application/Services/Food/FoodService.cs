@@ -207,6 +207,37 @@ public class FoodService
 
 
     // =========================
+    // UPDATE ACTIVE (soft delete / reactivate)
+    // =========================
+
+    public async Task<bool> UpdateActiveAsync(
+        int id,
+        bool isActive)
+    {
+        var food = await _db.Foods.FindAsync(id);
+
+        if (food == null)
+        {
+            return false;
+        }
+
+        food.IsActive = isActive;
+
+        // Ngừng dùng thì cũng không cho order (đối xứng với DeleteFoodAsync).
+        if (!isActive)
+        {
+            food.IsAvailable = false;
+        }
+
+        food.UpdatedAt = DateTime.UtcNow;
+
+        _db.Foods.Update(food);
+
+        return await _db.SaveChangesAsync() > 0;
+    }
+
+
+    // =========================
     // DELETE - SOFT DELETE
     // =========================
 

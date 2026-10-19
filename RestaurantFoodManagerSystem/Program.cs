@@ -11,12 +11,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+// GĐ6/A0: frontend tĩnh chạy bằng `python -m http.server 5500 --bind localhost`
+// ⇒ origin http://localhost:5500. Thêm 5501/3000 cho các cổng dev thay thế.
+// Policy này trước đây đăng ký nhưng KHÔNG được áp vào pipeline (thiếu UseCors).
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendPolicy", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5500")
+            .WithOrigins(
+                "http://localhost:5500",
+                "http://localhost:5501",
+                "http://localhost:3000")
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -83,6 +89,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<UserRoleService>();
 builder.Services.AddScoped<RoleService>();
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<MenuService>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentService>();
@@ -109,6 +116,10 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+// Phải đứng trước UseAuthentication/UseAuthorization để preflight và header
+// Authorization của request cross-origin được xử lý.
+app.UseCors("FrontendPolicy");
 
 app.UseAuthentication();
 app.UseAuthorization();

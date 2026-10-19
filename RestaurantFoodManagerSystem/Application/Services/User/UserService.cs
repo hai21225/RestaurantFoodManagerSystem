@@ -41,6 +41,40 @@ public class UserService
         return userDto;
     }
 
+    /// <summary>
+    /// Danh sách nhân viên kèm tên role (GĐ6/A2) — phục vụ <c>GET /api/users</c>.
+    /// Đọc 3 bảng rồi ghép trong bộ nhớ để tránh N+1.
+    /// </summary>
+    public async Task<List<UserListItemResponse>> GetAllWithRolesAsync(CancellationToken ct = default)
+    {
+        var users = await _db.Users
+            .AsNoTracking()
+            .OrderBy(u => u.Id)
+            .ToListAsync(ct);
+
+        var roleLinks = await (from ur in _db.UserRoles.AsNoTracking()
+                               join r in _db.Roles.AsNoTracking() on ur.RoleId equals r.RoleId
+                               select new { ur.UserId, r.RoleName })
+            .ToListAsync(ct);
+
+        var rolesByUser = roleLinks
+            .GroupBy(x => x.UserId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.RoleName).OrderBy(name => name).ToList());
+
+        return users.Select(u => new UserListItemResponse
+        {
+            UserId = u.Id,
+            UserName = u.UserName ?? string.Empty,
+            FullName = u.UserFullName ?? string.Empty,
+            Email = u.UserEmail ?? string.Empty,
+            Phone = u.UserPhone ?? string.Empty,
+            IsActive = u.IsActive,
+            Roles = rolesByUser.TryGetValue(u.Id, out var roles) ? roles : []
+        }).ToList();
+    }
+
     public async Task<bool> AddUserAsync(UserDto userdto)
     {
         var username = userdto.UserName?.Trim();

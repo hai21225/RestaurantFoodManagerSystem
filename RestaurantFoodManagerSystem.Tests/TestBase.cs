@@ -67,9 +67,12 @@ public abstract class TestBase : IDisposable
         public int? UserId { get; set; }
     }
 
-    protected AuthService Auth => new(new UserService(Db),
+    protected AuthService Auth => new(Db,
+                                      new UserService(Db),
                                       new UserRoleService(Db),
                                       new RoleService(Db));
+
+    protected SetupService SetupSvc => new(Db, Auth, new UserService(Db));
 
     protected FoodService Foods => new(Db);
     protected CategoryService Categories => new(Db);

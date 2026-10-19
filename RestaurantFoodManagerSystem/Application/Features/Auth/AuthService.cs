@@ -1,10 +1,15 @@
-﻿public class AuthService
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
+
+public class AuthService
 {
+    private readonly AppDbContext _db;
     private readonly UserService _userService;
     private readonly UserRoleService _userRoleService;
     private readonly RoleService _roleService;
-    public AuthService(UserService userService, UserRoleService userRoleService,RoleService roleService)
+    public AuthService(AppDbContext db, UserService userService, UserRoleService userRoleService,RoleService roleService)
     {
+        _db = db;
         _userService = userService;
         _userRoleService = userRoleService;
         _roleService = roleService;
@@ -89,6 +94,37 @@
         });
 
         return result;
+    }
+
+    /// <summary>
+    /// Use-case tạo nhân viên kèm role (GĐ6/A2) cho <c>POST /api/users</c>.
+    /// Bọc trong transaction để "user + role" là nguyên tử: gán role lỗi thì user cũng không được tạo.
+    /// </summary>
+    public async Task<bool> CreateUserWithRoleAsync(UserDto userDto, string? roleName, CancellationToken ct = default)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var created = await Register(userDto);
+        if (!created)
+        {
+            await tx.RollbackAsync(ct);
+            return false;
+        }
+
+        if (!string.IsNullOrWhiteSpace(roleName))
+        {
+            var user = await _userService.FindUserByUsernameAsync(userDto.UserName ?? "");
+            if (user is null)
+            {
+                await tx.RollbackAsync(ct);
+                return false;
+            }
+
+            await AssignRoleToUser(user.UserId, roleName.Trim());
+        }
+
+        await tx.CommitAsync(ct);
+        return true;
     }
 
 }

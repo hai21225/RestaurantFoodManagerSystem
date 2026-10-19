@@ -165,6 +165,40 @@ public class FoodsController : ControllerBase
 
 
     // ========================================
+    // PATCH /api/foods/5/active
+    //
+    // Kích hoạt lại (hoặc ngừng dùng) món — GĐ6/A4.
+    // Khác /availability (IsAvailable).
+    // ========================================
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("{id:int}/active")]
+    public async Task<IActionResult> UpdateActive(
+        int id,
+        [FromBody] UpdateFoodActiveRequest request)
+    {
+        var result = await _foodService
+            .UpdateActiveAsync(
+                id,
+                request.IsActive
+            );
+
+        if (!result)
+        {
+            return NotFound(new
+            {
+                message = "Food not found"
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Food active status updated successfully"
+        });
+    }
+
+
+    // ========================================
     // DELETE /api/foods/5
     // ========================================
 

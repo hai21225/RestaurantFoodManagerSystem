@@ -87,4 +87,54 @@ public sealed class RecipeService
         await _db.SaveChangesAsync(ct);
         return true;
     }
+
+    /// <summary>
+    /// Cập nhật công thức (GĐ6/A3) cho <c>PUT /api/management/recipes/{id}</c>.
+    /// Thay toàn bộ định lượng trong một transaction. Trả <c>false</c> nếu không tìm thấy công thức.
+    /// </summary>
+    public async Task<bool> UpdateAsync(int id, RecipeRequest r, CancellationToken ct)
+    {
+        var recipe = await _db.Recipes.FirstOrDefaultAsync(x => x.RecipeId == id, ct);
+        if (recipe is null)
+        {
+            return false;
+        }
+
+        if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
+            throw new KeyNotFoundException("Food size not found");
+        if (r.Ingredients is null || r.Ingredients.Count == 0)
+            throw new ArgumentException("Recipe must contain at least one ingredient");
+
+        var ids = r.Ingredients.Select(i => i.IngredientId).ToList();
+        if (ids.Count != ids.Distinct().Count())
+            throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
+
+        var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
+        if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
+
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        recipe.SizeId = r.SizeId;
+        recipe.Name = (r.Name ?? string.Empty).Trim();
+        recipe.Version = string.IsNullOrWhiteSpace(r.Version) ? "1" : r.Version.Trim();
+
+        var existing = await _db.RecipeIngredients
+            .Where(x => x.RecipeId == id)
+            .ToListAsync(ct);
+        _db.RecipeIngredients.RemoveRange(existing);
+
+        foreach (var i in r.Ingredients)
+        {
+            _db.RecipeIngredients.Add(new RecipeIngredient
+            {
+                RecipeId = id,
+                IngredientId = i.IngredientId,
+                Quanlity = i.Quantity
+            });
+        }
+
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return true;
+    }
 }

@@ -55,6 +55,8 @@ public sealed class ManagementController : ControllerBase
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("recipes")] public async Task<IActionResult> CreateRecipe(RecipeRequest r, [FromServices] RecipeService s, CancellationToken ct) { try { return Ok(await s.CreateAsync(r, ct)); } catch (KeyNotFoundException e) { return BadRequest(e.Message); } }
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPut("recipes/{id:int}")] public async Task<IActionResult> UpdateRecipe(int id, RecipeRequest r, [FromServices] RecipeService s, CancellationToken ct) { try { return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound(); } catch (KeyNotFoundException e) { return BadRequest(e.Message); } catch (ArgumentException e) { return BadRequest(e.Message); } }
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("recipes/{id:int}")] public async Task<IActionResult> DeleteRecipe(int id, [FromServices] RecipeService s, CancellationToken ct) => await s.DeleteAsync(id,ct) ? NoContent() : NotFound();
 
     // --- Bếp => KitchenDesk ---
