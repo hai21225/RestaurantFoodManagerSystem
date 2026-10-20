@@ -497,5 +497,4 @@ $RECYCLE.BIN/
 
 # Local-only workspace and notes (do not push)
 .opencode/
-docs/
 .tests/
