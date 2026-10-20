@@ -44,4 +44,10 @@ public static class AuthPolicies
     /// mã đơn + số bàn trên phiếu bếp, nhưng không được sửa đơn/bàn.
     /// </summary>
     public const string PosKitchenRead = "PosKitchenRead";
+
+    /// <summary>
+    /// Admin + Waiter + Chef — huỷ món. Bếp phải tự huỷ được món đang nấu; luật chi tiết
+    /// (món đã Ready chỉ Admin) do <c>OrderCancellationPolicy</c> áp ở tầng service.
+    /// </summary>
+    public const string OrderCancellation = "OrderCancellation";
 }

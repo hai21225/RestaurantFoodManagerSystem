@@ -8,6 +8,12 @@
     public decimal QuanlityAfter { get; set; }
     public string? ReferenceType { get; set; }
     public int? ReferenceId { get; set; }
+
+    /// <summary>
+    /// Dòng món gây ra giao dịch (ledger theo món). Null cho giao dịch cấp đơn/nhập kho/
+    /// điều chỉnh tay và cho dữ liệu cũ trước migration.
+    /// </summary>
+    public int? OrderItemId { get; set; }
     public string? Note { get; set; }
     public DateTime CreatedAt { get; set; }
     public int CreatedBy { get; set; }

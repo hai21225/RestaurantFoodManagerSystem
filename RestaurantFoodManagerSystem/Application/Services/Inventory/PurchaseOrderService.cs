@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -71,6 +72,10 @@ public sealed class PurchaseOrderService
     /// </summary>
     public async Task<bool> CancelAsync(int id, CancellationToken ct = default)
     {
+        // Serializable để cancel và receive trên cùng phiếu không chen vào nhau:
+        // một bên thấy trạng thái mới nhất sau khi bên kia commit, thay vì cùng đọc "Draft".
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var p = await _db.PurchaseOrders.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null)
         {
@@ -84,16 +89,22 @@ public sealed class PurchaseOrderService
 
         if (p.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
         {
+            await tx.CommitAsync(ct);
             return true;
         }
 
         p.Status = "Cancelled";
         await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return true;
     }
 
     public async Task<PurchaseOrder> CreateAsync(PurchaseOrderRequest r, CancellationToken ct)
     {
+        // Batch A2 (15.5): JSON `items: null` lọt qua model binding; `[]` tạo phiếu 0 dòng vô nghĩa.
+        if (r.Items is null || r.Items.Count == 0)
+            throw new ArgumentException("Purchase order must contain at least one item");
+
         if (!await _db.Suppliers.AnyAsync(x => x.SupplierId == r.SupplierId && x.IsActive, ct))
             throw new KeyNotFoundException("Supplier not found");
 
@@ -103,30 +114,42 @@ public sealed class PurchaseOrderService
         var p = new PurchaseOrder
         {
             SupplierId = r.SupplierId,
-            CreatedBy = _currentUser.ResolveActorId(r.CreatedBy, _logger, nameof(r.CreatedBy)),
+            CreatedBy = 0,
             Status = "Draft",
             OrderedAt = DateTime.UtcNow
         };
+
+        // Tính tròn TIỀN DÒNG một lần rồi dùng lại cho cả TotalPrice lẫn TotalAmount.
+        // Nếu không, DB lưu TotalPrice/decimal(18,2) đã tròn còn TotalAmount thì chưa
+        // ⇒ tổng phiếu lệch với tổng dòng hàng.
+        var lines = new List<(int IngredientId, decimal Quanlity, decimal UnitPrice, decimal TotalPrice)>();
 
         foreach (var i in r.Items)
         {
             if (!await _db.Ingredients.AnyAsync(x => x.IngredientId == i.IngredientId && x.IsActive, ct))
                 throw new KeyNotFoundException("Ingredient not found");
-            p.TotalAmount += i.Quanlity * i.UnitPrice;
+
+            var lineTotal = Math.Round(i.Quanlity * i.UnitPrice, 2, MidpointRounding.AwayFromZero);
+            lines.Add((i.IngredientId, i.Quanlity, i.UnitPrice, lineTotal));
+            p.TotalAmount += lineTotal;
         }
+
+        p.TotalAmount = Math.Round(p.TotalAmount, 2, MidpointRounding.AwayFromZero);
+        p.CreatedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, r.CreatedBy, _logger, nameof(r.CreatedBy), ct);
 
         _db.PurchaseOrders.Add(p);
         await _db.SaveChangesAsync(ct);
 
-        foreach (var i in r.Items)
+        foreach (var line in lines)
         {
             _db.PurchaseOrderItems.Add(new PurchaseOrderItem
             {
                 PurchaseOrderId = p.Id,
-                IngredientId = i.IngredientId,
-                Quanlity = i.Quanlity,
-                UnitPrice = i.UnitPrice,
-                TotalPrice = i.Quanlity * i.UnitPrice
+                IngredientId = line.IngredientId,
+                Quanlity = line.Quanlity,
+                UnitPrice = line.UnitPrice,
+                TotalPrice = line.TotalPrice
             });
         }
         await _db.SaveChangesAsync(ct);
@@ -137,7 +160,10 @@ public sealed class PurchaseOrderService
 
     public async Task<bool> ReceiveAsync(int id, ReceivePurchaseRequest r, CancellationToken ct)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        // Defect #5: đọc trạng thái phiếu + cộng kho phải nằm trong cùng transaction Serializable.
+        // Nhờ vậy hai lần receive đồng thời được tuần tự hoá: lần sau thấy "Received" và trả false,
+        // thay vì cả hai cùng thấy "Draft" rồi cộng kho hai lần.
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
         var p = await _db.PurchaseOrders.FirstOrDefaultAsync(x => x.Id == id, ct);
         if (p is null) return false;
@@ -149,7 +175,16 @@ public sealed class PurchaseOrderService
         if (p.Status.Equals("Received", StringComparison.OrdinalIgnoreCase))
             return false;
 
-        var items = await _db.PurchaseOrderItems.Where(x => x.PurchaseOrderId == id).ToListAsync(ct);
+        // Khoá các dòng tồn kho theo một thứ tự cố định để hai phiếu nhập chung nguyên liệu
+        // không tạo vòng chờ chéo nhau (deadlock) khi chạy Serializable.
+        var items = await _db.PurchaseOrderItems
+            .Where(x => x.PurchaseOrderId == id)
+            .OrderBy(x => x.IngredientId)
+            .ToListAsync(ct);
+
+        var receivedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, r.ReceivedBy, _logger, nameof(r.ReceivedBy), ct);
+
         foreach (var item in items)
         {
             // Defect #26: nguyên liệu thiếu dòng tồn kho là lỗi dữ liệu nghiệp vụ,
@@ -169,7 +204,7 @@ public sealed class PurchaseOrderService
                 ReferenceType = "PurchaseOrder",
                 ReferenceId = id,
                 CreatedAt = DateTime.UtcNow,
-                CreatedBy = _currentUser.ResolveActorId(r.ReceivedBy, _logger, nameof(r.ReceivedBy))
+                CreatedBy = receivedBy
             });
         }
 

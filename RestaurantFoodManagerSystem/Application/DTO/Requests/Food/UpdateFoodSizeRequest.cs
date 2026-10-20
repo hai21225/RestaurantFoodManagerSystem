@@ -2,7 +2,7 @@
 
 public class UpdateFoodSizeRequest
 {
-    [Required]
+    [Required, MaxLength(50)]
     public string SizeName { get; set; } = string.Empty;
 
     [Range(0, double.MaxValue)]

@@ -148,4 +148,25 @@ public class CategoryService
 
         return await _db.SaveChangesAsync(ct) > 0;
     }
+
+
+    /// <summary>
+    /// Khôi phục/tắt danh mục bằng soft-delete. Món và lịch sử báo cáo vẫn giữ CategoryId.
+    /// </summary>
+    public async Task<bool> SetActiveAsync(int id, bool active, CancellationToken ct = default)
+    {
+        var category = await _db.Categories.FindAsync([id], ct);
+
+        if (category == null)
+        {
+            return false;
+        }
+
+        category.IsActive = active;
+        category.UpdatedAt = DateTime.UtcNow;
+
+        _db.Categories.Update(category);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
 }

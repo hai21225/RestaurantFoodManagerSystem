@@ -37,6 +37,28 @@ public sealed class AuthTests : TestBase
     }
 
     [Fact]
+    public async Task Login_ReturnsUser_WhenUsingEmail()
+    {
+        var user = SeedUserWithPassword("secret123");
+
+        var result = await Auth.Login(user.UserEmail, "secret123");
+
+        Assert.NotNull(result);
+        Assert.Equal(user.Id, result!.UserId);
+    }
+
+    [Fact]
+    public async Task Login_ReturnsUser_WhenEmailHasDifferentCase()
+    {
+        var user = SeedUserWithPassword("secret123");
+
+        var result = await Auth.Login(user.UserEmail.ToUpperInvariant(), "secret123");
+
+        Assert.NotNull(result);
+        Assert.Equal(user.Id, result!.UserId);
+    }
+
+    [Fact]
     public async Task Login_ReturnsNull_WhenPasswordIsWrong()
     {
         var user = SeedUserWithPassword("secret123");
@@ -62,6 +84,24 @@ public sealed class AuthTests : TestBase
     public async Task Login_ReturnsNull_WhenUsernameIsBlank()
     {
         Assert.Null(await Auth.Login("   ", "secret123"));
+    }
+
+    [Fact]
+    public async Task Login_ReturnsNull_WhenPasswordIsNull()
+    {
+        var user = SeedUserWithPassword("secret123");
+
+        Assert.Null(await Auth.Login(user.UserName, null!));
+    }
+
+    [Fact]
+    public async Task Login_ReturnsNull_WhenStoredHashIsMalformed()
+    {
+        var user = SeedUserWithPassword("secret123");
+        user.UserPassword = "not-a-valid-bcrypt-hash";
+        await Db.SaveChangesAsync();
+
+        Assert.Null(await Auth.Login(user.UserName, "secret123"));
     }
 
     [Fact]
@@ -104,19 +144,19 @@ public sealed class AuthTests : TestBase
     }
 
     [Fact]
-    public async Task Register_ReturnsFalse_WhenPasswordConfirmationDiffers()
+    public async Task Register_Throws_WhenPasswordConfirmationDiffers()
     {
         var username = $"reg-{Guid.NewGuid():N}";
 
-        var result = await Auth.Register(new UserDto
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Auth.Register(new UserDto
         {
             UserName = username,
             Email = $"{username}@example.test",
             Password = "secret123",
             ConfirmPassword = "different"
-        });
+        }));
 
-        Assert.False(result);
+        Assert.Equal("Password and confirm password do not match", ex.Message);
         Assert.False(Db.Users.Any(u => u.UserName == username));
     }
 
@@ -130,6 +170,49 @@ public sealed class AuthTests : TestBase
             Password = "secret123",
             ConfirmPassword = "secret123"
         }));
+    }
+
+    [Fact]
+    public async Task Register_Throws_WhenEmailFormatIsInvalid()
+    {
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Auth.Register(new UserDto
+        {
+            UserName = $"reg-{Guid.NewGuid():N}",
+            Email = "not-an-email",
+            Password = "secret123",
+            ConfirmPassword = "secret123"
+        }));
+
+        Assert.Equal("Email format is invalid", ex.Message);
+    }
+
+    [Fact]
+    public async Task Register_Throws_WhenPasswordIsTooShort()
+    {
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Auth.Register(new UserDto
+        {
+            UserName = $"reg-{Guid.NewGuid():N}",
+            Email = $"reg-{Guid.NewGuid():N}@example.test",
+            Password = "12345",
+            ConfirmPassword = "12345"
+        }));
+
+        Assert.Contains("6 and 72", ex.Message);
+    }
+
+    [Fact]
+    public async Task Register_Throws_WhenPasswordIsTooLong()
+    {
+        var password = new string('a', 73);
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Auth.Register(new UserDto
+        {
+            UserName = $"reg-{Guid.NewGuid():N}",
+            Email = $"reg-{Guid.NewGuid():N}@example.test",
+            Password = password,
+            ConfirmPassword = password
+        }));
+
+        Assert.Contains("6 and 72", ex.Message);
     }
 
     [Fact]
@@ -149,7 +232,7 @@ public sealed class AuthTests : TestBase
     {
         var user = SeedUserWithPassword("secret123");
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => Auth.AssignRoleToUser(user.Id, "NotARole"));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => Auth.AssignRoleToUser(user.Id, "NotARole"));
 
         Assert.Equal("Role not found", ex.Message);
     }

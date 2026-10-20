@@ -161,6 +161,43 @@ public class ToppingService
     }
 
 
+    /// <summary>
+    /// Bật/tắt vòng đời topping (soft-delete/restore). Khi tắt, topping cũng không còn
+    /// khả dụng để chọn trong POS; dữ liệu lịch sử vẫn được giữ.
+    /// </summary>
+    public async Task<bool> SetActiveAsync(
+        int id,
+        bool active,
+        CancellationToken ct = default)
+    {
+        var topping = await _db.Toppings.FindAsync([id], ct);
+
+        if (topping == null)
+        {
+            return false;
+        }
+
+        if (active &&
+            await _db.Toppings.AnyAsync(x =>
+                x.ToppingId != id &&
+                x.ToppingName == topping.ToppingName &&
+                x.IsActive, ct))
+        {
+            throw new InvalidOperationException("Topping name already exists");
+        }
+
+        topping.IsActive = active;
+        if (!active)
+        {
+            topping.IsAvailable = false;
+        }
+
+        _db.Toppings.Update(topping);
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+
     private static ToppingResponseDto MapToDto(Topping topping)
     {
         return new ToppingResponseDto

@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -43,9 +44,11 @@ public sealed class SetupService
             throw new ArgumentException("Password and confirm password do not match");
         }
 
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        // Kiểm tra bên trong transaction để hai request đồng thời không cùng tạo được Admin.
+        // Kiểm tra bên trong transaction Serializable để hai request đồng thời không cùng tạo được Admin.
+        // SQL Server giữ key-range lock trên bảng users tới khi commit, nên request thứ hai phải chờ
+        // rồi thấy user đã tồn tại (Batch A2/15.6).
         if (await _db.Users.AnyAsync(ct))
         {
             await tx.RollbackAsync(ct);

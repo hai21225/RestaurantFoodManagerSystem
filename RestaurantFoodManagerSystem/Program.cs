@@ -48,6 +48,14 @@ if (authOptions.Enforce && string.IsNullOrWhiteSpace(jwtOptions.Key))
         "Đặt qua biến môi trường Authentication__Jwt__Key hoặc user-secrets.");
 }
 
+// HS256 cần khoá tối thiểu 32 byte; khoá quá ngắn sẽ ném lỗi ngay lúc ký token (500 ở login).
+if (!string.IsNullOrWhiteSpace(jwtOptions.Key) &&
+    Encoding.UTF8.GetByteCount(jwtOptions.Key) < 32)
+{
+    throw new InvalidOperationException(
+        "Authentication:Jwt:Key phải dài tối thiểu 32 byte (chuẩn HS256).");
+}
+
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddScoped<TokenService>();
 
@@ -84,6 +92,7 @@ builder.Services.AddScoped<CategoryService>();
 builder.Services.AddScoped<FoodSizeService>();
 builder.Services.AddScoped<ToppingService>();
 builder.Services.AddScoped<FoodToppingService>();
+builder.Services.AddScoped<TableAreaService>();
 builder.Services.AddScoped<RestaurantTableService>();
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<UserRoleService>();
@@ -92,6 +101,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<SetupService>();
 builder.Services.AddScoped<MenuService>();
 builder.Services.AddSingleton<IOrderIdempotencyStore, InMemoryOrderIdempotencyStore>();
+builder.Services.AddScoped<OrderLifecycleCoordinator>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<IngredientService>();
@@ -108,6 +118,14 @@ builder.Services.AddScoped<ReportService>();
 
 
 var app = builder.Build();
+
+if (!authOptions.Enforce)
+{
+    // Cảnh báo: khi tắt enforce, mọi policy [Authorize] đều cho qua ⇒ API mở cho
+    // mọi caller. Chỉ chấp nhận khi frontend chưa gửi Bearer token.
+    app.Logger.LogWarning(
+        "Auth:Enforce=false — mọi endpoint [Authorize] đang cho qua. Chỉ dùng cho môi trường dev.");
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -239,8 +239,10 @@ public sealed class ResponseDtoHttpTests : IClassFixture<RestaurantApiFactory>
     }
 
     [Fact]
-    public async Task PutOrderItems_ReplacesItems_ReturnsUpdatedDetail()
+    public async Task PutOrderItems_IsRetired_Returns410Gone_AndLeavesOrderUntouched()
     {
+        // C-09: route replace-all đã bị chặn. Client cũ phải chuyển sang 3 route lệnh
+        // (gọi thêm / đổi số lượng / hủy món).
         var (tableId, sizeId, userId, toppingId) = SeedOrderableScenario();
         using var client = _factory.CreateClient();
 
@@ -269,19 +271,21 @@ public sealed class ResponseDtoHttpTests : IClassFixture<RestaurantApiFactory>
             }
         });
 
-        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
-        var detail = await update.Content.ReadFromJsonAsync<JsonElement>();
-        var item = Assert.Single(detail.GetProperty("items").EnumerateArray());
-        Assert.Equal(3, item.GetProperty("quantity").GetInt32());
-        Assert.Equal("more", item.GetProperty("note").GetString());
-        Assert.Equal(45m, detail.GetProperty("totalAmount").GetDecimal());
-        Assert.Single(item.GetProperty("toppings").EnumerateArray());
+        Assert.Equal(HttpStatusCode.Gone, update.StatusCode);
+        var body = await update.Content.ReadAsStringAsync();
+        Assert.Contains("retired", body);
+        Assert.Contains("/quantity", body);
+        Assert.Contains("/cancel", body);
 
+        // Đơn và kho không bị đụng: route cũ không còn thay dòng món nữa.
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var recipeId = db.Recipes.Single(x => x.SizeId == sizeId).RecipeId;
         var ingredientId = db.RecipeIngredients.Single(x => x.RecipeId == recipeId).IngredientId;
-        Assert.Equal(997m, db.Inventories.Single(x => x.IngredientId == ingredientId).Quanlity);
+        Assert.Equal(998m, db.Inventories.Single(x => x.IngredientId == ingredientId).Quanlity);
+        var item = Assert.Single(db.OrderItems.Where(x => x.OrderId == orderId));
+        Assert.Equal(2, item.Quanlity);
+        Assert.Equal("Pending", item.Status);
     }
 
     [Fact]

@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Net.Mail;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class AuthService
@@ -15,23 +17,22 @@ public class AuthService
         _roleService = roleService;
     }
 
-    public async Task<UserDto?> Login(string username, string password, CancellationToken ct = default)
+    public async Task<UserDto?> Login(string identifier, string password, CancellationToken ct = default)
     {
-        var users = await _userService.FindUserByUsernameAsync(username, ct);
+        var users = await _userService.FindUserByLoginAsync(identifier, ct);
 
         if (users == null || users.IsActive != true || string.IsNullOrWhiteSpace(users.Password))
         {
             return null;
         }
 
-        var result = BCrypt.Net.BCrypt.Verify(password, users.Password);
-        
-        if(!result)
+        // Chặn sớm password null/rỗng: BCrypt.Verify có thể ném lỗi với input không hợp lệ.
+        if (string.IsNullOrWhiteSpace(password))
         {
             return null;
         }
 
-        return users;
+        return VerifyPassword(password, users.Password) ? users : null;
     }
 
     public async Task<bool> Register(UserDto userDto, CancellationToken ct = default)
@@ -49,9 +50,16 @@ public class AuthService
             throw new ArgumentException("Username, email and password are required");
         }
 
+        ValidatePassword(userDto.Password, "Password must be between 6 and 72 bytes (UTF-8)");
+
+        if (!IsValidEmail(userDto.Email))
+        {
+            throw new ArgumentException("Email format is invalid");
+        }
+
         if(userDto.Password != userDto.ConfirmPassword)
         {
-            return false;
+            throw new ArgumentException("Password and confirm password do not match");
         }
         var userdto = new UserDto
         {
@@ -77,23 +85,40 @@ public class AuthService
         return _userRoleService.GetRoleNamesByUserIdAsync(userId, ct);
     }
 
-    public async Task<bool> AssignRoleToUser(int userid, string rolename, CancellationToken ct = default)
+    /// <summary>
+    /// Gán role cho user. Kiểm tra user/role tồn tại và không gán trùng.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">User hoặc role không tồn tại.</exception>
+    /// <exception cref="InvalidOperationException">Role đã được gán cho user này.</exception>
+    public async Task<bool> AssignRoleToUser(int userid, string? rolename, CancellationToken ct = default)
     {
-
-        var role = await _roleService.GetRoleByRoleNameAsync(rolename, ct);
-
-
-        if (role == null)
+        var name = rolename?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(name))
         {
-            throw new Exception("Role not found");
+            throw new ArgumentException("Role name is required");
         }
-        var result=await _userRoleService.AddUserRoleAsync(new UserRoleDto
+
+        if (!await _db.Users.AnyAsync(u => u.Id == userid, ct))
+        {
+            throw new KeyNotFoundException("User not found");
+        }
+
+        var role = await _roleService.GetRoleByRoleNameAsync(name, ct);
+        if (role is null)
+        {
+            throw new KeyNotFoundException("Role not found");
+        }
+
+        if (await _db.UserRoles.AnyAsync(x => x.UserId == userid && x.RoleId == role.RoleId, ct))
+        {
+            throw new InvalidOperationException("Role is already assigned to this user");
+        }
+
+        return await _userRoleService.AddUserRoleAsync(new UserRoleDto
         {
             UserId = userid,
             RoleId = role.RoleId,
         }, ct);
-
-        return result;
     }
 
     /// <summary>
@@ -118,10 +143,7 @@ public class AuthService
         }
 
         // BCrypt chỉ dùng tối đa 72 byte đầu; chặn sớm để không âm thầm cắt mật khẩu.
-        if (newPassword.Length < 6 || newPassword.Length > 72)
-        {
-            throw new ArgumentException("New password must be between 6 and 72 characters");
-        }
+        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
 
         if (newPassword != confirmPassword)
         {
@@ -162,10 +184,7 @@ public class AuthService
         var newPassword = request.NewPassword ?? string.Empty;
         var confirmPassword = request.ConfirmPassword ?? string.Empty;
 
-        if (newPassword.Length < 6 || newPassword.Length > 72)
-        {
-            throw new ArgumentException("New password must be between 6 and 72 characters");
-        }
+        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
 
         if (newPassword != confirmPassword)
         {
@@ -179,6 +198,44 @@ public class AuthService
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    private static bool IsValidEmail(string? email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        var trimmed = email.Trim();
+
+        // Chỉ nhận địa chỉ trần (không nhận dạng "Tên <email>") để tránh lưu
+        // giá trị không phải email thật vào trường UserEmail.
+        return MailAddress.TryCreate(trimmed, out var address)
+               && string.Equals(address.Address, trimmed, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Kiểm độ dài mật khẩu theo <b>byte UTF-8</b>, không phải số ký tự.
+    ///
+    /// <para>
+    /// BCrypt chỉ dùng 72 byte đầu. Mật khẩu tiếng Việt có nhiều byte nên một mật khẩu
+    /// 72 ký tự có thể vượt 72 byte và bị cắt âm thầm ⇒ hai mật khẩu khác nhau lại
+    /// cùng khớp, và mật khẩu thực tế yếu hơn người dùng tưởng.
+    /// </para>
+    /// </summary>
+    private static void ValidatePassword(string? password, string message)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            throw new ArgumentException(message);
+        }
+
+        var bytes = Encoding.UTF8.GetByteCount(password);
+        if (bytes < 6 || bytes > 72)
+        {
+            throw new ArgumentException(message);
+        }
     }
 
     private static bool VerifyPassword(string password, string? hash)
@@ -233,10 +290,15 @@ public class AuthService
 
         if (role.RoleName == AuthPolicies.Roles.Admin)
         {
+            // Chỉ tính Admin còn ACTIVE: nếu tính cả tài khoản đã khoá thì có thể gỡ role
+            // của Admin cuối cùng đang hoạt động ⇒ hệ thống mất người quản trị vĩnh viễn.
             var anotherAdminExists = await (
                 from ur in _db.UserRoles
                 join r in _db.Roles on ur.RoleId equals r.RoleId
-                where r.RoleName == AuthPolicies.Roles.Admin && ur.UserId != userId
+                join u in _db.Users on ur.UserId equals u.Id
+                where r.RoleName == AuthPolicies.Roles.Admin
+                   && ur.UserId != userId
+                   && u.IsActive
                 select ur.UserId)
                 .AnyAsync(ct);
 

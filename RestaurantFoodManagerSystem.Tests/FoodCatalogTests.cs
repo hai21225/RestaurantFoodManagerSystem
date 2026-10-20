@@ -83,6 +83,23 @@ public sealed class FoodCatalogTests : TestBase
     }
 
     [Fact]
+    public async Task GetFoodsByCategory_IncludesInactive_WhenRequested()
+    {
+        var category = SeedCategory();
+        var active = SeedFood(category.CategoryId);
+        var inactive = SeedFood(category.CategoryId, isActive: false);
+
+        var visible = await Foods.GetFoodsByCategoryIdAsync(category.CategoryId);
+        var all = await Foods.GetFoodsByCategoryIdAsync(
+            category.CategoryId,
+            includeInactive: true);
+
+        Assert.Contains(visible, x => x.FoodId == active.FoodId);
+        Assert.DoesNotContain(visible, x => x.FoodId == inactive.FoodId);
+        Assert.Contains(all, x => x.FoodId == inactive.FoodId);
+    }
+
+    [Fact]
     public async Task UpdateFood_ReturnsNull_WhenMissing_AndThrowsWhenCategoryMissing()
     {
         var category = SeedCategory();
@@ -249,6 +266,55 @@ public sealed class FoodCatalogTests : TestBase
         var sizes = await FoodSizes.GetByFoodIdAsync(food.FoodId);
         Assert.Single(sizes);
         Assert.Equal("M", sizes[0].SizeName);
+
+        var all = await FoodSizes.GetByFoodIdAsync(
+            food.FoodId,
+            includeInactive: true);
+        Assert.Equal(2, all.Count);
+        Assert.Contains(all, x => x.SizeId == inactive.SizeId);
+    }
+
+    [Fact]
+    public async Task FoodSize_Delete_IsSoft_AndCanBeRestored()
+    {
+        var category = SeedCategory();
+        var food = SeedFood(category.CategoryId);
+        var size = SeedSize(food.FoodId, 10m);
+
+        Assert.True(await FoodSizes.DeleteAsync(food.FoodId, size.SizeId));
+
+        Assert.DoesNotContain(
+            await FoodSizes.GetByFoodIdAsync(food.FoodId),
+            x => x.SizeId == size.SizeId);
+        Assert.Contains(
+            await FoodSizes.GetByFoodIdAsync(food.FoodId, includeInactive: true),
+            x => x.SizeId == size.SizeId);
+        Assert.Null(await FoodSizes.GetByIdAsync(food.FoodId, size.SizeId));
+        Assert.NotNull(await FoodSizes.GetByIdAsync(
+            food.FoodId,
+            size.SizeId,
+            includeInactive: true));
+
+        Assert.True(await FoodSizes.SetActiveAsync(food.FoodId, size.SizeId, true));
+        Assert.Contains(
+            await FoodSizes.GetByFoodIdAsync(food.FoodId),
+            x => x.SizeId == size.SizeId);
+    }
+
+    [Fact]
+    public async Task FoodSize_Restore_Conflicts_WhenActiveNameAlreadyExists()
+    {
+        var category = SeedCategory();
+        var food = SeedFood(category.CategoryId);
+        SeedSize(food.FoodId, 10m, name: "M");
+
+        var deleted = SeedSize(food.FoodId, 11m, name: "L");
+        deleted.SizeName = "M";
+        deleted.IsActive = false;
+        Db.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => FoodSizes.SetActiveAsync(food.FoodId, deleted.SizeId, true));
     }
 
     [Fact]

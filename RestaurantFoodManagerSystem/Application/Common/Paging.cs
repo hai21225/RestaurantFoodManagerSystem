@@ -18,6 +18,10 @@ public static class Paging
         if (pageSize < 1 || pageSize > MaxPageSize)
             throw new ArgumentException($"pageSize must be between 1 and {MaxPageSize}");
 
-        return (page - 1) * pageSize;
+        var skip = (long)(page - 1) * pageSize;
+        if (skip > int.MaxValue)
+            throw new ArgumentException("page is too large");
+
+        return (int)skip;
     }
 }

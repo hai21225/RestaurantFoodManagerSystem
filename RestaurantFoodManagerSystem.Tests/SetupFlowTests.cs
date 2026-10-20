@@ -184,7 +184,7 @@ public sealed class SetupFlowTests : TestBase
             ConfirmPassword = "secret123"
         };
 
-        await Assert.ThrowsAsync<Exception>(
+        await Assert.ThrowsAsync<KeyNotFoundException>(
             () => Auth.CreateUserWithRoleAsync(dto, "KhongTonTai"));
 
         // transaction phải rollback ⇒ không còn user nào được tạo

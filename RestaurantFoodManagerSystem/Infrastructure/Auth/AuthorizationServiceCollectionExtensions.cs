@@ -46,6 +46,13 @@ public static class AuthorizationServiceCollectionExtensions
                     AuthPolicies.Roles.Waiter,
                     AuthPolicies.Roles.Cashier,
                     AuthPolicies.Roles.Chef));
+
+            // Bếp được huỷ món đang nấu; Admin/Waiter huỷ món còn Pending.
+            options.AddPolicy(AuthPolicies.OrderCancellation,
+                p => p.RequireRole(
+                    AuthPolicies.Roles.Admin,
+                    AuthPolicies.Roles.Waiter,
+                    AuthPolicies.Roles.Chef));
         });
 
         // Đăng ký sau AddAuthorization để ghi đè DefaultAuthorizationPolicyProvider.

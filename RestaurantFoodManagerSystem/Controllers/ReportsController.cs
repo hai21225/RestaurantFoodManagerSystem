@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -26,7 +27,9 @@ public sealed class ReportsController : ControllerBase
         try
         {
             var bytes = await s.ExportRevenueCsvAsync(query, ct);
-            var fileName = $"revenue-{VietnamTime.NormalizePeriod(query.Period)}-{DateTime.UtcNow:yyyyMMddHHmm}.csv";
+            // Tên file dùng giờ VN cho khớp với nội dung CSV (giờ VN).
+            var stamp = (DateTime.UtcNow + VietnamTime.Offset).ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
+            var fileName = $"revenue-{VietnamTime.NormalizePeriod(query.Period)}-{stamp}.csv";
             return File(bytes, "text/csv; charset=utf-8", fileName);
         }
         catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }

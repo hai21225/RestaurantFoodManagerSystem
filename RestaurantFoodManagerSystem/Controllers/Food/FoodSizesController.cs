@@ -15,14 +15,18 @@ public class FoodSizesController : ControllerBase
 
 
     // GET /api/foods/5/sizes
+    // GET /api/foods/5/sizes?includeInactive=true
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet]
-    public async Task<IActionResult> GetAll(int foodId, CancellationToken ct = default)
+    public async Task<IActionResult> GetAll(
+        int foodId,
+        [FromQuery] bool includeInactive = false,
+        CancellationToken ct = default)
     {
         try
         {
             var sizes = await _foodSizeService
-                .GetByFoodIdAsync(foodId, ct);
+                .GetByFoodIdAsync(foodId, includeInactive, ct);
 
             return Ok(sizes);
         }
@@ -37,15 +41,17 @@ public class FoodSizesController : ControllerBase
 
 
     // GET /api/foods/5/sizes/2
+    // GET /api/foods/5/sizes/2?includeInactive=true
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("{sizeId:int}")]
     public async Task<IActionResult> GetById(
         int foodId,
         int sizeId,
+        [FromQuery] bool includeInactive = false,
         CancellationToken ct = default)
     {
         var size = await _foodSizeService
-            .GetByIdAsync(foodId, sizeId, ct);
+            .GetByIdAsync(foodId, sizeId, includeInactive, ct);
 
         if (size == null)
         {
@@ -154,6 +160,43 @@ public class FoodSizesController : ControllerBase
         {
             message = "Default size updated successfully"
         });
+    }
+
+
+    // PATCH /api/foods/5/sizes/2/active
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("{sizeId:int}/active")]
+    public async Task<IActionResult> SetActive(
+        int foodId,
+        int sizeId,
+        [FromBody] UpdateActiveRequest request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await _foodSizeService
+                .SetActiveAsync(foodId, sizeId, request.IsActive, ct);
+
+            if (!result)
+            {
+                return NotFound(new
+                {
+                    message = "Food size not found"
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Food size active status updated successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
     }
 
 

@@ -13,7 +13,7 @@ public sealed class CreateOrderItemRequest
     [Range(1, int.MaxValue)] public int SizeId { get; set; }
     // C# dùng tên Quanlity theo quy ước của project/DB; JSON vẫn là "quantity" để không phá frontend.
     [Range(1, int.MaxValue)] [JsonPropertyName("quantity")] public int Quanlity { get; set; }
-    public string? Note { get; set; }
+    [MaxLength(500)] public string? Note { get; set; }
     public List<CreateOrderToppingRequest> Toppings { get; set; } = [];
 }
 
@@ -31,6 +31,47 @@ public sealed class UpdateOrderItemsRequest
 {
     [Range(1, int.MaxValue)] public int ChangedBy { get; set; }
     [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
+}
+
+/// <summary>
+/// Gọi thêm món vào một đơn đang mở (<c>POST /api/orders/{id}/items</c>).
+/// Khác với <see cref="UpdateOrderItemsRequest"/>: chỉ thêm dòng mới và luôn tạo một
+/// round/ticket bếp mới, không replace-all.
+/// </summary>
+public sealed class AddOrderItemsRequest
+{
+    [Range(1, int.MaxValue)] public int ChangedBy { get; set; }
+    [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
+}
+
+/// <summary>
+/// Giảm/tăng số lượng của một món (<c>PATCH /api/orders/{id}/items/{itemId}/quantity</c>).
+/// Chỉ truyền một trong <see cref="Quantity"/> (số lượng đích) hoặc <see cref="Delta"/>.
+/// </summary>
+public sealed class AdjustOrderItemQuantityRequest
+{
+    /// <summary>Số lượng đích của cả nhóm dòng (>= 0). 0 tương đương huỷ món.</summary>
+    [Range(0, int.MaxValue)] public int? Quantity { get; set; }
+
+    /// <summary>Số lượng thay đổi so với hiện tại (âm = giảm, dương = tăng).</summary>
+    public int? Delta { get; set; }
+
+    public int ChangedBy { get; set; }
+
+    /// <summary>
+    /// <c>CustomerChange</c> (mặc định), <c>OutOfStock</c>, <c>PhysicalShortage</c>,
+    /// hoặc <c>KitchenError</c>.
+    /// </summary>
+    [MaxLength(50)] public string? ReasonCode { get; set; }
+
+    /// <summary>Lý do chi tiết; bắt buộc khi số lượng đích = 0.</summary>
+    [MaxLength(500)] public string? Reason { get; set; }
+
+    /// <summary>
+    /// Cho phép Admin giảm xuống dưới số phần đã nấu. Phần đã nấu bị giảm sẽ được ghi
+    /// nhận là wastage, không hoàn kho ảo.
+    /// </summary>
+    public bool AllowWastage { get; set; }
 }
 
 /// <summary>
@@ -59,7 +100,33 @@ public sealed class UpdateOrderStatusRequest
 {
     [Required] public string Status { get; set; } = string.Empty;
     public int ChangedBy { get; set; }
+
+    /// <summary>Ghi chú trạng thái; bắt buộc khi <see cref="Status"/> = Cancelled (lý do huỷ).</summary>
     public string? Note { get; set; }
+
+    /// <summary>
+    /// Lý do huỷ: <c>CustomerChange</c> (mặc định), <c>OutOfStock</c>,
+    /// <c>PhysicalShortage</c>, hoặc <c>KitchenError</c>. Chỉ dùng khi <see cref="Status"/>
+    /// = <c>Cancelled</c>; quyết định có hoàn kho hay ghi wastage.
+    /// </summary>
+    [MaxLength(50)] public string? ReasonCode { get; set; }
+}
+
+/// <summary>
+/// Huỷ một dòng món tại POS/bếp (<c>POST /api/orders/{orderId}/items/{itemId}/cancel</c>).
+/// </summary>
+public sealed class CancelOrderItemRequest
+{
+    [Required, MaxLength(500)]
+    public string Reason { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Lý do huỷ: <c>CustomerChange</c> (mặc định), <c>OutOfStock</c>,
+    /// <c>PhysicalShortage</c>, hoặc <c>KitchenError</c>; quyết định có hoàn kho hay ghi wastage.
+    /// </summary>
+    [MaxLength(50)] public string? ReasonCode { get; set; }
+
+    public int ChangedBy { get; set; }
 }
 
 /// <summary>
@@ -88,6 +155,6 @@ public sealed class CreatePaymentRequest
 {
     [Range(1, int.MaxValue)] public int OrderId { get; set; }
     [Required] public string PaymentMethod { get; set; } = string.Empty;
-    public string? TransactionCode { get; set; }
+    [MaxLength(100)] public string? TransactionCode { get; set; }
     [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
 }

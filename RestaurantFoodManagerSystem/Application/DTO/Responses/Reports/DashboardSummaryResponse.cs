@@ -2,7 +2,8 @@
 /// Kết quả <c>GET /api/reports/dashboard</c> (Batch A): số liệu tổng hợp cho trang Tổng quan.
 ///
 /// Doanh thu chỉ tính payment <c>Paid</c> trong ngày hôm nay theo giờ Việt Nam.
-/// Trạng thái bàn được tính từ các đơn còn mở (không dựa vào cột <c>Status</c> có thể cũ).
+/// <c>Occupied</c> tính từ đơn còn mở; <c>Maintenance</c> lấy từ trạng thái vận hành
+/// và cờ soft-delete của bàn.
 /// </summary>
 public sealed class DashboardSummaryResponse
 {
@@ -22,7 +23,10 @@ public sealed class DashboardSummaryResponse
     public List<DashboardOrderItemResponse> RecentOrders { get; set; } = [];
 }
 
-/// <summary>Tình trạng bàn đang hoạt động (bàn đã soft-delete không được tính).</summary>
+/// <summary>
+/// Tổng hợp tất cả bàn (kể cả bàn đã soft-delete). Bàn soft-delete hoặc đang bảo trì
+/// được tính vào <see cref="Maintenance"/> để <c>Available + Occupied + Maintenance = Total</c>.
+/// </summary>
 public sealed class DashboardTablesSummary
 {
     public int Total { get; set; }

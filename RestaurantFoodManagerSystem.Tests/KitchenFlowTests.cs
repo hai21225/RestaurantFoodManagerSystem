@@ -155,11 +155,54 @@ public sealed class KitchenFlowTests : TestBase
     }
 
     [Fact]
-    public async Task UpdateOrderStatus_Completed_SetsCompletedAt_AndOrderBecomesReady()
+    public async Task UpdateOrderStatus_Completed_Rejected_WhenItemsNotFinished()
     {
         var scenario = SeedKitchen();
 
-        await Kitchen.UpdateOrderStatusAsync(scenario.KitchenOrder.KitchenOrderId, new KitchenStatusRequest { Status = "Completed" }, CancellationToken.None);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Kitchen.UpdateOrderStatusAsync(
+                scenario.KitchenOrder.KitchenOrderId,
+                new KitchenStatusRequest { Status = "Completed" },
+                CancellationToken.None));
+
+        Assert.Contains("while dishes are not finished", ex.Message);
+        Assert.Equal("Pending", Db.KitchenOrders.Single(x => x.KitchenOrderId == scenario.KitchenOrder.KitchenOrderId).Status);
+        Assert.Equal("SentToKitchen", Db.Orders.Single(x => x.OrderId == scenario.Order.OrderId).Status);
+    }
+
+    [Fact]
+    public async Task UpdateOrderStatus_Ready_Rejected_WhenItemsNotFinished()
+    {
+        var scenario = SeedKitchen();
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            Kitchen.UpdateOrderStatusAsync(
+                scenario.KitchenOrder.KitchenOrderId,
+                new KitchenStatusRequest { Status = "Ready" },
+                CancellationToken.None));
+
+        Assert.Contains("while dishes are not finished", ex.Message);
+        Assert.Equal("Pending", Db.KitchenOrders.Single(x => x.KitchenOrderId == scenario.KitchenOrder.KitchenOrderId).Status);
+    }
+
+    [Fact]
+    public async Task UpdateOrderStatus_Completed_AfterAllItemsDone_SetsCompletedAt_AndOrderBecomesReady()
+    {
+        var scenario = SeedKitchen();
+
+        await Kitchen.UpdateItemStatusAsync(
+            scenario.First.Id,
+            new KitchenItemStatusRequest { Status = "Ready" },
+            CancellationToken.None);
+        await Kitchen.UpdateItemStatusAsync(
+            scenario.Second.Id,
+            new KitchenItemStatusRequest { Status = "Completed" },
+            CancellationToken.None);
+
+        await Kitchen.UpdateOrderStatusAsync(
+            scenario.KitchenOrder.KitchenOrderId,
+            new KitchenStatusRequest { Status = "Completed" },
+            CancellationToken.None);
 
         var kitchen = Db.KitchenOrders.Single(x => x.KitchenOrderId == scenario.KitchenOrder.KitchenOrderId);
         Assert.Equal("Completed", kitchen.Status);

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/users")]
@@ -203,15 +204,16 @@ public class UsersController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return Conflict(new { message = ex.Message });
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new { message = ex.Message });
         }
-        catch (Exception ex)
+        catch (DbUpdateException)
         {
-            return BadRequest(new { message = ex.Message });
+            // Race tạo trùng username/email: unique index của DB là chốt chặn cuối.
+            return Conflict(new { message = "Username or email already exists" });
         }
     }
 
@@ -244,12 +246,17 @@ public class UsersController : ControllerBase
                 message = "Role assigned successfully"
             });
         }
-        catch (Exception ex)
+        catch (KeyNotFoundException ex)
         {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
+            return NotFound(new { message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 

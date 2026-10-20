@@ -15,6 +15,14 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence;
 public static class DatabaseInitializer
 {
     /// <summary>Role mặc định của hệ thống, dùng chung cho seed và test.</summary>
+    /// <summary>Khu vực bàn mặc định cho lần khởi động đầu tiên.</summary>
+    public static readonly IReadOnlyList<(string Name, string Description, int DisplayOrder)> DefaultTableAreas =
+    [
+        ("Sảnh chính", "Khu vực phục vụ chung", 1),
+        ("Lầu 2", "Khu vực bàn trên lầu", 2),
+        ("Ngoài trời", "Khu vực sân ngoài", 3)
+    ];
+
     public static readonly IReadOnlyList<(string Name, string Description)> DefaultRoles =
     [
         ("Admin", "Người quản lí cấp cao"),
@@ -52,6 +60,7 @@ public static class DatabaseInitializer
         if (options.SeedOnStartup)
         {
             await SeedRolesAsync(db, cancellationToken);
+            await SeedTableAreasAsync(db, cancellationToken);
         }
     }
 
@@ -76,5 +85,57 @@ public static class DatabaseInitializer
 
         await db.SaveChangesAsync(cancellationToken);
         return true;
+    }
+
+    /// <summary>
+    /// Thêm 3 khu vực bàn mặc định nếu bảng <c>table_areas</c> rỗng, sau đó gán các bàn
+    /// chưa có khu vực vào khu vực mặc định đầu tiên. Idempotent: chạy lại không nhân đôi dữ liệu.
+    /// </summary>
+    public static async Task<bool> SeedTableAreasAsync(
+        AppDbContext db,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(db);
+
+        var created = false;
+        if (!await db.TableAreas.AnyAsync(cancellationToken))
+        {
+            db.TableAreas.AddRange(DefaultTableAreas.Select(area => new TableArea
+            {
+                AreaName = area.Name,
+                Description = area.Description,
+                DisplayOrder = area.DisplayOrder,
+                IsActive = true
+            }));
+
+            await db.SaveChangesAsync(cancellationToken);
+            created = true;
+        }
+
+        var defaultAreaId = await db.TableAreas
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.DisplayOrder)
+            .ThenBy(x => x.AreaId)
+            .Select(x => (int?)x.AreaId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (defaultAreaId.HasValue)
+        {
+            var unassigned = await db.RestaurantTables
+                .Where(x => x.AreaId == null)
+                .ToListAsync(cancellationToken);
+
+            if (unassigned.Count > 0)
+            {
+                foreach (var table in unassigned)
+                {
+                    table.AreaId = defaultAreaId.Value;
+                }
+
+                await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        return created;
     }
 }

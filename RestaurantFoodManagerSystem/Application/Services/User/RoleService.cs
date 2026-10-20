@@ -28,15 +28,14 @@ public class RoleService
             .ToListAsync(ct);
     }
 
-    public async Task<Roles> GetRoleByRoleNameAsync(string name, CancellationToken ct = default)
+    /// <summary>
+    /// Tìm role theo tên. Trả <c>null</c> khi không có — caller tự quyết định
+    /// 404/409 thay vì bắt một exception chung.
+    /// </summary>
+    public async Task<Roles?> GetRoleByRoleNameAsync(string name, CancellationToken ct = default)
     {
-        var role = await _db.Roles
+        return await _db.Roles
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.RoleName == name, ct);
-        if (role == null)
-        {
-            throw new Exception("Role not found");
-        }
-        return role;
     }
 }

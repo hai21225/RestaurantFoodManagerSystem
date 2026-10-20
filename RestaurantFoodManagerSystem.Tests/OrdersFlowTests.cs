@@ -499,6 +499,19 @@ public sealed class OrdersFlowTests : TestBase
     }
 
     [Fact]
+    public async Task Create_Throws_WhenTableHasCompletedOrderNotPaid()
+    {
+        var s = SeedOrderScenario();
+        SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Completed);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.CreateAsync(
+            Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
+            CancellationToken.None));
+
+        Assert.Equal("Table already has an open order", ex.Message);
+    }
+
+    [Fact]
     public async Task Create_Throws_WhenTableIsUnderMaintenance()
     {
         // Defect #20: trạng thái Maintenance phải bị chặn kể cả khi IsActive bị đặt sai.
@@ -747,7 +760,8 @@ public sealed class OrdersFlowTests : TestBase
             new RestaurantTableService(db),
             CurrentUser,
             NullLogger<OrderService>.Instance,
-            OrderIdempotency);
+            OrderIdempotency,
+            new OrderLifecycleCoordinator(db));
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateAsync(
             Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),

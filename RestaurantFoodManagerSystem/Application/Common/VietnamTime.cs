@@ -23,11 +23,18 @@ public static class VietnamTime
     /// <summary>
     /// Cắt kỳ báo cáo chứa <paramref name="date"/> (ngày giờ VN; mặc định hôm nay theo giờ VN).
     /// <c>FromUtc</c> bao gồm, <c>ToUtc</c> loại trừ.
+    ///
+    /// <para>
+    /// Mốc trả về luôn có <c>Kind</c> rõ ràng: <c>FromUtc</c>/<c>ToUtc</c> là <c>Utc</c>
+    /// (JSON có đuôi <c>Z</c>), còn <c>StartVn</c>/<c>EndVn</c> là giờ VN
+    /// (<c>Unspecified</c>). Trước đây <c>Kind</c> lúc có lúc không tuỳy kỳ/tham số
+    /// ⇒ cùng một ý nghĩa lại trả về hai định dạng JSON khác nhau.
+    /// </para>
     /// </summary>
     public static (string Period, DateTime FromUtc, DateTime ToUtc, DateTime StartVn, DateTime EndVn) Resolve(string? period, DateTime? date)
     {
         var normalized = NormalizePeriod(period);
-        var dateVn = (date ?? DateTime.UtcNow + Offset).Date;
+        var dateVn = ToVnDate(date);
 
         var (startVn, endVn) = normalized switch
         {
@@ -36,8 +43,29 @@ public static class VietnamTime
             _ => (new DateTime(dateVn.Year, dateVn.Month, 1), new DateTime(dateVn.Year, dateVn.Month, 1).AddMonths(1))
         };
 
-        return (normalized, startVn - Offset, endVn - Offset, startVn, endVn);
+        return (normalized, ToUtc(startVn), ToUtc(endVn), startVn, endVn);
     }
+
+    /// <summary>
+    /// Ngày theo giờ VN từ tham số <c>date</c>. Giá trị không kèm múi giờ được hiểu là
+    /// giờ VN (đúng như tài liệu API); giá trị UTC/Local được quy đổi sang VN.
+    /// </summary>
+    private static DateTime ToVnDate(DateTime? date)
+    {
+        var vn = date switch
+        {
+            null => DateTime.UtcNow + Offset,
+            { Kind: DateTimeKind.Utc } d => d + Offset,
+            { Kind: DateTimeKind.Local } d => d.ToUniversalTime() + Offset,
+            _ => date.Value
+        };
+
+        return DateTime.SpecifyKind(vn.Date, DateTimeKind.Unspecified);
+    }
+
+    /// <summary>Chuyển một mốc thời gian giờ VN sang UTC (kèm <c>Kind = Utc</c>).</summary>
+    public static DateTime ToUtc(DateTime vn) =>
+        DateTime.SpecifyKind(vn - Offset, DateTimeKind.Utc);
 
     /// <summary>Bắt đầu bucket chứa <paramref name="utc"/> (UTC), trả về theo giờ VN.</summary>
     public static DateTime BucketStartVn(DateTime utc, string normalizedPeriod)

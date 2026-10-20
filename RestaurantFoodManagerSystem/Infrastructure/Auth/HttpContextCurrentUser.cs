@@ -29,7 +29,28 @@ public sealed class HttpContextCurrentUser : ICurrentUser
             var raw = principal.FindFirst("sub")?.Value
                       ?? principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
-            return int.TryParse(raw, out var id) ? id : null;
+            // Id 0 không phải user nào ⇒ coi như chưa xác thực.
+            return int.TryParse(raw, out var id) && id > 0 ? id : null;
+        }
+    }
+
+    public IReadOnlyCollection<string> Roles
+    {
+        get
+        {
+            var principal = _accessor.HttpContext?.User;
+            if (principal is null)
+            {
+                return Array.Empty<string>();
+            }
+
+            // TokenService ghi claim "role"; JwtBearer có thể map sang ClaimTypes.Role.
+            return principal.FindAll("role")
+                .Concat(principal.FindAll(ClaimTypes.Role))
+                .Select(x => x.Value)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
         }
     }
 }

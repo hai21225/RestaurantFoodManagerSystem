@@ -73,6 +73,21 @@ public sealed class PaymentsFlowTests : TestBase
     }
 
     [Fact]
+    public async Task Create_Throws_WhenOrderStatusPaidButPaymentRowMissing()
+    {
+        // Dữ liệu lệch: order đã Paid nhưng chưa có payment row (import tay/migration lỗi).
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: "Paid");
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(
+            new CreatePaymentRequest { OrderId = order.OrderId, PaymentMethod = "Cash", CreatedBy = s.Staff.Id },
+            CancellationToken.None));
+
+        Assert.Equal("Order is already paid", ex.Message);
+        Assert.Empty(Db.Payments.Where(x => x.OrderId == order.OrderId));
+    }
+
+    [Fact]
     public async Task Create_Throws_WhenOrderIsCancelled()
     {
         // Nhóm B: đơn đã huỷ không được thanh toán.

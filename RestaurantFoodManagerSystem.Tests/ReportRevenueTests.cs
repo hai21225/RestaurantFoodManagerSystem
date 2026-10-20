@@ -122,7 +122,8 @@ public sealed class ReportRevenueServiceTests : TestBase
         Assert.Equal(1, summary.OpenOrderCount);
         Assert.Equal(1, summary.LowStockCount);
 
-        Assert.Equal(3, summary.Tables.Total);
+        // Tổng gồm cả bàn đã soft-delete; 3 bàn active + 1 bàn inactive = 4.
+        Assert.Equal(4, summary.Tables.Total);
         Assert.Equal(1, summary.Tables.Occupied);
         Assert.Equal(2, summary.Tables.Available);
         Assert.Equal(1, summary.Tables.Maintenance);
@@ -136,6 +137,39 @@ public sealed class ReportRevenueServiceTests : TestBase
         Assert.Equal(openOrder.OrderId, recent.OrderId);
         Assert.Equal(s.Table.TableNumber, recent.TableNumber);
         Assert.Equal(OrderStatuses.Preparing, recent.Status);
+    }
+
+    [Fact]
+    public async Task Dashboard_CountsActiveMaintenance_AndKeepsTotalReconciled()
+    {
+        SeedTable();
+        var maintenance = SeedTable();
+        maintenance.Status = RestaurantTableStatuses.Maintenance;
+        Db.SaveChanges();
+
+        var summary = await Reports.GetDashboardAsync(CancellationToken.None);
+
+        Assert.Equal(2, summary.Tables.Total);
+        Assert.Equal(1, summary.Tables.Available);
+        Assert.Equal(0, summary.Tables.Occupied);
+        Assert.Equal(1, summary.Tables.Maintenance);
+        Assert.Equal(
+            summary.Tables.Total,
+            summary.Tables.Available + summary.Tables.Occupied + summary.Tables.Maintenance);
+    }
+
+    [Fact]
+    public async Task Dashboard_CountsCompletedOrderAsOpenAndOccupied()
+    {
+        var table = SeedTable();
+        var staff = SeedUser();
+        SeedOrder(table.TableId, staff.Id, status: OrderStatuses.Completed);
+
+        var summary = await Reports.GetDashboardAsync(CancellationToken.None);
+
+        Assert.Equal(1, summary.OpenOrderCount);
+        Assert.Equal(1, summary.Tables.Occupied);
+        Assert.Equal(0, summary.Tables.Available);
     }
 
     [Fact]

@@ -80,6 +80,7 @@ public sealed class ListEndpointsServiceTests : TestBase
     [InlineData(-1, 20)]
     [InlineData(1, 0)]
     [InlineData(1, 101)]
+    [InlineData(int.MaxValue, 100)]
     public async Task Orders_List_RejectsInvalidPaging(int page, int pageSize)
     {
         await Assert.ThrowsAsync<ArgumentException>(() =>

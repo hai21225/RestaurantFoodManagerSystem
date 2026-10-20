@@ -12,4 +12,11 @@ public interface ICurrentUser
     /// ⇒ service sẽ dùng giá trị actor từ body như trước GĐ6.
     /// </summary>
     int? UserId { get; }
+
+    /// <summary>
+    /// Các role của người dùng hiện tại lấy từ claim (GĐ6). Rỗng khi chưa xác thực.
+    /// Service dùng để áp luật nghiệp vụ chi tiết hơn policy ở controller (ví dụ bếp được
+    /// huỷ món đang nấu nhưng không được huỷ món đã ra đĩa).
+    /// </summary>
+    IReadOnlyCollection<string> Roles { get; }
 }

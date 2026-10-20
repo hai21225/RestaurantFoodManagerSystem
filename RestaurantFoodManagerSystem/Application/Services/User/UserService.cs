@@ -22,11 +22,37 @@ public class UserService
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.UserName == normalizedUsername, ct);
 
-        if (user == null)
+        return user is null ? null : ToDto(user);
+    }
+
+    /// <summary>
+    /// Tìm user để đăng nhập bằng username <b>hoặc</b> email (không phân biệt hoa/thường).
+    /// Dùng riêng cho luồng login; các luồng kiểm tra trùng username vẫn dùng
+    /// <see cref="FindUserByUsernameAsync"/> để không đổi quy tắc đăng ký.
+    /// </summary>
+    public async Task<UserDto?> FindUserByLoginAsync(string identifier, CancellationToken ct = default)
+    {
+        var normalized = identifier?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(normalized))
         {
             return null;
         }
-        var userDto = new UserDto
+
+        // ToLowerInvariant để không phụ thuộc culture của host (ví dụ locale Thổ Nhĩ Kỳ).
+        var lowered = normalized.ToLowerInvariant();
+
+        var user = await _db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => u.UserName.ToLower() == lowered || u.UserEmail.ToLower() == lowered,
+                ct);
+
+        return user is null ? null : ToDto(user);
+    }
+
+    private static UserDto ToDto(Users user)
+    {
+        return new UserDto
         {
             UserId = user.Id,
             UserName = user.UserName,
@@ -38,7 +64,6 @@ public class UserService
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
-        return userDto;
     }
 
     /// <summary>
@@ -290,10 +315,33 @@ public class UserService
     {
         var username = userdto.UserName?.Trim();
         var email = userdto.Email?.Trim();
+        var fullName = userdto.FullName?.Trim() ?? string.Empty;
+        var phone = userdto.Phone?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(email))
         {
             throw new ArgumentException("Username and email are required");
+        }
+
+        // Độ dài phải khớp cột DB; thiếu kiểm tra sẽ sinh DbUpdateException ("truncated") khi lưu.
+        if (username.Length > 100)
+        {
+            throw new ArgumentException("Username must be at most 100 characters");
+        }
+
+        if (email.Length > 150)
+        {
+            throw new ArgumentException("Email must be at most 150 characters");
+        }
+
+        if (fullName.Length > 150)
+        {
+            throw new ArgumentException("Full name must be at most 150 characters");
+        }
+
+        if (phone.Length > 20)
+        {
+            throw new ArgumentException("Phone must be at most 20 characters");
         }
 
         if (await _db.Users.AnyAsync(x => x.UserName == username, ct))
@@ -301,7 +349,10 @@ public class UserService
             throw new InvalidOperationException("Username already exists");
         }
 
-        if (await _db.Users.AnyAsync(x => x.UserEmail == email, ct))
+        // LOWER() dịch được trên SQL Server lẫn SQLite ⇒ bắt trùng email không phân biệt
+        // hoa/thường, khớp unique index của DB thật.
+        var normalizedEmail = email.ToLowerInvariant();
+        if (await _db.Users.AnyAsync(x => x.UserEmail.ToLower() == normalizedEmail, ct))
         {
             throw new InvalidOperationException("Email already exists");
         }
@@ -309,16 +360,16 @@ public class UserService
         var user = new Users
         {
             UserName = username,
-            UserPassword = userdto.Password??"",
-            UserFullName = userdto.FullName??"",
+            UserPassword = userdto.Password ?? "",
+            UserFullName = fullName,
             UserEmail = email,
-            UserPhone = userdto.Phone??"",
+            UserPhone = phone,
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         await _db.Users.AddAsync(user, ct);
-        return await _db.SaveChangesAsync(ct)>0;
+        return await _db.SaveChangesAsync(ct) > 0;
 
     }
 }

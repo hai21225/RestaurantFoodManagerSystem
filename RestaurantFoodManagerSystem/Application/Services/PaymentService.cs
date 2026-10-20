@@ -27,13 +27,39 @@ public sealed class PaymentService
         // Nhóm B: không thanh toán đơn đã huỷ; không thanh toán trùng.
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Cannot pay a cancelled order");
+        if (string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Order is already paid");
         if (await _db.Payments.AnyAsync(x => x.OrderId == request.OrderId && x.Status == OrderStatuses.Paid, ct))
             throw new InvalidOperationException("Order is already paid");
+
+        // P1e: không thu tiền khi bếp chưa xong — tránh trả bàn sớm trong lúc món còn Preparing.
+        // Đơn không có dòng món (dữ liệu legacy) giữ nguyên hành vi cũ.
+        var itemStatuses = await _db.OrderItems.AsNoTracking()
+            .Where(x => x.OrderId == request.OrderId)
+            .Select(x => x.Status)
+            .ToListAsync(ct);
+
+        if (itemStatuses.Count > 0)
+        {
+            var activeItems = itemStatuses
+                .Where(x => !KitchenStatuses.IsCancelled(x))
+                .ToList();
+
+            if (activeItems.Count == 0)
+                throw new InvalidOperationException("Order has no payable items");
+
+            if (activeItems.Any(x => !KitchenStatuses.IsDone(x)) ||
+                !OrderStatuses.IsPayable(order.Status))
+            {
+                throw new InvalidOperationException("Order is not ready for payment");
+            }
+        }
 
         // Nhóm B4: payment + order-status phải là nguyên tử.
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
-        var createdBy = _currentUser.ResolveActorId(request.CreatedBy, _logger, nameof(request.CreatedBy));
+        var createdBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
 
         // Nhóm B3: đơn tổng 0đ không phải là một khoản thu; tránh tạo payment "Paid" vô nghĩa.
         if (order.TotalAmount <= 0)

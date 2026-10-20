@@ -38,6 +38,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<OrderItemTopping> OrderItemToppings { get; set; }
         public DbSet<OrderStatusHistory> OrderStatusHistories { get; set; }
+        public DbSet<OrderItemStatusHistory> OrderItemStatusHistories { get; set; }
 
 
         // =========================================================
@@ -94,6 +95,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         // RESTAURANT TABLE
         // =========================================================
 
+        public DbSet<TableArea> TableAreas { get; set; }
         public DbSet<RestaurantTable> RestaurantTables { get; set; }
 
 
@@ -381,6 +383,35 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
 
             // =====================================================
+            // RESTAURANT TABLE AREA
+            // =====================================================
+
+            modelBuilder.Entity<TableArea>(entity =>
+            {
+                entity.ToTable("table_areas");
+
+                entity.HasKey(x => x.AreaId);
+
+                entity.Property(x => x.AreaName)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.DisplayOrder)
+                    .IsRequired();
+
+                entity.Property(x => x.IsActive)
+                    .IsRequired();
+
+                entity.HasIndex(x => x.AreaName)
+                    .IsUnique()
+                    .HasFilter(activeFilter);
+            });
+
+
+            // =====================================================
             // RESTAURANT TABLE
             // =====================================================
 
@@ -409,6 +440,15 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsUnique()
                     .HasFilter(activeFilter);
 
+                entity.HasIndex(x => x.AreaId);
+
+                // Xóa khu vực (soft-delete) không được kéo theo bàn; bàn vẫn hiển thị
+                // với khu vực cũ cho tới khi admin chuyển khu vực.
+                entity.HasOne(x => x.Area)
+                    .WithMany()
+                    .HasForeignKey(x => x.AreaId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 ConfigureRowVersion(entity);
             });
 
@@ -419,7 +459,17 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
             modelBuilder.Entity<Order>(entity =>
             {
-                entity.ToTable("orders");
+                entity.ToTable("orders", table =>
+                {
+                    // C-11: chặn dữ liệu trạng thái ngoài allow-list ở tầng DB.
+                    // SQLite test dùng EnsureCreated từ model; check constraint chỉ cần cho SQL Server.
+                    if (isSqlServer)
+                    {
+                        table.HasCheckConstraint(
+                            "CK_orders_Status",
+                            "[Status] IN ('Pending','SentToKitchen','Preparing','Ready','Completed','Paid','Cancelled')");
+                    }
+                });
 
                 entity.HasKey(x => x.OrderId);
 
@@ -482,7 +532,16 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
             modelBuilder.Entity<OrderItem>(entity =>
             {
-                entity.ToTable("order_items");
+                entity.ToTable("order_items", table =>
+                {
+                    // C-11: Accepted là trạng thái phiếu, không dùng cho từng dòng món.
+                    if (isSqlServer)
+                    {
+                        table.HasCheckConstraint(
+                            "CK_order_items_Status",
+                            "[Status] IN ('Pending','Preparing','Ready','Completed','Cancelled')");
+                    }
+                });
 
                 entity.HasKey(x => x.Id);
 
@@ -502,6 +561,18 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.CreatedAt)
                     .IsRequired();
 
+                entity.Property(x => x.CancelReason)
+                    .HasMaxLength(500);
+
+                // Cách A: nhóm các dòng tách ra từ cùng một món gọi ban đầu.
+                entity.Property(x => x.OrderItemGroupId);
+
+                // Người huỷ món: giữ lịch sử, không xoá theo user.
+                entity.HasOne<Users>()
+                    .WithMany()
+                    .HasForeignKey(x => x.CancelledBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
                 // Order -> OrderItem
                 entity.HasOne<Order>()
                     .WithMany()
@@ -516,6 +587,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
                 entity.HasIndex(x => x.OrderId);
                 entity.HasIndex(x => x.SizeId);
+                entity.HasIndex(x => x.OrderItemGroupId);
             });
 
 
@@ -589,12 +661,67 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
 
             // =====================================================
+            // ORDER ITEM STATUS HISTORY (C-10)
+            // =====================================================
+
+            modelBuilder.Entity<OrderItemStatusHistory>(entity =>
+            {
+                entity.ToTable("order_item_status_histories");
+
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.OldStatus)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.NewStatus)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.Reason)
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.ReasonCode)
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.CreatedAt)
+                    .IsRequired();
+
+                entity.HasOne<Order>()
+                    .WithMany()
+                    .HasForeignKey(x => x.OrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Không đặt FK tới order_items/kitchen_order_items: hai bảng đó đã có
+                // cascade từ orders, thêm SetNull sẽ tạo multiple cascade paths trên SQL Server.
+                // ID vẫn được lưu để audit, kể cả khi dòng gốc bị replace-all xoá.
+                entity.HasOne<Users>()
+                    .WithMany()
+                    .HasForeignKey(x => x.ChangedBy)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasIndex(x => x.OrderId);
+                entity.HasIndex(x => x.OrderItemId);
+                entity.HasIndex(x => x.KitchenOrderItemId);
+                entity.HasIndex(x => x.CreatedAt);
+            });
+
+
+            // =====================================================
             // KITCHEN ORDER
             // =====================================================
 
             modelBuilder.Entity<KitchenOrder>(entity =>
             {
-                entity.ToTable("kitchen_orders");
+                entity.ToTable("kitchen_orders", table =>
+                {
+                    if (isSqlServer)
+                    {
+                        table.HasCheckConstraint(
+                            "CK_kitchen_orders_Status",
+                            "[Status] IN ('Pending','Accepted','Preparing','Ready','Completed','Cancelled')");
+                    }
+                });
 
                 entity.HasKey(x => x.KitchenOrderId);
 
@@ -624,7 +751,16 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
             modelBuilder.Entity<KitchenOrderItem>(entity =>
             {
-                entity.ToTable("kitchen_order_items");
+                entity.ToTable("kitchen_order_items", table =>
+                {
+                    // C-11: item không có Accepted; nhận phiếu không đổi trạng thái món.
+                    if (isSqlServer)
+                    {
+                        table.HasCheckConstraint(
+                            "CK_kitchen_order_items_Status",
+                            "[Status] IN ('Pending','Preparing','Ready','Completed','Cancelled')");
+                    }
+                });
 
                 entity.HasKey(x => x.Id);
 
@@ -899,12 +1035,20 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .HasForeignKey(x => x.CreatedBy)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // Ledger theo món: xoá dòng món (ví dụ PUT /items thay toàn bộ) chỉ ngắt liên kết,
+                // không xoá lịch sử kho.
+                entity.HasOne<OrderItem>()
+                    .WithMany()
+                    .HasForeignKey(x => x.OrderItemId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
                 entity.HasIndex(x => x.IngredientId);
                 entity.HasIndex(x => new
                 {
                     x.ReferenceType,
                     x.ReferenceId
                 });
+                entity.HasIndex(x => x.OrderItemId);
             });
 
 

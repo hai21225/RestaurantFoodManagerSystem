@@ -31,7 +31,7 @@ public class FoodsController : ControllerBase
         if (categoryId.HasValue)
         {
             var foods = await _foodService
-                .GetFoodsByCategoryIdAsync(categoryId.Value, ct);
+                .GetFoodsByCategoryIdAsync(categoryId.Value, includeInactive, ct);
 
             return Ok(foods);
         }

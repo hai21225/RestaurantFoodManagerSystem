@@ -76,6 +76,11 @@ public abstract class TestBase : IDisposable
     protected sealed class TestCurrentUser : ICurrentUser
     {
         public int? UserId { get; set; }
+
+        /// <summary>Rỗng = giữ hành vi cũ (test cũ không quan tâm role).</summary>
+        public List<string> RoleList { get; } = [];
+
+        public IReadOnlyCollection<string> Roles => RoleList;
     }
 
     protected AuthService Auth => new(Db,
@@ -90,14 +95,16 @@ public abstract class TestBase : IDisposable
     protected FoodSizeService FoodSizes => new(Db);
     protected ToppingService Toppings => new(Db);
     protected FoodToppingService FoodToppings => new(Db);
+    protected TableAreaService Areas => new(Db);
     protected RestaurantTableService Tables => new(Db);
 
     /// <summary>Dùng chung một store để test retry/idempotency qua nhiều lần gọi service.</summary>
     protected IOrderIdempotencyStore OrderIdempotency { get; } = new InMemoryOrderIdempotencyStore();
 
-    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance, OrderIdempotency);
+    protected OrderLifecycleCoordinator Lifecycle => new(Db);
+    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance, OrderIdempotency, Lifecycle);
     protected PaymentService Payments => new(Db, Tables, CurrentUser, NullLogger<PaymentService>.Instance);
-    protected KitchenService Kitchen => new(Db);
+    protected KitchenService Kitchen => new(Db, Tables, CurrentUser, Lifecycle);
     protected MenuService Menu => new(Db);
 
     protected IngredientService Ingredients => new(Db);
@@ -229,6 +236,21 @@ public abstract class TestBase : IDisposable
         return ingredient;
     }
 
+    protected Supplier SeedSupplier(bool isActive = true)
+    {
+        var supplier = new Supplier
+        {
+            Name = Unique("supplier"),
+            Phone = "0000000000",
+            Email = $"{Guid.NewGuid():N}@example.test",
+            Address = "Test address",
+            IsActive = isActive
+        };
+        Db.Suppliers.Add(supplier);
+        Db.SaveChanges();
+        return supplier;
+    }
+
     protected Recipe SeedRecipe(int sizeId, params (int IngredientId, decimal Quantity)[] items)
     {
         var recipe = new Recipe
@@ -254,12 +276,30 @@ public abstract class TestBase : IDisposable
         return recipe;
     }
 
-    protected RestaurantTable SeedTable(string? number = null, int capacity = 4)
+    protected TableArea SeedTableArea(string? name = null, bool isActive = true)
+    {
+        var area = new TableArea
+        {
+            AreaName = name ?? Unique("Khu"),
+            Description = "Test area",
+            DisplayOrder = 1,
+            IsActive = isActive
+        };
+        Db.TableAreas.Add(area);
+        Db.SaveChanges();
+        return area;
+    }
+
+    protected RestaurantTable SeedTable(
+        string? number = null,
+        int capacity = 4,
+        int? areaId = null)
     {
         var table = new RestaurantTable
         {
             TableNumber = number ?? Unique("T"),
             Capacity = capacity,
+            AreaId = areaId,
             Status = RestaurantTableStatuses.Available,
             IsActive = true
         };

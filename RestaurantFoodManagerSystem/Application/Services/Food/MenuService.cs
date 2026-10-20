@@ -13,10 +13,22 @@ public sealed class MenuService
         var foods = await _db.Foods.AsNoTracking().Where(f => f.IsActive && f.IsAvailable).ToListAsync(ct);
         var sizes = await _db.FoodSizes.AsNoTracking().Where(s => s.IsActive).ToListAsync(ct);
         var toppings = await _db.Toppings.AsNoTracking().Where(t => t.IsActive && t.IsAvailable).ToListAsync(ct);
+
+        // Defect #6: nạp toàn bộ liên kết món–topping bằng MỘT truy vấn. Trước đây
+        // `_db.FoodToppings.Any(...)` nằm trong projection nên EF thực thi lúc serialize
+        // response (N+1 + truy cập DB ngoài phạm vi action).
+        var toppingLinks = await _db.FoodToppings.AsNoTracking()
+            .Select(ft => new { ft.FoodId, ft.ToppingId })
+            .ToListAsync(ct);
+        var toppingIdsByFood = toppingLinks
+            .GroupBy(x => x.FoodId)
+            .ToDictionary(g => g.Key, g => g.Select(x => x.ToppingId).ToHashSet());
+
         return categories.Select(c => new { c.CategoryId, c.CategoryName, c.CategoryDescription,
             Foods = foods.Where(f => f.CategoryId == c.CategoryId).Select(f => new { f.FoodId, f.FoodName, f.FoodDescription, f.FoodImageUrl, f.FoodPrice,
                 Sizes = sizes.Where(s => s.FoodId == f.FoodId).Select(s => new { s.SizeId, s.SizeName, s.SizePrice, s.IsDefault }),
-                Toppings = toppings.Where(t => _db.FoodToppings.Any(ft => ft.FoodId == f.FoodId && ft.ToppingId == t.ToppingId))
+                Toppings = toppings.Where(t =>
+                        toppingIdsByFood.TryGetValue(f.FoodId, out var linkedIds) && linkedIds.Contains(t.ToppingId))
                     .Select(t => new { t.ToppingId, t.ToppingName, t.ToppingPrice }) }) });
     }
 }

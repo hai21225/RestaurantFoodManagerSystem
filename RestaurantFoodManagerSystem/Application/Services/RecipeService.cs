@@ -8,11 +8,16 @@ public sealed class RecipeService
     public RecipeService(AppDbContext db) => _db = db;
 
     /// <summary>
-    /// Danh sách công thức đang hoạt động (Nhóm C/GĐ7). Bổ sung <c>ingredientCount</c> so với entity thô.
+    /// Danh sách công thức (Nhóm C/GĐ7). Mặc định chỉ trả công thức đang hoạt động;
+    /// truyền <paramref name="includeInactive"/> = true để quản trị viên xem cả công thức
+    /// đã soft-delete và khôi phục.
     /// </summary>
-    public Task<List<RecipeSummaryResponse>> GetAllAsync(CancellationToken ct) =>
+    public Task<List<RecipeSummaryResponse>> GetAllAsync(CancellationToken ct = default) =>
+        GetAllAsync(includeInactive: false, ct);
+
+    public Task<List<RecipeSummaryResponse>> GetAllAsync(bool includeInactive, CancellationToken ct) =>
         (from r in _db.Recipes.AsNoTracking()
-         where r.IsActive
+         where includeInactive || r.IsActive
          select new RecipeSummaryResponse
          {
              RecipeId = r.RecipeId,
@@ -27,12 +32,15 @@ public sealed class RecipeService
     {
         if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
             throw new KeyNotFoundException("Food size not found");
-        if (r.Ingredients.Count == 0)
+        if (r.Ingredients is null || r.Ingredients.Count == 0)
             throw new ArgumentException("Recipe must contain at least one ingredient");
 
         var ids = r.Ingredients.Select(i => i.IngredientId).ToList();
         if (ids.Count != ids.Distinct().Count())
             throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
+
+        if (r.Ingredients.Any(i => i.Quanlity <= 0))
+            throw new ArgumentException("Ingredient quantity must be greater than zero");
 
         var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
         if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
@@ -51,7 +59,24 @@ public sealed class RecipeService
             IsActive = true
         };
         _db.Recipes.Add(x);
-        await _db.SaveChangesAsync(ct);
+
+        try
+        {
+            // Phải lưu recipe trước để có RecipeId cho các dòng nguyên liệu.
+            await _db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            await tx.RollbackAsync(ct);
+            _db.ChangeTracker.Clear();
+
+            // Unique index lọc (recipes.SizeId WHERE IsActive=1) là chốt chặn cuối khi
+            // hai request tạo công thức cho cùng size chạy đồng thời.
+            if (await _db.Recipes.AsNoTracking().AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
+                throw new InvalidOperationException("This size already has an active recipe");
+
+            throw;
+        }
 
         foreach (var i in r.Ingredients)
         {
@@ -114,6 +139,29 @@ public sealed class RecipeService
     }
 
     /// <summary>
+    /// Khôi phục/tắt công thức bằng soft-delete; định lượng nguyên liệu vẫn được giữ
+    /// để lịch sử và báo cáo không bị ảnh hưởng.
+    /// </summary>
+    public async Task<bool> SetActiveAsync(int id, bool active, CancellationToken ct = default)
+    {
+        var x = await _db.Recipes.FindAsync([id], ct);
+        if (x is null) return false;
+
+        if (active &&
+            await _db.Recipes.AnyAsync(r =>
+                r.SizeId == x.SizeId &&
+                r.RecipeId != id &&
+                r.IsActive, ct))
+        {
+            throw new InvalidOperationException("This size already has an active recipe");
+        }
+
+        x.IsActive = active;
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
+    /// <summary>
     /// Cập nhật công thức (GĐ6/A3) cho <c>PUT /api/management/recipes/{id}</c>.
     /// Thay toàn bộ định lượng trong một transaction. Trả <c>false</c> nếu không tìm thấy công thức.
     /// </summary>
@@ -134,6 +182,9 @@ public sealed class RecipeService
         if (ids.Count != ids.Distinct().Count())
             throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
 
+        if (r.Ingredients.Any(i => i.Quanlity <= 0))
+            throw new ArgumentException("Ingredient quantity must be greater than zero");
+
         var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
         if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
 
@@ -150,15 +201,30 @@ public sealed class RecipeService
         var existing = await _db.RecipeIngredients
             .Where(x => x.RecipeId == id)
             .ToListAsync(ct);
-        _db.RecipeIngredients.RemoveRange(existing);
 
-        foreach (var i in r.Ingredients)
+        // Cập nhật theo chênh lệch thay vì xoá rồi chèn lại: xoá/insert cùng khóa
+        // (RecipeId, IngredientId) trong một SaveChanges phụ thuộc thứ tự lệnh của EF.
+        var requested = r.Ingredients.ToDictionary(i => i.IngredientId, i => i.Quanlity);
+
+        foreach (var row in existing)
+        {
+            if (requested.Remove(row.IngredientId, out var quantity))
+            {
+                row.Quanlity = quantity;
+            }
+            else
+            {
+                _db.RecipeIngredients.Remove(row);
+            }
+        }
+
+        foreach (var (ingredientId, quantity) in requested)
         {
             _db.RecipeIngredients.Add(new RecipeIngredient
             {
                 RecipeId = id,
-                IngredientId = i.IngredientId,
-                Quanlity = i.Quanlity
+                IngredientId = ingredientId,
+                Quanlity = quantity
             });
         }
 

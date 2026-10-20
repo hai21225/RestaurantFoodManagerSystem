@@ -42,6 +42,16 @@ public sealed class OrderItemDetailResponse
     public string? Note { get; set; }
     public string Status { get; set; } = string.Empty;
 
+    /// <summary>Nhóm dòng tách ra từ cùng một món gọi ban đầu (null với dữ liệu cũ).</summary>
+    public Guid? OrderItemGroupId { get; set; }
+
+    /// <summary>Lý do huỷ dòng món (null nếu món còn hoạt động).</summary>
+    public string? CancelReason { get; set; }
+
+    public DateTime? CancelledAt { get; set; }
+
+    public int? CancelledBy { get; set; }
+
     /// <summary>
     /// Topping đã chọn cho dòng món (Batch A) — rỗng nếu món không có topping.
     /// Đây là bản phân rã của phần topping đã nằm trong <see cref="UnitPrice"/>,

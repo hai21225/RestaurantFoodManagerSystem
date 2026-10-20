@@ -50,6 +50,26 @@ public class DatabaseInitializerTests : TestBase
     }
 
     [Fact]
+    public async Task SeedTableAreasAsync_AddsDefaults_AssignsTables_AndIsIdempotent()
+    {
+        var table = SeedTable();
+
+        Assert.True(await DatabaseInitializer.SeedTableAreasAsync(Db));
+
+        var areas = await Db.TableAreas.AsNoTracking().ToListAsync();
+        Assert.Equal(DatabaseInitializer.DefaultTableAreas.Count, areas.Count);
+        Assert.All(areas, area => Assert.True(area.IsActive));
+
+        var stored = await Db.RestaurantTables.AsNoTracking()
+            .SingleAsync(x => x.TableId == table.TableId);
+        Assert.NotNull(stored.AreaId);
+        Assert.Contains(areas, area => area.AreaId == stored.AreaId);
+
+        Assert.False(await DatabaseInitializer.SeedTableAreasAsync(Db));
+        Assert.Equal(DatabaseInitializer.DefaultTableAreas.Count, await Db.TableAreas.CountAsync());
+    }
+
+    [Fact]
     public async Task InitializeAsync_SeedsRoles_WhenMigrationIsDisabled()
     {
         // MigrateOnStartup=false vì migration viết cho SQL Server; schema SQLite đã có từ TestBase.

@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using RestaurantFoodManagerSystem.Infrastructure.Auth;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -21,6 +23,7 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
 {
     private const string Foods = "/api/foods";
     private const string RestaurantTables = "/api/restaurant-tables";
+    private const string TableAreas = "/api/table-areas";
     private const string OrderById = "/api/orders/1";
     private const string WarehouseIngredients = "/api/management/ingredients";
     private const string KitchenOrders = "/api/management/kitchen/orders";
@@ -44,6 +47,7 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [Theory]
     [InlineData(Foods)]                    // Authenticated
     [InlineData(RestaurantTables)]         // PosOrCashier
+    [InlineData(TableAreas)]               // PosOrCashier
     [InlineData(OrderById)]                // PosOrCashier
     [InlineData(WarehouseIngredients)]     // WarehouseDesk
     [InlineData(KitchenOrders)]            // KitchenDesk
@@ -80,6 +84,7 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [Theory]
     [InlineData(AuthPolicies.Roles.Waiter, WarehouseIngredients)]              // kho: Admin + WarehouseManager
     [InlineData(AuthPolicies.Roles.Chef, RestaurantTables)]                     // POS/thu ngân: Admin + Waiter + Cashier
+    [InlineData(AuthPolicies.Roles.Chef, TableAreas)]                           // POS/thu ngân: Admin + Waiter + Cashier
     [InlineData(AuthPolicies.Roles.Cashier, KitchenOrders)]                     // bếp: Admin + Chef
     [InlineData(AuthPolicies.Roles.WarehouseManager, AdminPromotions)]          // AdminOnly
     [InlineData(AuthPolicies.Roles.Waiter, AdminUsers)]                         // AdminOnly (cấp action)
@@ -103,6 +108,8 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     [InlineData(AuthPolicies.Roles.Chef, Foods)]                      // Authenticated
     [InlineData(AuthPolicies.Roles.Waiter, RestaurantTables)]         // PosOrCashier
     [InlineData(AuthPolicies.Roles.Cashier, RestaurantTables)]        // PosOrCashier
+    [InlineData(AuthPolicies.Roles.Waiter, TableAreas)]               // PosOrCashier
+    [InlineData(AuthPolicies.Roles.Cashier, TableAreas)]              // PosOrCashier
     [InlineData(AuthPolicies.Roles.Chef, KitchenOrders)]              // KitchenDesk
     [InlineData(AuthPolicies.Roles.WarehouseManager, WarehouseIngredients)] // WarehouseDesk
     [InlineData(AuthPolicies.Roles.Admin, AdminPromotions)]           // AdminOnly
@@ -143,6 +150,73 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
         var response = await client.GetAsync("/api/setup/status");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Login_WithEmail_Returns200AndToken()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var password = "secret123";
+        var user = new Users
+        {
+            UserName = $"email-login-{suffix}",
+            UserPassword = BCrypt.Net.BCrypt.HashPassword(password),
+            UserFullName = "Email Login",
+            UserEmail = $"email-login-{suffix}@test.local",
+            UserPhone = "0000000000",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
+        db.SaveChanges();
+
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            userName = user.UserEmail,
+            password
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var token = json.GetProperty("data").GetProperty("token").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(token));
+    }
+
+    [Fact]
+    public async Task Login_WithMalformedStoredHash_Returns401InsteadOf500()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new Users
+        {
+            UserName = $"broken-hash-{suffix}",
+            UserPassword = "not-a-valid-bcrypt-hash",
+            UserFullName = "Broken Hash",
+            UserEmail = $"broken-hash-{suffix}@test.local",
+            UserPhone = "0000000000",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
+        db.SaveChanges();
+
+        using var client = _factory.CreateClient();
+        var response = await client.PostAsJsonAsync("/api/auth/login", new
+        {
+            userName = user.UserName,
+            password = "secret123"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     // ==========================================================

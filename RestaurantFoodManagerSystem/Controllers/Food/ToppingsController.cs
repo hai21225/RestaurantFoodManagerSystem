@@ -138,6 +138,42 @@ public class ToppingsController : ControllerBase
     }
 
 
+    // PATCH /api/toppings/1/active
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("{id:int}/active")]
+    public async Task<IActionResult> SetActive(
+        int id,
+        [FromBody] UpdateActiveRequest request,
+        CancellationToken ct = default)
+    {
+        try
+        {
+            var result = await _toppingService
+                .SetActiveAsync(id, request.IsActive, ct);
+
+            if (!result)
+            {
+                return NotFound(new
+                {
+                    message = "Topping not found"
+                });
+            }
+
+            return Ok(new
+            {
+                message = "Topping active status updated successfully"
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+
     // DELETE /api/toppings/1
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("{id:int}")]

@@ -42,8 +42,8 @@ public sealed class ReportService
             groups.Add(new RevenueGroupResponse
             {
                 Label = VietnamTime.BucketLabel(bucket, period),
-                From = bucket - VietnamTime.Offset,
-                To = next - VietnamTime.Offset,
+                From = VietnamTime.ToUtc(bucket),
+                To = VietnamTime.ToUtc(next),
                 Revenue = has ? bucketTotals.Revenue : 0m,
                 OrderCount = has ? bucketTotals.Orders : 0
             });
@@ -97,17 +97,28 @@ public sealed class ReportService
                 CreatedAt = o.CreatedAt
             }).Take(10).ToListAsync(ct);
 
-        var activeTableIds = await _db.RestaurantTables.AsNoTracking()
-            .Where(x => x.IsActive)
-            .Select(x => x.TableId)
+        // Tất cả bàn vẫn được hiển thị trên frontend. Bàn đã soft-delete hoặc đang bảo trì
+        // được gom vào Maintenance; chỉ bàn active + không bảo trì mới là Available/Occupied.
+        var tableRows = await _db.RestaurantTables.AsNoTracking()
+            .Select(x => new { x.TableId, x.IsActive, x.Status })
             .ToListAsync(ct);
+
+        var operationalTableIds = tableRows
+            .Where(x => x.IsActive &&
+                        !string.Equals(
+                            x.Status,
+                            RestaurantTableStatuses.Maintenance,
+                            StringComparison.OrdinalIgnoreCase))
+            .Select(x => x.TableId)
+            .ToList();
 
         var occupiedTableIds = await openOrders
             .Select(x => x.TableId)
             .Distinct()
             .ToListAsync(ct);
 
-        var occupied = occupiedTableIds.Count(id => activeTableIds.Contains(id));
+        var occupied = occupiedTableIds.Count(id => operationalTableIds.Contains(id));
+        var maintenance = tableRows.Count - operationalTableIds.Count;
 
         var kitchenRows = await _db.KitchenOrders.AsNoTracking()
             .Select(x => x.Status)
@@ -132,10 +143,10 @@ public sealed class ReportService
             LowStockCount = lowStockCount,
             Tables = new DashboardTablesSummary
             {
-                Total = activeTableIds.Count,
+                Total = tableRows.Count,
                 Occupied = occupied,
-                Available = activeTableIds.Count - occupied,
-                Maintenance = await _db.RestaurantTables.AsNoTracking().CountAsync(x => !x.IsActive, ct)
+                Available = operationalTableIds.Count - occupied,
+                Maintenance = maintenance
             },
             Kitchen = new DashboardKitchenSummary
             {

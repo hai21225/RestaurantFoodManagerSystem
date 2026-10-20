@@ -13,7 +13,10 @@ public class FoodSizeService
 
 
     public async Task<List<FoodSizeResponseDto>>
-        GetByFoodIdAsync(int foodId, CancellationToken ct = default)
+        GetByFoodIdAsync(
+            int foodId,
+            bool includeInactive = false,
+            CancellationToken ct = default)
     {
         var food = await _db.Foods.FindAsync([foodId], ct);
 
@@ -22,12 +25,16 @@ public class FoodSizeService
             throw new Exception("Food not found");
         }
 
-        var sizes = await _db.FoodSizes
+        var query = _db.FoodSizes
             .AsNoTracking()
-            .Where(x =>
-                x.FoodId == foodId &&
-                x.IsActive)
-            .ToListAsync(ct);
+            .Where(x => x.FoodId == foodId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(x => x.IsActive);
+        }
+
+        var sizes = await query.ToListAsync(ct);
 
         return sizes
             .Select(MapToDto)
@@ -38,14 +45,21 @@ public class FoodSizeService
     public async Task<FoodSizeResponseDto?> GetByIdAsync(
         int foodId,
         int sizeId,
+        bool includeInactive = false,
         CancellationToken ct = default)
     {
-        var size = await _db.FoodSizes
+        var query = _db.FoodSizes
             .AsNoTracking()
-            .FirstOrDefaultAsync(x =>
+            .Where(x =>
                 x.SizeId == sizeId &&
-                x.FoodId == foodId &&
-                x.IsActive, ct);
+                x.FoodId == foodId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(x => x.IsActive);
+        }
+
+        var size = await query.FirstOrDefaultAsync(ct);
 
         if (size == null)
         {
@@ -231,6 +245,48 @@ public class FoodSizeService
         size.UpdatedAt = DateTime.UtcNow;
 
         return await _db.SaveChangesAsync(ct) > 0;
+    }
+
+
+    /// <summary>
+    /// Bật/tắt vòng đời của size (soft-delete/restore). Không hard-delete để giữ lịch sử
+    /// công thức và báo cáo; size bị tắt cũng không còn là default.
+    /// </summary>
+    public async Task<bool> SetActiveAsync(
+        int foodId,
+        int sizeId,
+        bool active,
+        CancellationToken ct = default)
+    {
+        var size = await _db.FoodSizes
+            .FirstOrDefaultAsync(x =>
+                x.SizeId == sizeId &&
+                x.FoodId == foodId, ct);
+
+        if (size == null)
+        {
+            return false;
+        }
+
+        if (active &&
+            await _db.FoodSizes.AnyAsync(x =>
+                x.FoodId == foodId &&
+                x.SizeId != sizeId &&
+                x.SizeName == size.SizeName &&
+                x.IsActive, ct))
+        {
+            throw new InvalidOperationException("This size already exists for this food");
+        }
+
+        size.IsActive = active;
+        if (!active)
+        {
+            size.IsDefault = false;
+        }
+        size.UpdatedAt = DateTime.UtcNow;
+
+        await _db.SaveChangesAsync(ct);
+        return true;
     }
 
 

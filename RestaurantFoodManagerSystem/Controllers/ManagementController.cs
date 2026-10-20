@@ -13,9 +13,26 @@ public sealed class ManagementController : ControllerBase
         (await s.GetAllAsync(ct)).Select(IngredientResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpGet("ingredients/{id:int}")]
+    public async Task<IActionResult> IngredientDetails(int id, [FromServices] IngredientService s, CancellationToken ct)
+    {
+        var ingredient = await s.GetByIdAsync(id, ct);
+        return ingredient is null ? NotFound() : Ok(IngredientResponse.From(ingredient));
+    }
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("ingredients")]
-    public async Task<IActionResult> CreateIngredient(IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
-        Ok(IngredientResponse.From(await s.CreateAsync(r, ct)));
+    public async Task<IActionResult> CreateIngredient(IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct)
+    {
+        try
+        {
+            return Ok(IngredientResponse.From(await s.CreateAsync(r, ct)));
+        }
+        catch (InvalidOperationException e)
+        {
+            return Conflict(e.Message);
+        }
+    }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("ingredients/{id:int}")]
@@ -24,13 +41,44 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("ingredients/{id:int}")]
-    public async Task<IActionResult> UpdateIngredient(int id, IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
-        await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
+    public async Task<IActionResult> UpdateIngredient(int id, IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct)
+    {
+        try
+        {
+            return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException e)
+        {
+            return Conflict(e.Message);
+        }
+    }
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("ingredients/{id:int}/active")]
+    public async Task<IActionResult> SetIngredientActive(int id, UpdateActiveRequest r, [FromServices] IngredientService s, CancellationToken ct)
+    {
+        try
+        {
+            return await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException e)
+        {
+            return Conflict(e.Message);
+        }
+    }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("suppliers")]
     public async Task<List<SupplierResponse>> Suppliers([FromServices] SupplierService s, CancellationToken ct) =>
         (await s.GetAllAsync(ct)).Select(SupplierResponse.From).ToList();
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpGet("suppliers/{id:int}")]
+    public async Task<IActionResult> SupplierDetails(int id, [FromServices] SupplierService s, CancellationToken ct)
+    {
+        var supplier = await s.GetByIdAsync(id, ct);
+        return supplier is null ? NotFound() : Ok(SupplierResponse.From(supplier));
+    }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("suppliers")]
@@ -48,6 +96,11 @@ public sealed class ManagementController : ControllerBase
         await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("suppliers/{id:int}/active")]
+    public async Task<IActionResult> SetSupplierActive(int id, UpdateActiveRequest r, [FromServices] SupplierService s, CancellationToken ct) =>
+        await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("inventory")]
     public async Task<List<InventoryResponse>> Inventory([FromServices] InventoryService s, CancellationToken ct) =>
         (await s.GetAllAsync(ct)).Select(InventoryResponse.From).ToList();
@@ -58,6 +111,7 @@ public sealed class ManagementController : ControllerBase
     {
         try { return await s.AdjustAsync(ingredientId, r, ct) ? NoContent() : NotFound(); }
         catch (ConcurrencyConflictException e) { return Conflict(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
         catch (InvalidOperationException e) { return BadRequest(e.Message); }
     }
 
@@ -80,6 +134,7 @@ public sealed class ManagementController : ControllerBase
     {
         try { return Ok(PurchaseOrderResponse.From(await s.CreateAsync(r, ct))); }
         catch (KeyNotFoundException e) { return BadRequest(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
     }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
@@ -93,6 +148,7 @@ public sealed class ManagementController : ControllerBase
     {
         try { return await s.ReceiveAsync(id, r, ct) ? NoContent() : NotFound(); }
         catch (ConcurrencyConflictException e) { return Conflict(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
         catch (InvalidOperationException e) { return Conflict(e.Message); }
     }
 
@@ -112,6 +168,14 @@ public sealed class ManagementController : ControllerBase
         (await s.GetAllAsync(ct)).Select(PromotionResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
+    [HttpGet("promotions/{id:int}")]
+    public async Task<IActionResult> PromotionDetails(int id, [FromServices] PromotionService s, CancellationToken ct)
+    {
+        var promotion = await s.GetByIdAsync(id, ct);
+        return promotion is null ? NotFound() : Ok(PromotionResponse.From(promotion));
+    }
+
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("promotions")]
     public async Task<IActionResult> CreatePromotion(PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct)
     {
@@ -121,13 +185,22 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPatch("promotions/{id:int}/active")]
-    public async Task<IActionResult> TogglePromotion(int id, [FromQuery] bool active, [FromServices] PromotionService s, CancellationToken ct) =>
-        await s.SetActiveAsync(id, active, ct) ? NoContent() : NotFound();
+    public async Task<IActionResult> TogglePromotion(int id, [FromQuery] bool? active, [FromServices] PromotionService s, CancellationToken ct)
+    {
+        // `bool` không nullable sẽ mặc định false khi thiếu query param ⇒ gọi thiếu tham số
+        // lại vô tình TẮT promotion. Bắt buộc phải truyền `?active=true|false`.
+        if (active is null) return BadRequest(new { message = "active is required" });
+
+        return await s.SetActiveAsync(id, active.Value, ct) ? NoContent() : NotFound();
+    }
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPut("promotions/{id:int}")]
-    public async Task<IActionResult> UpdatePromotion(int id, PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct) =>
-        await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
+    public async Task<IActionResult> UpdatePromotion(int id, PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct)
+    {
+        try { return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound(); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
+    }
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpDelete("promotions/{id:int}")]
@@ -138,8 +211,11 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("recipes")]
-    public Task<List<RecipeSummaryResponse>> Recipes([FromServices] RecipeService s, CancellationToken ct) =>
-        s.GetAllAsync(ct);
+    public Task<List<RecipeSummaryResponse>> Recipes(
+        [FromQuery] bool includeInactive,
+        [FromServices] RecipeService s,
+        CancellationToken ct) =>
+        s.GetAllAsync(includeInactive, ct);
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("recipes/{id:int}")]
@@ -156,6 +232,7 @@ public sealed class ManagementController : ControllerBase
             return Ok(RecipeSummaryResponse.From(recipe, r.Ingredients.Count));
         }
         catch (KeyNotFoundException e) { return BadRequest(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
         catch (InvalidOperationException e) { return Conflict(e.Message); }
     }
 
@@ -173,6 +250,20 @@ public sealed class ManagementController : ControllerBase
     [HttpDelete("recipes/{id:int}")]
     public async Task<IActionResult> DeleteRecipe(int id, [FromServices] RecipeService s, CancellationToken ct) =>
         await s.DeleteAsync(id, ct) ? NoContent() : NotFound();
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("recipes/{id:int}/active")]
+    public async Task<IActionResult> SetRecipeActive(int id, UpdateActiveRequest r, [FromServices] RecipeService s, CancellationToken ct)
+    {
+        try
+        {
+            return await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException e)
+        {
+            return Conflict(e.Message);
+        }
+    }
 
     // --- Bếp => KitchenDesk ---
 
@@ -192,6 +283,8 @@ public sealed class ManagementController : ControllerBase
     {
         try { return await s.UpdateOrderStatusAsync(id, r, ct) ? NoContent() : NotFound(); }
         catch (ConcurrencyConflictException e) { return Conflict(e.Message); }
+        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
         catch (ArgumentException e) { return BadRequest(e.Message); }
     }
 
@@ -201,6 +294,38 @@ public sealed class ManagementController : ControllerBase
     {
         try { return await s.UpdateItemStatusAsync(id, r, ct) ? NoContent() : NotFound(); }
         catch (ConcurrencyConflictException e) { return Conflict(e.Message); }
+        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
+    }
+
+    [Authorize(Policy = AuthPolicies.KitchenDesk)]
+    [HttpPost("kitchen/items/{id:int}/reopen")]
+    public async Task<IActionResult> KitchenItemReopen(int id, ReopenKitchenItemRequest r, [FromServices] KitchenService s, CancellationToken ct)
+    {
+        try { return await s.ReopenItemAsync(id, r, ct) ? NoContent() : NotFound(); }
+        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
+    }
+
+    [Authorize(Policy = AuthPolicies.KitchenDesk)]
+    [HttpPatch("kitchen/items/{id:int}/prepared-quantity")]
+    public async Task<IActionResult> KitchenPreparedQuantity(int id, PreparedQuantityRequest r, [FromServices] KitchenService s, CancellationToken ct)
+    {
+        try { return await s.UpdatePreparedQuantityAsync(id, r, ct) ? NoContent() : NotFound(); }
+        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (ArgumentException e) { return BadRequest(e.Message); }
+    }
+
+    [Authorize(Policy = AuthPolicies.KitchenDesk)]
+    [HttpPost("kitchen/items/{id:int}/shortage")]
+    public async Task<IActionResult> KitchenShortage(int id, ReportShortageRequest r, [FromServices] KitchenService s, CancellationToken ct)
+    {
+        try { return await s.ReportShortageAsync(id, r, ct) ? NoContent() : NotFound(); }
+        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(e.Message); }
         catch (ArgumentException e) { return BadRequest(e.Message); }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/auth")]
@@ -132,11 +133,27 @@ public class AuthController : ControllerBase
                 message = "Register successful"
             });
         }
-        catch (Exception ex)
+        catch (ArgumentException ex)
         {
             return BadRequest(new
             {
                 message = ex.Message
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (DbUpdateException)
+        {
+            // Race tạo trùng username/email: unique index của DB là chốt chặn cuối.
+            // Không trả message SQL cho client.
+            return Conflict(new
+            {
+                message = "Username or email already exists"
             });
         }
     }

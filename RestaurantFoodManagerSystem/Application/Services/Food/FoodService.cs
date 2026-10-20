@@ -61,14 +61,21 @@ public class FoodService
     // =========================
 
     public async Task<List<FoodResponseDto>>
-        GetFoodsByCategoryIdAsync(int categoryId, CancellationToken ct = default)
+        GetFoodsByCategoryIdAsync(
+            int categoryId,
+            bool includeInactive = false,
+            CancellationToken ct = default)
     {
-        var foods = await _db.Foods
+        var query = _db.Foods
             .AsNoTracking()
-            .Where(x =>
-                x.CategoryId == categoryId &&
-                x.IsActive)
-            .ToListAsync(ct);
+            .Where(x => x.CategoryId == categoryId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(x => x.IsActive);
+        }
+
+        var foods = await query.ToListAsync(ct);
 
         return foods
             .Select(MapToDto)

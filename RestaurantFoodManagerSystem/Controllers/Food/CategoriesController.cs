@@ -151,6 +151,35 @@ public class CategoriesController : ControllerBase
 
 
     // ===================================================
+    // PATCH /api/categories/5/active
+    // ===================================================
+
+    [Authorize(Policy = AuthPolicies.WarehouseDesk)]
+    [HttpPatch("{id:int}/active")]
+    public async Task<IActionResult> SetActive(
+        int id,
+        [FromBody] UpdateActiveRequest request,
+        CancellationToken ct = default)
+    {
+        var result = await _categoryService
+            .SetActiveAsync(id, request.IsActive, ct);
+
+        if (!result)
+        {
+            return NotFound(new
+            {
+                message = "Category not found"
+            });
+        }
+
+        return Ok(new
+        {
+            message = "Category active status updated successfully"
+        });
+    }
+
+
+    // ===================================================
     // DELETE /api/categories/5
     // ===================================================
 
