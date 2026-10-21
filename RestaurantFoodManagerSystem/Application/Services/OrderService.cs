@@ -124,10 +124,6 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Danh sách đơn có lọc + phân trang cho <c>GET /api/orders</c> (P1).
-    /// Lấy kèm <c>tableNumber</c> (join bàn) và <c>itemCount</c> (đếm dòng món) trong cùng truy vấn.
-    /// </summary>
-    /// <summary>
     /// Hoá đơn gộp theo bàn — <c>GET /api/orders/table/{tableId}/bill</c> (Đợt 3 / B2).
     ///
     /// <para>
@@ -282,6 +278,10 @@ public sealed class OrderService
         return true;
     }
 
+    /// <summary>
+    /// Danh sách đơn có lọc + phân trang cho <c>GET /api/orders</c> (P1).
+    /// Lấy kèm <c>tableNumber</c> (join bàn) và <c>itemCount</c> (đếm dòng món) trong cùng truy vấn.
+    /// </summary>
     public async Task<PagedResponse<OrderListItemResponse>> GetListAsync(OrderListQuery query, CancellationToken ct = default)
     {
         var skip = Paging.ResolveSkip(query.Page, query.PageSize);
@@ -590,7 +590,7 @@ public sealed class OrderService
     /// <para>
     /// Cách A: các dòng đã tách (prepared/pending) được cộng dồn theo <c>OrderItemGroupId</c>.
     /// Giảm chỉ tác động phần chưa nấu; giảm xuống dưới số đã nấu bị chặn (409) trừ khi
-    /// Admin báº­t <c>AllowWastage</c>. TÄƒng sau ticket <c>Completed</c> táº¡o round/ticket má»›i.
+    /// Admin bật <c>AllowWastage</c>. Tăng sau ticket <c>Completed</c> tạo round/ticket mới.
     /// </para>
     /// </summary>
     /// <summary>
@@ -660,6 +660,9 @@ public sealed class OrderService
         if (KitchenStatuses.IsCancelled(source.Status))
             throw new InvalidOperationException("Order item is already cancelled");
 
+        // Gán group id để gom các dòng tách từ cùng 1 món. Nhớ lại trạng thái cũ để
+        // hoàn tác nếu cuối cùng hoá đơn không có gì thay đổi (xem nhánh return sớm bên dưới).
+        var hadGroupId = source.OrderItemGroupId is not null;
         OrderItemMutations.EnsureGroupId(source);
 
         var groupItems = await OrderItemMutations.LoadGroupAsync(_db, source, ct);
@@ -722,7 +725,16 @@ public sealed class OrderService
             throw new ArgumentException("Quantity cannot be negative");
 
         if (targetQuantity == currentQuantity)
+        {
+            // Không có gì thay đổi ⇒ hoàn tác group id vừa gán (nếu trước đó chưa có),
+            // để không lọt ra ngoài khi transaction bị rollback hoặc khi context dùng lại.
+            if (!hadGroupId)
+            {
+                source.OrderItemGroupId = null;
+            }
+
             return true;
+        }
 
         var reasonCode = OrderItemMutations.NormalizeReasonCode(
             request.ReasonCode, OrderItemMutations.CustomerChange);
@@ -863,6 +875,12 @@ public sealed class OrderService
                     Status = KitchenStatuses.Pending,
                     Note = newItem.Note
                 });
+
+                // C-23: lưu dòng bếp NGAY trước khi tính lại trạng thái phiếu.
+                // Vòng tính lại đọc món của phiếu bằng truy vấn DB ⇒ món ở trạng thái
+                // "Added" sẽ không xuất hiện ⇒ phiếu có thể bị chuyển "Ready"/đóng trong khi
+                // vẫn còn món `Pending` mà bếp chưa nấu.
+                await _db.SaveChangesAsync(ct);
 
                 var extraRequirements = await OrderItemMutations.CalculateRequirementsForQuantityAsync(
                     _db, newItem.SizeId, added, ct);
@@ -1564,7 +1582,7 @@ public sealed class OrderService
 
         // Lấy kitchen item MỚI NHẤT. Sau khi tách dòng (prepared-quantity/shortage) một
         // OrderItem có nhiều KitchenOrderItem; FirstOrDefault không ORDER BY sẽ huỷ nhầm
-        // phiáº¿u báº¿p. (P0-07)
+        // phiếu bếp. (P0-07)
         var kitchenItem = await OrderItemMutations.FindKitchenItemAsync(_db, item.Id, ct);
         var kitchenOrder = kitchenItem is null
             ? null
@@ -1638,13 +1656,9 @@ public sealed class OrderService
         else
         {
             // Dòng huỷ không còn được tính tiền; bỏ discount cũ vì cơ sở khuyến mãi đã đổi.
-            order.Subtotal = activeItems.Sum(x => x.UnitPrice * x.Quanlity);
-            order.DiscountAmount = 0m;
-            order.PromotionId = null;
-            order.PromotionDiscountType = null;
-            order.PromotionDiscountValue = null;
-            OrderTotalsCalculator.Apply(order, settings);
-            order.UpdatedAt = now;
+            // Dùng chung hàm RecalculateTotals với các luồng gọi thêm / điều chỉnh SL
+            // ⇒ công thức tiền chỉ có 1 nơi định nghĩa.
+            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
 
             if (kitchenOrder is not null && kitchenItem is not null)
             {
@@ -1794,7 +1808,13 @@ public sealed class OrderService
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
-        if (order is null || OrderStatuses.IsTerminal(order.Status)) return false;
+        if (order is null) return false;
+
+        // C-23: đơn đã Paid/Cancelled là XUNG ĐỘT NGHIỆP VỤ (409) — giống hệt
+        // RemovePromotionAsync, để FE không phải đoán 400 hay 409 cho cùng một điều kiện.
+        if (OrderStatuses.IsTerminal(order.Status))
+            throw new InvalidOperationException(
+                $"Order is {order.Status} and can no longer change status");
 
         var now = DateTime.UtcNow;
         var promotion = await _db.Promotions.FirstOrDefaultAsync(
@@ -1878,11 +1898,13 @@ public sealed class OrderService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.TableId == request.TableId, ct);
 
+        // C-15: bàn đích không tồn tại / bảo trì ⇒ 400 (lỗi đầu vào).
+        // Chỉ "bàn đích đang có đơn mở" và "đơn đã Paid/Cancelled" mới là 409 (xung đột nghiệp vụ).
         if (target is null || !target.IsActive)
-            throw new KeyNotFoundException("Table not found");
+            throw new ArgumentException("Table not found");
 
         if (string.Equals(target.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Target table is under maintenance");
+            throw new ArgumentException("Target table is under maintenance");
 
         // Bàn đích phải trống: nếu đang có đơn mở thì ngoài bàn đó đang có người.
         var targetHasOpenOrder = await _db.Orders.AnyAsync(
@@ -1993,19 +2015,25 @@ public sealed class OrderService
 
         var lines = await (
             from orderItem in _db.OrderItems.AsNoTracking()
-            join size in _db.FoodSizes.AsNoTracking() on orderItem.SizeId equals size.SizeId
-            join food in _db.Foods.AsNoTracking() on size.FoodId equals food.FoodId
+            // LEFT JOIN (như GetAsync / GetTableBillAsync): món/size bị xoá cứng thì dòng món
+            // vẫn phải tính vào cơ sở khuyến mãi, nếu không cả đơn sẽ bị từ chối khuyến mãi
+            // một cách âm thầm (base = 0).
+            join size in _db.FoodSizes.AsNoTracking() on orderItem.SizeId equals size.SizeId into sizeGroup
+            from size in sizeGroup.DefaultIfEmpty()
+            join food in _db.Foods.AsNoTracking() on size.FoodId equals food.FoodId into foodGroup
+            from food in foodGroup.DefaultIfEmpty()
             where orderItem.OrderId == order.OrderId
                && orderItem.Status != KitchenStatuses.Cancelled
             select new
             {
                 orderItem.SizeId,
-                food.CategoryId,
+                CategoryId = food != null ? food.CategoryId : (int?)null,
                 LineTotal = orderItem.UnitPrice * orderItem.Quanlity
             }).ToListAsync(ct);
 
         return lines
-            .Where(x => sizeIds.Contains(x.SizeId) || categoryIds.Contains(x.CategoryId))
+            .Where(x => sizeIds.Contains(x.SizeId)
+                     || (x.CategoryId.HasValue && categoryIds.Contains(x.CategoryId.Value)))
             .Sum(x => x.LineTotal);
     }
 }

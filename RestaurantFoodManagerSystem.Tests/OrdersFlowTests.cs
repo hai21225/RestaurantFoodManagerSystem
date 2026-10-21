@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+﻿﻿﻿using System.Collections.Concurrent;
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -419,7 +419,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task ApplyPromotion_PercentDiscount_RoundsToTwoDecimalsBeforeSave()
     {
-        // Defect #18: 12.5% cá»§a 100.05 = 12.50625; DB decimal(18,2) pháº£i nháº­n 12.51
+        // Defect #18: 12.5% của 100.05 = 12.50625; DB decimal(18,2) phải nhân 12.51
         // và TotalAmount phải tính từ chính giá trị đã làm tròn.
         var s = SeedOrderScenario();
         var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 100.05m);

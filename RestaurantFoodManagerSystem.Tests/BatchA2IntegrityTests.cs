@@ -308,8 +308,12 @@ public sealed class BatchA2IntegrityTests : TestBase
         Db.Promotions.Add(promotion);
         Db.SaveChanges();
 
-        Assert.False(await Orders.ApplyPromotionAsync(paid.OrderId, promotion.Id, CancellationToken.None));
-        Assert.False(await Orders.ApplyPromotionAsync(cancelled.OrderId, promotion.Id, CancellationToken.None));
+        // C-23: đơn đã Paid/Cancelled là XUNG ĐỘT NGHIỆP VỤ ⇒ 409, giống hệt
+        // RemovePromotionAsync (trước đây trả false ⇒ 400, lệch với DELETE).
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.ApplyPromotionAsync(
+            paid.OrderId, promotion.Id, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.ApplyPromotionAsync(
+            cancelled.OrderId, promotion.Id, CancellationToken.None));
         Assert.All(Db.Orders.ToList(), x => Assert.Equal(0m, x.DiscountAmount));
     }
 

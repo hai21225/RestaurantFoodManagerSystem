@@ -74,7 +74,8 @@ public sealed class Phase3TableTransferTests : TestBase
         target.Status = RestaurantTableStatuses.Maintenance;
         await Db.SaveChangesAsync();
 
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Orders.ChangeTableAsync(
+        // C-23: bàn đích bảo trì là lỗi ĐẦU VÀO ⇒ 400 (ArgumentException), không phải 409.
+        var ex = await Assert.ThrowsAsync<ArgumentException>(() => Orders.ChangeTableAsync(
             order.OrderId,
             new ChangeOrderTableRequest { TableId = target.TableId, ChangedBy = s.Staff.Id },
             CancellationToken.None));
@@ -115,7 +116,8 @@ public sealed class Phase3TableTransferTests : TestBase
         var s = SeedOrderScenario();
         var order = await CreateOpenOrderAsync(s.Table.TableId, s.Staff.Id);
 
-        await Assert.ThrowsAsync<KeyNotFoundException>(() => Orders.ChangeTableAsync(
+        // C-23: bàn đích không tồn tại là lỗi ĐẦU VÀO ⇒ 400 (ArgumentException), không phải 404.
+        await Assert.ThrowsAsync<ArgumentException>(() => Orders.ChangeTableAsync(
             order.OrderId,
             new ChangeOrderTableRequest { TableId = 999999, ChangedBy = s.Staff.Id },
             CancellationToken.None));

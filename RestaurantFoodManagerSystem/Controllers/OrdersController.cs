@@ -130,7 +130,15 @@ public sealed class OrdersController : ControllerBase
         catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
     [Authorize(Policy = AuthPolicies.PosOperator)]
-    [HttpPatch("{id:int}/promotion/{promotionId:int}")] public async Task<IActionResult> Promotion(int id, int promotionId, [FromServices] OrderService service, CancellationToken ct) => await service.ApplyPromotionAsync(id, promotionId, ct) ? NoContent() : BadRequest("Order or promotion is invalid");
+    [HttpPatch("{id:int}/promotion/{promotionId:int}")]
+    public async Task<IActionResult> Promotion(int id, int promotionId, [FromServices] OrderService service, CancellationToken ct)
+    {
+        try
+        {
+            return await service.ApplyPromotionAsync(id, promotionId, ct) ? NoContent() : BadRequest(new { message = "Order or promotion is invalid" });
+        }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+    }
     // Đợt 2 / A2: gỡ khuyến mãi khỏi đơn (trước đây chỉ gỡ được gián tiếp khi sửa món).
     [Authorize(Policy = AuthPolicies.PosOperator)]
     [HttpDelete("{id:int}/promotion/{promotionId:int}")]

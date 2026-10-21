@@ -83,6 +83,24 @@ script PowerShell phải lưu **UTF-8 có BOM**; gửi body JSON tiếng Việt 
 
 ---
 
+## C-23 — Rà soát sâu `OrderService` + sửa 8 điểm (2026-10-21)
+
+> File `OrderService.cs` đã qua một lần splice dòng (đợt C-20) ⇒ rà soát lại toàn bộ: quét cân bằng
+> ngoặc, kiểm kê 29 thành viên, đối chiếu từng luồng nghiệp vụ với `kitchen-stock-rule` §2.2–§2.4.1.
+
+- **Kết luận cấu trúc: file NGuyÊN vẹn** — dấu vết splice chỉ là mã hoá lại comment
+  (mojibake → UTF-8), **không dòng lệnh nào thay đổi** (1763 dòng code trước = 1763 sau).
+- **Sửa 8 điểm:** (1) chuyển bàn — bàn đích lỗi đầu vào trả **400** thay vì 404/409 ·
+  (2) cơ sở khuyến mãi dùng LEFT JOIN (không còn âm thầm từ chối khuyến mãi khi món bị xoá cứng) ·
+  (3) lưu dòng bếp mới **trước** khi tính lại trạng thái phiếu · (4) `CancelItemAsync` dùng chung
+  `RecalculateTotals` · (5) điều chỉnh SL không đổi gì thì không để lọt group id ·
+  (6) áp khuyến mãi lên đơn `Paid` trả **409** (giống gỡ khuyến mãi) ·
+  (7) gắn lại 2 khối XML doc bị bỏ trôi · (8) lỗi áp khuyến mãi trả **JSON `{message}`** thay vì text thuần.
+- **Vệ sinh mojibake:** quét lại **toàn repo** (272 file) ⇒ **0 dòng còn lại**.
+- **Kiểm chứng:** build **0 warning / 0 error**; test **697/697 pass**; E2E **100/100**;
+  `has-pending-model-changes` = **No changes**; **không** đụng FE.
+- **Chi tiết:** `docs/architecture/endpoint-baseline.md` mục "C-23" · test `Tests/C23OrderContractTests.cs`.
+
 ## C-22 — Khôi phục cấu hình quán sau khi chạy E2E (2026-10-21)
 
 - **Vấn đề:** `restaurant_settings` là **singleton dùng chung** (VAT, phí dịch vụ, tên quán).

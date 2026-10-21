@@ -572,3 +572,46 @@ Wastage      | 0.001 | orderItemId=27 (dòng gốc)          "Wastage (KitchenEr
 ### C-21.2 Test
 
 `Tests/C21ReportIntegrityTests.cs` — 17 test mới, mỗi lỗi 1 test (C-21.1 có 2 test: huỷ từ POS + huỷ từ bếp).
+
+---
+
+## C-23 — Rà soát sâu `OrderService` sau khi file bị splice (2026-10-21)
+
+> Rà soát độc lập toàn bộ `OrderService.cs` (2012 dòng): quét cân bằng ngoặc, kiểm kê 29 thành viên,
+> đối chiếu từng luồng nghiệp vụ với `kitchen-stock-rule` §2.2–§2.4.1 và `p1c-p1d`.
+> **Kết luận cấu trúc: file NGuyÊN vẹn** — dấu vết splice chỉ là mã hoá lại comment
+> (mojibake → UTF-8), **không dòng lệnh nào thay đổi** (1763 dòng code trước = 1763 dòng code sau).
+> Build 0 warning / 0 error · test **697/697 pass** · E2E **100/100** · **không** đổi schema.
+
+### C-23.1 Sửa 8 điểm
+
+| # | Vấn đề | Sửa |
+|---|---|---|
+| 1 | `PATCH /api/orders/{id}/table` — bàn đích không tồn tại trả **404**, bảo trì trả **409** (hợp đồng C-15 quy định **400**) | `ArgumentException` ⇒ **400**; chỉ "bàn đang có đơn mở" / "đơn đã Paid\|Cancelled" mới là 409 |
+| 2 | Cơ sở khuyến mãi dùng **INNER JOIN** ⇒ món/size bị xoá cứng làm base = 0 ⇒ khuyến mãi bị từ chối **âm thầm** | chuyển sang **LEFT JOIN** (như `GetAsync` / `GetTableBillAsync`) |
+| 3 | Dòng bếp mới chưa lưu khi tính lại trạng thái phiếu ⇒ phiếu có thể bị chuyển `Ready`/đóng trong khi còn món `Pending` | `SaveChangesAsync` ngay sau khi thêm dòng bếp |
+| 4 | `CancelItemAsync` tự viết lại công thức tiền (lệch với `RecalculateTotals`) | dùng chung `OrderItemMutations.RecalculateTotals` |
+| 5 | Điều chỉnh SL **không đổi gì** vẫn gán `OrderItemGroupId` ⇒ rò ra ngoài nếu context dùng lại | hoàn tác group id ở nhánh no-op |
+| 6 | Áp khuyến mãi lên đơn `Paid` trả **400**, gỡ khuyến mãi trả **409** (cùng 1 điều kiện, 2 mã khác nhau) | áp khuyến mãi cũng trả **409** (`InvalidOperationException`) |
+| 7 | 2 khối XML doc bị bỏ trôi ⇒ `GetListAsync` và `AdjustItemQuantityAsync` mất mô tả | gắn lại đúng method |
+| 8 | `PATCH /api/orders/{id}/promotion/{promotionId}` trả lỗi **text thuần** ⇒ FE đọc `payload.message` ra `undefined` | trả JSON `{ "message": ... }` |
+
+### C-23.2 Hợp đồng API đổi
+
+| Route | Thay đổi |
+|---|---|
+| `PATCH /api/orders/{id}/table` | bàn đích không tồn tại / bảo trì: **404/409 → 400** `{message}` |
+| `PATCH /api/orders/{id}/promotion/{promotionId}` | đơn đã `Paid`/`Cancelled`: **400 → 409** `{message}` · lỗi trả **JSON** `{message}` thay vì text thuần |
+
+### C-23.3 Test
+
+`Tests/C23OrderContractTests.cs` — 7 test mới (4 unit + 3 HTTP).
+3 test cũ cập nhật theo hợp đồng mới: `ChangeTable_UnknownTable_IsRejected`,
+`ChangeTable_TargetTableUnderMaintenance_IsBlocked`, `ApplyPromotion_RejectsPaidOrCancelledOrder`.
+
+### C-23.4 Vệ sinh mojibake
+
+- `scripts\e2e-smoke.ps1` **ghi đè cấu hình quán** (VAT/phí DV/tên) và không khôi phục ⇒ chạy E2E là đổi
+  luôn tiền thật của quán. Nay script **lưu cấu hình cũ trước** và **khôi phục lại ở cuối**.
+- Quét lại **toàn repo** (272 file: `.cs` `.ps1` `.sql` `.md` `.json` `.yml`) bằng detector mojibake
+  ⇒ **0 dòng còn lại**.
