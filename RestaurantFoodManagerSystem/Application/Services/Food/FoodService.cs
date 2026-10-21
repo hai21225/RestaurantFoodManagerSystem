@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class FoodService
@@ -96,7 +96,7 @@ public class FoodService
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         var food = new Food
@@ -130,7 +130,7 @@ public class FoodService
 
         if (result <= 0)
         {
-            throw new Exception("Failed to create food");
+            throw new InvalidOperationException("Failed to create food");
         }
 
         return MapToDto(food);
@@ -158,7 +158,7 @@ public class FoodService
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         food.CategoryId = request.CategoryId;
@@ -239,7 +239,11 @@ public class FoodService
         if (!isActive)
         {
             food.IsAvailable = false;
+            food.InactiveAt = DateTime.UtcNow;
         }
+
+        // C-13: InactiveReason/InactiveAt là lý do của lần vô hiệu hoá gần nhất — giữ lại làm
+        // báo cáo, không xoá khi bật lại món.
 
         food.UpdatedAt = DateTime.UtcNow;
 
@@ -266,6 +270,7 @@ public class FoodService
 
         // Món đã bị disable thì cũng không nên order được
         food.IsAvailable = false;
+        food.InactiveAt = DateTime.UtcNow;
 
         food.UpdatedAt = DateTime.UtcNow;
 

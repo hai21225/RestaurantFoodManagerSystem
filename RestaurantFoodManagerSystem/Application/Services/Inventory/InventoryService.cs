@@ -28,12 +28,29 @@ public sealed class InventoryService
         var x = await _db.Inventories.FirstOrDefaultAsync(i => i.IngredientId == ingredientId, ct);
         if (x is null) return false;
 
+        // C-17: ledger ghi kèm đơn vị tính lúc phát sinh giao dịch.
+        var unit = await _db.Ingredients
+            .AsNoTracking()
+            .Where(i => i.IngredientId == ingredientId)
+            .Select(i => i.Unit)
+            .FirstOrDefaultAsync(ct);
+
         // Cột lưu decimal(18,3) ⇒ làm tròn trước để ledger và tồn kho khớp tuyệt đối.
         var delta = Math.Round(r.Quanlity, 3, MidpointRounding.AwayFromZero);
         if (delta == 0) throw new ArgumentException("Adjustment quantity cannot be zero");
 
         var before = x.Quanlity;
         if (before + delta < 0) throw new InvalidOperationException("Inventory cannot become negative");
+
+        // C-21: điều chỉnh tay BẮT BUỘC có lý do. Skill yêu cầu mọi biến động kho phải có
+        // "reason"; không có thì không trả lời được "tồn giảm 3kg vì lý do gì" ⇒ báo cáo
+        // biến động kho không truy được nguyên nhân.
+        var note = r.Note?.Trim();
+        if (string.IsNullOrWhiteSpace(note))
+        {
+            throw new ArgumentException(
+                "Note (reason) is required for a manual stock adjustment");
+        }
 
         x.Quanlity += delta;
         x.UpdatedAt = DateTime.UtcNow;
@@ -44,7 +61,12 @@ public sealed class InventoryService
             Quanlity = Math.Abs(delta),
             QuanlityBefore = before,
             QuanlityAfter = x.Quanlity,
-            Note = r.Note,
+            Unit = unit,
+            // C-21: điều chỉnh tay không trỏ tới đơn/phiếu nào ⇒ dùng ReferenceType riêng
+            // để báo cáo "biến động kho" lọc được nhóm này.
+            ReferenceType = "ManualAdjustment",
+            ReferenceId = null,
+            Note = note,
             CreatedAt = DateTime.UtcNow,
             CreatedBy = await _currentUser.ResolveExistingActorAsync(
                 _db, r.CreatedBy, _logger, nameof(r.CreatedBy), ct)
@@ -52,6 +74,52 @@ public sealed class InventoryService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return true;
+    }
+
+    /// <summary>
+    /// Danh sách nguyên liệu **cần kho xử lý** — <c>GET /api/management/inventory/low-stock</c>
+    /// (Đợt 3 / B4).
+    ///
+    /// <para>
+    /// Trước Đợt 3, dashboard chỉ trả về <c>lowStockCount</c> (một con số) và
+    /// <c>GET /management/inventory</c> không có <c>minimumStock</c> ⇒ frontend phải tự ghép
+    /// 2 danh sách (tồn kho + nguyên liệu) để biết cái nào sắp hết. Nay server trả thẳng
+    /// danh sách, kèm mức tối thiểu và số lượng còn thiếu.
+    /// </para>
+    ///
+    /// <para>
+    /// C-21: gồm cả nguyên liệu bị bếp đánh dấu <c>OutOfStock</c> / <c>Spoiled</c> **dù tồn
+    /// vẫn còn nhiều** — trước đây kho không nhìn thấy tín hiệu này ở đâu cả (chỉ thấy được
+    /// qua <c>GET /api/management/ingredients</c>). Mỗi dòng có <c>stockStatus</c> để FE
+    /// phân biệt "sắp hết" với "hư/hết hạn".
+    /// </para>
+    ///
+    /// <para>Sắp xếp theo số lượng thiếu **giảm dần** (gấp nhất trước) rồi theo tên.</para>
+    /// </summary>
+    public async Task<List<LowStockItemResponse>> GetLowStockAsync(CancellationToken ct = default)
+    {
+        var rows = await (
+            from inventory in _db.Inventories.AsNoTracking()
+            join ingredient in _db.Ingredients.AsNoTracking() on inventory.IngredientId equals ingredient.IngredientId
+            where ingredient.IsActive
+               && (inventory.Quanlity <= ingredient.MinimumStock
+                   || ingredient.StockStatus != IngredientStockStatuses.Available)
+            select new LowStockItemResponse
+            {
+                IngredientId = ingredient.IngredientId,
+                IngredientName = ingredient.Name,
+                Unit = ingredient.Unit,
+                Quanlity = inventory.Quanlity,
+                MinimumStock = ingredient.MinimumStock,
+                Shortage = ingredient.MinimumStock - inventory.Quanlity,
+                IsOutOfStock = inventory.Quanlity <= 0,
+                StockStatus = ingredient.StockStatus
+            }).ToListAsync(ct);
+
+        return rows
+            .OrderByDescending(x => x.Shortage)
+            .ThenBy(x => x.IngredientName, StringComparer.Ordinal)
+            .ToList();
     }
 
     /// <summary>
@@ -94,6 +162,9 @@ public sealed class InventoryService
                 Quanlity = t.Quanlity,
                 QuanlityBefore = t.QuanlityBefore,
                 QuanlityAfter = t.QuanlityAfter,
+                // C-17: ưu tiên snapshot ghi kèm lúc phát sinh; dòng cũ chưa có thì
+                // lấy đơn vị hiện tại của nguyên liệu.
+                Unit = t.Unit ?? (i != null ? i.Unit : null),
                 ReferenceType = t.ReferenceType,
                 ReferenceId = t.ReferenceId,
                 Note = t.Note,

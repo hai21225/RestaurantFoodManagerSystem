@@ -32,8 +32,10 @@ public sealed class PaymentsFlowTests : TestBase
     }
 
     [Fact]
-    public async Task Create_UsesEmptyString_WhenTransactionCodeIsMissing()
+    public async Task Create_GeneratesTransactionCode_WhenMissing()
     {
+        // C-19: mã giao dịch phải luôn có và luôn duy nhất — client không gửi thì
+        // server sinh mã nội bộ (trước đây để chuỗi rỗng ⇒ nhiều dòng trùng nhau).
         var s = SeedOrderScenario();
         var order = SeedOrder(s.Table.TableId, s.Staff.Id);
 
@@ -45,7 +47,9 @@ public sealed class PaymentsFlowTests : TestBase
             CreatedBy = s.Staff.Id
         }, CancellationToken.None);
 
-        Assert.Equal(string.Empty, payment!.TransactionCode);
+        Assert.NotNull(payment);
+        Assert.False(string.IsNullOrWhiteSpace(payment!.TransactionCode));
+        Assert.StartsWith("PAY", payment.TransactionCode);
     }
 
     [Fact]
@@ -70,6 +74,80 @@ public sealed class PaymentsFlowTests : TestBase
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(request, CancellationToken.None));
         Assert.Equal("Order is already paid", ex.Message);
+    }
+
+    // ==================== C-19: mã giao dịch ====================
+
+    [Fact]
+    public async Task Create_KeepsClientTransactionCode()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        var payment = await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = order.OrderId,
+            PaymentMethod = "Bank",
+            TransactionCode = "  NHANHANG-001  ",
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        Assert.Equal("NHANHANG-001", payment!.TransactionCode);
+    }
+
+    [Fact]
+    public async Task Create_Rejects_DuplicateTransactionCode()
+    {
+        // C-19: trùng mã giao dịch = thu 2 lần cùng một mã ngân hàng ⇒ phải báo lỗi.
+        var s = SeedOrderScenario();
+        var first = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = first.OrderId,
+            PaymentMethod = "Bank",
+            TransactionCode = "NHANHANG-001",
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        var second = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(
+            new CreatePaymentRequest
+            {
+                OrderId = second.OrderId,
+                PaymentMethod = "Bank",
+                TransactionCode = "NHANHANG-001",
+                CreatedBy = s.Staff.Id
+            },
+            CancellationToken.None));
+
+        Assert.Contains("already exists", ex.Message);
+        Assert.Single(Db.Payments);
+    }
+
+    [Fact]
+    public async Task Create_GeneratedTransactionCodes_AreDifferentPerPayment()
+    {
+        var s = SeedOrderScenario();
+        var first = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var second = SeedOrder(s.Table.TableId, s.Staff.Id);
+
+        var a = await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = first.OrderId,
+            PaymentMethod = "Cash",
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        var b = await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = second.OrderId,
+            PaymentMethod = "Cash",
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        Assert.NotEqual(a!.TransactionCode, b!.TransactionCode);
+        Assert.All(Db.Payments, x => Assert.False(string.IsNullOrWhiteSpace(x.TransactionCode)));
     }
 
     [Fact]

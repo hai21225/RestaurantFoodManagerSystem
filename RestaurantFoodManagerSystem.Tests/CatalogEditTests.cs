@@ -76,12 +76,28 @@ public sealed class CatalogEditTests : TestBase
         var result = await Recipes.UpdateAsync(recipe.RecipeId, request, default);
 
         Assert.True(result);
-        var reloaded = await Db.Recipes.AsNoTracking().FirstAsync(r => r.RecipeId == recipe.RecipeId);
-        Assert.Equal("Công thức mới", reloaded.Name);
-        Assert.Equal("2", reloaded.Version);
+
+        // C-19: bản cũ KHÔNG bị ghi đè — nó chuyển sang không hoạt động và giữ nguyên
+        // định lượng cũ để làm minh chứng lịch sử.
+        var old = await Db.Recipes.AsNoTracking().FirstAsync(r => r.RecipeId == recipe.RecipeId);
+        Assert.False(old.IsActive);
+        Assert.Equal("1", old.Version);
+
+        var oldLines = await Db.RecipeIngredients.AsNoTracking()
+            .Where(ri => ri.RecipeId == recipe.RecipeId)
+            .ToListAsync();
+        Assert.Single(oldLines);
+        Assert.Equal(1m, oldLines[0].Quanlity);
+
+        // Bản mới là bản đang chạy cho size này (unique index SizeId WHERE IsActive=1).
+        var created = await Db.Recipes.AsNoTracking()
+            .SingleAsync(r => r.SizeId == size.SizeId && r.IsActive);
+        Assert.NotEqual(recipe.RecipeId, created.RecipeId);
+        Assert.Equal("Công thức mới", created.Name);
+        Assert.Equal("2", created.Version);
 
         var lines = await Db.RecipeIngredients.AsNoTracking()
-            .Where(ri => ri.RecipeId == recipe.RecipeId)
+            .Where(ri => ri.RecipeId == created.RecipeId)
             .OrderBy(ri => ri.IngredientId)
             .ToListAsync();
         Assert.Equal(2, lines.Count);

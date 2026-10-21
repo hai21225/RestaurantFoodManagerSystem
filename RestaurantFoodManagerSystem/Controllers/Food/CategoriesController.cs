@@ -50,21 +50,12 @@ public class CategoriesController : ControllerBase
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
-        try
-        {
-            var category =
-                await _categoryService
-                    .GetCategoryByIdAsync(id, ct);
+        // Không tồn tại ⇒ service ném KeyNotFoundException ⇒ 404 (ApiExceptionFilter).
+        var category =
+            await _categoryService
+                .GetCategoryByIdAsync(id, ct);
 
-            return Ok(category);
-        }
-        catch (Exception ex)
-        {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok(category);
     }
 
 
@@ -78,32 +69,22 @@ public class CategoriesController : ControllerBase
         [FromBody] CategoryDTO dto,
         CancellationToken ct = default)
     {
-        try
-        {
-            var result =
-                await _categoryService
-                    .CreateCategoryAsync(dto, ct);
+        var result =
+            await _categoryService
+                .CreateCategoryAsync(dto, ct);
 
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Failed to create category"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Category created successfully"
-            });
-        }
-        catch (Exception ex)
+        if (!result)
         {
             return BadRequest(new
             {
-                message = ex.Message
+                message = "Failed to create category"
             });
         }
+
+        return Ok(new
+        {
+            message = "Category created successfully"
+        });
     }
 
 
@@ -118,35 +99,25 @@ public class CategoriesController : ControllerBase
         [FromBody] CategoryDTO dto,
         CancellationToken ct = default)
     {
-        try
-        {
-            // ID lấy từ URL, không tin ID client gửi trong body
-            dto.Id = id;
+        // ID lấy từ URL, không tin ID client gửi trong body
+        dto.Id = id;
 
-            var result =
-                await _categoryService
-                    .UpdateCategoryAsync(dto, ct);
+        var result =
+            await _categoryService
+                .UpdateCategoryAsync(dto, ct);
 
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Failed to update category"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Category updated successfully"
-            });
-        }
-        catch (Exception ex)
+        if (!result)
         {
             return NotFound(new
             {
-                message = ex.Message
+                message = "Category not found"
             });
         }
+
+        return Ok(new
+        {
+            message = "Category updated successfully"
+        });
     }
 
 
@@ -187,31 +158,20 @@ public class CategoriesController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        try
-        {
-            var result =
-                await _categoryService
-                    .DeleteCategoryAsync(id, ct);
+        var result = await _categoryService
+            .DeleteCategoryAsync(id, ct);
 
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Failed to delete category"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Category deleted successfully"
-            });
-        }
-        catch (Exception ex)
+        if (!result)
         {
             return NotFound(new
             {
-                message = ex.Message
+                message = "Category not found"
             });
         }
+
+        return Ok(new
+        {
+            message = "Category deleted successfully"
+        });
     }
 }

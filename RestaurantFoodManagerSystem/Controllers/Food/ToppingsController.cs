@@ -54,24 +54,15 @@ public class ToppingsController : ControllerBase
         [FromBody] CreateToppingRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var topping = await _toppingService
-                .CreateAsync(request, ct);
+        // Trùng tên ⇒ 409 (InvalidOperationException).
+        var topping = await _toppingService
+            .CreateAsync(request, ct);
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new { id = topping.ToppingId },
-                topping
-            );
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = topping.ToppingId },
+            topping
+        );
     }
 
 
@@ -83,28 +74,18 @@ public class ToppingsController : ControllerBase
         [FromBody] UpdateToppingRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var topping = await _toppingService
-                .UpdateAsync(id, request, ct);
+        var topping = await _toppingService
+            .UpdateAsync(id, request, ct);
 
-            if (topping == null)
-            {
-                return NotFound(new
-                {
-                    message = "Topping not found"
-                });
-            }
-
-            return Ok(topping);
-        }
-        catch (Exception ex)
+        if (topping == null)
         {
-            return BadRequest(new
+            return NotFound(new
             {
-                message = ex.Message
+                message = "Topping not found"
             });
         }
+
+        return Ok(topping);
     }
 
 
@@ -146,31 +127,22 @@ public class ToppingsController : ControllerBase
         [FromBody] UpdateActiveRequest request,
         CancellationToken ct = default)
     {
-        try
+        // Bật lại topping đã có tên trùng với topping khác ⇒ 409.
+        var result = await _toppingService
+            .SetActiveAsync(id, request.IsActive, ct);
+
+        if (!result)
         {
-            var result = await _toppingService
-                .SetActiveAsync(id, request.IsActive, ct);
-
-            if (!result)
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "Topping not found"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Topping active status updated successfully"
+                message = "Topping not found"
             });
         }
-        catch (InvalidOperationException ex)
+
+        return Ok(new
         {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+            message = "Topping active status updated successfully"
+        });
     }
 
 

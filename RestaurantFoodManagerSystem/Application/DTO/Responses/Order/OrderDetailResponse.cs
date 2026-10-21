@@ -13,7 +13,24 @@ public sealed class OrderDetailResponse
     public decimal Subtotal { get; set; }
     public decimal DiscountAmount { get; set; }
     public decimal TaxAmount { get; set; }
+
+    /// <summary>Phí dịch vụ của đơn (Đợt 2 / A1).</summary>
+    public decimal ServiceChargeAmount { get; set; }
+
     public decimal TotalAmount { get; set; }
+
+    /// <summary>Ghi chú cho cả hoá đơn (Đợt 3 / B3); null = chưa có.</summary>
+    public string? Note { get; set; }
+
+    /// <summary>Khuyến mãi đang áp dụng cho đơn (Đợt 2 / A3); null = không có.</summary>
+    public int? PromotionId { get; set; }
+
+    /// <summary>Snapshot loại giảm giá của khuyến mãi tại lúc áp dụng (Đợt 2 / A3).</summary>
+    public string? PromotionDiscountType { get; set; }
+
+    /// <summary>Snapshot giá trị giảm giá của khuyến mãi tại lúc áp dụng (Đợt 2 / A3).</summary>
+    public decimal? PromotionDiscountValue { get; set; }
+
     public int CreatedBy { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

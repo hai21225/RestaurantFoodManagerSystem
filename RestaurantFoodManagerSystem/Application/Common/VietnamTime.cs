@@ -67,6 +67,26 @@ public static class VietnamTime
     public static DateTime ToUtc(DateTime vn) =>
         DateTime.SpecifyKind(vn - Offset, DateTimeKind.Utc);
 
+    /// <summary>
+    /// Chuyển một mốc thời gian UTC sang giờ VN (kèm <c>Kind = Unspecified</c>).
+    /// Dùng khi trả lời API theo quy ước "đầu vào/đầu ra dùng giờ Việt Nam".
+    /// </summary>
+    public static DateTime ToVn(DateTime utc) =>
+        DateTime.SpecifyKind(utc + Offset, DateTimeKind.Unspecified);
+
+    /// <summary>
+    /// Quy đổi mốc thời gian do client gửi sang UTC theo quy ước chung của API (Đợt 2 / P0-05):
+    /// giá trị <b>không kèm múi giờ</b> (<c>Kind = Unspecified</c>) được hiểu là
+    /// <b>giờ Việt Nam</b>; giá trị đã kèm múi giờ thì giữ nguyên ý nghĩa.
+    /// </summary>
+    public static DateTime ToUtcFromApi(DateTime value) =>
+        value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => ToUtc(value)
+        };
+
     /// <summary>Bắt đầu bucket chứa <paramref name="utc"/> (UTC), trả về theo giờ VN.</summary>
     public static DateTime BucketStartVn(DateTime utc, string normalizedPeriod)
     {

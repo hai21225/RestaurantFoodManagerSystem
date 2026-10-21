@@ -14,7 +14,7 @@ public sealed class OrdersController : ControllerBase
         catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
     }
     [Authorize(Policy = AuthPolicies.PosOperator)]
-    [HttpPost] public async Task<IActionResult> Create(CreateOrderRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct) { try { return Ok(await service.CreateIdempotentAsync(request, idempotencyKey, ct)); } catch (KeyNotFoundException e) { return BadRequest(e.Message); } catch (ArgumentException e) { return BadRequest(e.Message); } catch (InvalidOperationException e) { return Conflict(e.Message); } }
+    [HttpPost] public async Task<IActionResult> Create(CreateOrderRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct) { try { return Ok(await service.CreateIdempotentAsync(request, idempotencyKey, ct)); } catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); } catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); } catch (ArgumentException e) { return BadRequest(new { message = e.Message }); } catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); } }
     // C-09: route "thay toàn bộ dòng món" (replace-all) đã bị chặn.
     //
     // Lý do bỏ:
@@ -42,37 +42,37 @@ public sealed class OrdersController : ControllerBase
         });
     [Authorize(Policy = AuthPolicies.PosOperator)]
     [HttpPost("{id:int}/items")]
-    public async Task<IActionResult> AddItems(int id, AddOrderItemsRequest request, [FromServices] OrderService service, CancellationToken ct)
+    public async Task<IActionResult> AddItems(int id, AddOrderItemsRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct)
     {
         try
         {
-            if (!await service.AddItemsAsync(id, request, ct)) return NotFound();
-            return await service.GetAsync(id, ct) is { } detail ? Ok(detail) : NotFound();
+            return await service.AddItemsIdempotentAsync(id, request, idempotencyKey, ct) is { } detail ? Ok(detail) : NotFound();
         }
-        catch (KeyNotFoundException e) { return BadRequest(e.Message); }
-        catch (ArgumentException e) { return BadRequest(e.Message); }
-        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
     [Authorize(Policy = AuthPolicies.PosOperator)]
     [HttpPatch("{orderId:int}/items/{itemId:int}/quantity")]
-    public async Task<IActionResult> AdjustQuantity(int orderId, int itemId, AdjustOrderItemQuantityRequest request, [FromServices] OrderService service, CancellationToken ct)
+    public async Task<IActionResult> AdjustQuantity(int orderId, int itemId, AdjustOrderItemQuantityRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct)
     {
         try
         {
-            if (!await service.AdjustItemQuantityAsync(orderId, itemId, request, ct)) return NotFound();
-            return await service.GetAsync(orderId, ct) is { } detail ? Ok(detail) : NotFound();
+            return await service.AdjustItemQuantityIdempotentAsync(orderId, itemId, request, idempotencyKey, ct) is { } detail ? Ok(detail) : NotFound();
         }
-        catch (KeyNotFoundException e) { return BadRequest(e.Message); }
-        catch (ArgumentException e) { return BadRequest(e.Message); }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
         catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet("{id:int}/history")] public async Task<IActionResult> History(int id, [FromServices] OrderService service, CancellationToken ct) => (await service.GetHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet("{id:int}/item-history")] public async Task<IActionResult> ItemHistory(int id, [FromServices] OrderService service, CancellationToken ct) => (await service.GetItemHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
     [Authorize(Policy = AuthPolicies.PosOperator)]
-    [HttpPatch("{id:int}/status")] public async Task<IActionResult> Status(int id, UpdateOrderStatusRequest request, [FromServices] OrderService service, CancellationToken ct) { try { return await service.UpdateStatusAsync(id, request, ct) ? NoContent() : NotFound(); } catch (ArgumentException e) { return BadRequest(e.Message); } catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); } catch (InvalidOperationException e) { return Conflict(e.Message); } }
+    [HttpPatch("{id:int}/status")] public async Task<IActionResult> Status(int id, UpdateOrderStatusRequest request, [FromServices] OrderService service, CancellationToken ct) { try { return await service.UpdateStatusAsync(id, request, ct) ? NoContent() : NotFound(); } catch (ArgumentException e) { return BadRequest(new { message = e.Message }); } catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); } catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); } }
     [Authorize(Policy = AuthPolicies.OrderCancellation)]
     [HttpPost("{orderId:int}/items/{itemId:int}/cancel")]
     public async Task<IActionResult> CancelItem(int orderId, int itemId, CancelOrderItemRequest request, [FromServices] OrderService service, CancellationToken ct)
@@ -82,10 +82,67 @@ public sealed class OrdersController : ControllerBase
             if (!await service.CancelItemAsync(orderId, itemId, request, ct)) return NotFound();
             return await service.GetAsync(orderId, ct) is { } detail ? Ok(detail) : NotFound();
         }
-        catch (ArgumentException e) { return BadRequest(e.Message); }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
         catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(e.Message); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+    }
+    // B1: chuyển đơn sang bàn khác (khách đổi chỗ ngồi). Waiter + Admin.
+    /// <summary>
+    /// Đợt 3 / B2 — hoá đơn **gộp theo bàn**: gom mọi đơn đang mở của bàn thành 1 bản tổng hợp
+    /// (tiền hàng, giảm giá, VAT, phí dịch vụ, tổng + danh sách món đã gộp).
+    /// Trả 404 khi bàn không có đơn đang mở.
+    /// </summary>
+    [Authorize(Policy = AuthPolicies.PosOrCashier)]
+    [HttpGet("table/{tableId:int}/bill")]
+    public async Task<IActionResult> TableBill(int tableId, [FromServices] OrderService service, CancellationToken ct) =>
+        await service.GetTableBillAsync(tableId, ct) is { } bill ? Ok(bill) : NotFound();
+
+    /// <summary>
+    /// Đợt 3 / B3 — ghi chú cho **cả hoá đơn** ("xuất hoá đơn công ty ABC", "chia đôi với bàn 6"…).
+    /// Gửi chuỗi rỗng để xoá ghi chú.
+    /// </summary>
+    [Authorize(Policy = AuthPolicies.PosOperator)]
+    [HttpPatch("{id:int}/note")]
+    public async Task<IActionResult> UpdateNote(int id, UpdateOrderNoteRequest request, [FromServices] OrderService service, CancellationToken ct)
+    {
+        try
+        {
+            return await service.UpdateNoteAsync(id, request, ct) ? NoContent() : NotFound();
+        }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+    }
+
+    [Authorize(Policy = AuthPolicies.PosOperator)]
+    [HttpPatch("{id:int}/table")]
+    public async Task<IActionResult> ChangeTable(int id, ChangeOrderTableRequest request, [FromServices] OrderService service, CancellationToken ct)
+    {
+        try
+        {
+            return await service.ChangeTableAsync(id, request, ct) ? NoContent() : NotFound();
+        }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
+        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
     [Authorize(Policy = AuthPolicies.PosOperator)]
     [HttpPatch("{id:int}/promotion/{promotionId:int}")] public async Task<IActionResult> Promotion(int id, int promotionId, [FromServices] OrderService service, CancellationToken ct) => await service.ApplyPromotionAsync(id, promotionId, ct) ? NoContent() : BadRequest("Order or promotion is invalid");
+    // Đợt 2 / A2: gỡ khuyến mãi khỏi đơn (trước đây chỉ gỡ được gián tiếp khi sửa món).
+    [Authorize(Policy = AuthPolicies.PosOperator)]
+    [HttpDelete("{id:int}/promotion/{promotionId:int}")]
+    public async Task<IActionResult> RemovePromotion(int id, int promotionId, [FromServices] OrderService service, CancellationToken ct)
+    {
+        try
+        {
+            return await service.RemovePromotionAsync(id, promotionId, ct)
+                ? NoContent()
+                : BadRequest(new { message = "Order or promotion is invalid" });
+        }
+        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
+        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+    }
 }

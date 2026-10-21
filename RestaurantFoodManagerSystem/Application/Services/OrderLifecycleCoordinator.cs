@@ -130,16 +130,43 @@ public sealed class OrderLifecycleCoordinator
         string? historyNote,
         string? cancelReason,
         DateTime now,
-        CancellationToken ct)
+        CancellationToken ct,
+        string? reasonCode = null)
     {
         var effectiveStatuses = ticketItems
             .Select(x => x.Id == changedItemId ? changedStatus : x.Status)
             .ToList();
 
+        return await SyncTicketAndOrderAsync(
+            order, ticket, effectiveStatuses, changedBy, historyNote, cancelReason, now,
+            allowReopen: false, ct, reasonCode);
+    }
+
+    /// <summary>
+    /// Đường đồng bộ **duy nhất** cho mọi luồng bếp: đổi trạng thái món, prepared-quantity,
+    /// shortage, reopen. Trước đây 3 luồng sau tự gọi
+    /// <see cref="RecalculateTicketStatus"/> + <see cref="RefreshOrderStatusFromAllItemsAsync"/>
+    /// ⇒ sửa logic ở đây thì 3 luồng đó không tự được hưởng.
+    ///
+    /// <param name="effectiveItemStatuses">Trạng thái hiện tại của mọi món trong phiếu
+    /// (đã gồm thay đổi trong bộ nhớ).</param>
+    /// </summary>
+    public async Task<bool> SyncTicketAndOrderAsync(
+        Order? order,
+        KitchenOrder ticket,
+        IReadOnlyCollection<string> effectiveItemStatuses,
+        int changedBy,
+        string? historyNote,
+        string? cancelReason,
+        DateTime now,
+        bool allowReopen,
+        CancellationToken ct,
+        string? reasonCode = null)
+    {
         // Ticket đã Completed/Cancelled là terminal: không mở lại chỉ vì một món bị huỷ.
         // Trường hợp huỷ toàn bộ đơn đi qua CancelOrderAsync/OrderCancellation, nơi ticket
         // được đặt Cancelled có chủ đích.
-        RecalculateTicketStatus(ticket, effectiveStatuses, now);
+        RecalculateTicketStatus(ticket, effectiveItemStatuses, now);
 
         if (order is null)
         {
@@ -152,9 +179,10 @@ public sealed class OrderLifecycleCoordinator
             order,
             changedBy,
             historyNote,
-            allowReopen: false,
+            allowReopen,
             cancelReason,
-            ct);
+            ct,
+            reasonCode: reasonCode);
     }
 
     /// <summary>
@@ -193,7 +221,8 @@ public sealed class OrderLifecycleCoordinator
         IReadOnlyCollection<OrderItem> orderItems,
         int changedBy,
         string? historyNote,
-        CancellationToken ct) =>
+        CancellationToken ct,
+        string? reasonCode = null) =>
         RefreshOrderStatusFromAllItemsAsync(
             order,
             changedBy,
@@ -201,7 +230,8 @@ public sealed class OrderLifecycleCoordinator
             allowReopen: false,
             cancelReason: null,
             ct,
-            orderItems);
+            orderItems,
+            reasonCode);
 
     /// <summary>
     /// Tính lại trạng thái đơn từ tất cả dòng món còn hoạt động của tất cả round.
@@ -221,7 +251,8 @@ public sealed class OrderLifecycleCoordinator
         bool allowReopen,
         string? cancelReason,
         CancellationToken ct,
-        IReadOnlyCollection<OrderItem>? effectiveItems = null)
+        IReadOnlyCollection<OrderItem>? effectiveItems = null,
+        string? reasonCode = null)
     {
         if (OrderStatuses.IsTerminal(order.Status))
         {
@@ -288,7 +319,8 @@ public sealed class OrderLifecycleCoordinator
                 changedBy,
                 historyNote ?? reason,
                 reason,
-                ct);
+                ct,
+                reasonCode);
             return true;
         }
 
@@ -329,7 +361,8 @@ public sealed class OrderLifecycleCoordinator
             changedBy,
             historyNote,
             cancelReason,
-            ct);
+            ct,
+            reasonCode);
         return true;
     }
 
@@ -352,6 +385,45 @@ public sealed class OrderLifecycleCoordinator
             NewStatus = order.Status,
             ChangedBy = changedBy,
             Note = note,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Ghi dòng history cho lúc **tạo đơn** (Pending → SentToKitchen) để lịch sử đơn có
+    /// điểm bắt đầu, không bắt đầu giữa chừng.
+    /// </summary>
+    public void RecordOrderCreated(Order order, int changedBy, string note)
+    {
+        _db.OrderStatusHistories.Add(new OrderStatusHistory
+        {
+            OrderId = order.OrderId,
+            OldStatus = OrderStatuses.Pending,
+            NewStatus = order.Status,
+            ChangedBy = changedBy,
+            Note = note,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
+
+    /// <summary>
+    /// Đánh dấu đơn đã thu tiền + ghi history. <c>Paid</c> là trạng thái terminal nên có
+    /// method riêng, không đi qua ma trận transition (transition chỉ mô tả luồng phục vụ).
+    /// </summary>
+    public void ApplyPaid(Order order, int changedBy, string? historyNote)
+    {
+        var oldStatus = order.Status;
+
+        order.Status = OrderStatuses.Paid;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        _db.OrderStatusHistories.Add(new OrderStatusHistory
+        {
+            OrderId = order.OrderId,
+            OldStatus = oldStatus,
+            NewStatus = OrderStatuses.Paid,
+            ChangedBy = changedBy,
+            Note = historyNote,
             CreatedAt = DateTime.UtcNow
         });
     }
@@ -459,8 +531,26 @@ public sealed class OrderLifecycleCoordinator
             NewStatus = order.Status,
             ChangedBy = changedBy,
             Note = historyNote ?? cancelReason,
+            // P0-12: lưu mã lý do để phân biệt "huỷ vì khách đổi" với "huỷ vì hết hàng".
+            // Trước đây chỉ có Note text tự do nên không tra lại được.
+            ReasonCode = NormalizeReasonCode(reasonCode),
             CreatedAt = now
         });
+    }
+
+    /// <summary>
+    /// Chuẩn hoá mã lý do ghi vào lịch sử đơn: chỉ nhận 4 mã đã chốt ở C-08, tối đa 50 ký tự.
+    /// Mã lạ bị bỏ qua (null) thay vì làm hỏng cả dòng audit.
+    /// </summary>
+    private static string? NormalizeReasonCode(string? reasonCode)
+    {
+        if (string.IsNullOrWhiteSpace(reasonCode))
+        {
+            return null;
+        }
+
+        var trimmed = reasonCode.Trim();
+        return trimmed.Length > 50 ? trimmed[..50] : trimmed;
     }
 
     /// <summary>Huỷ toàn bộ đơn và ghi history trong cùng transaction của caller.</summary>
@@ -479,6 +569,32 @@ public sealed class OrderLifecycleCoordinator
             reason,
             ct,
             reasonCode);
+
+    /// <summary>
+    /// Đánh dấu đơn đã hoàn tiền + ghi history. <c>Paid</c> là trạng thái terminal nên cần
+    /// method riêng, không đi qua ma trận transition.
+    ///
+    /// <para>Đơn về lại <c>Ready</c> (món đã phục vụ xong, chờ thu lại) — không về
+    /// <c>SentToKitchen</c> vì bếp đã nấu xong, và không về <c>Cancelled</c> vì hoàn tiền
+    /// không phải huỷ đơn.</para>
+    /// </summary>
+    public void ApplyRefunded(Order order, int changedBy, string? historyNote)
+    {
+        var oldStatus = order.Status;
+
+        order.Status = OrderStatuses.Ready;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        _db.OrderStatusHistories.Add(new OrderStatusHistory
+        {
+            OrderId = order.OrderId,
+            OldStatus = oldStatus,
+            NewStatus = order.Status,
+            ChangedBy = changedBy,
+            Note = historyNote,
+            CreatedAt = DateTime.UtcNow
+        });
+    }
 
     /// <summary>Map trạng thái phiếu bếp sang trạng thái order hiện có.</summary>
     public static string MapTicketStatusToOrder(string kitchenStatus) =>

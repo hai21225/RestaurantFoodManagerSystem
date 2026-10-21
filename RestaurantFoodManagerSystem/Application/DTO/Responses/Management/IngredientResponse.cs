@@ -11,12 +11,16 @@ public sealed class IngredientResponse
     public decimal MinimumStock { get; set; }
     public bool IsActive { get; set; }
 
+    /// <summary>Trạng thái đáp ứng: Available / OutOfStock / Spoiled.</summary>
+    public string StockStatus { get; set; } = IngredientStockStatuses.Available;
+
     public static IngredientResponse From(Ingredient x) => new()
     {
         IngredientId = x.IngredientId,
         Name = x.Name,
         Unit = x.Unit,
         MinimumStock = x.MinimumStock,
-        IsActive = x.IsActive
+        IsActive = x.IsActive,
+        StockStatus = x.StockStatus
     };
 }

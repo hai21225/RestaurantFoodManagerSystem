@@ -205,7 +205,11 @@ public sealed class OrderCancellationTests : TestBase
         Assert.Equal("Cancelled", check.OrderItems.Single(x => x.Id == items[1].Id).Status);
         Assert.Equal(50m, check.Orders.Single(x => x.OrderId == order.OrderId).Subtotal);
 
-        var history = Assert.Single(check.OrderStatusHistories.Where(x => x.OrderId == order.OrderId));
+        // Lịch sử có dòng "đơn được tạo" (P0-03) rồi mới tới dòng đổi trạng thái.
+        var history = check.OrderStatusHistories
+            .Where(x => x.OrderId == order.OrderId)
+            .OrderBy(x => x.Id)
+            .Last();
         Assert.Equal("Preparing", history.OldStatus);
         Assert.Equal("Ready", history.NewStatus);
         Assert.Equal("Khách đổi món", history.Note);
@@ -608,7 +612,10 @@ public sealed class OrderCancellationTests : TestBase
 
         Assert.All(check.OrderItems, x => Assert.Equal("Cancelled", x.Status));
         Assert.Equal("Cancelled", check.KitchenOrders.Single().Status);
-        Assert.Equal("Khách huỷ đơn", check.OrderStatusHistories.Single().Note);
+        Assert.Equal("Khách huỷ đơn", check.OrderStatusHistories
+            .Where(x => x.OrderId == order.OrderId)
+            .OrderBy(x => x.Id)
+            .Last().Note);
     }
 
     // ============================ P1e: THANH TOÁN KHI BẾP CHƯA XONG ============================

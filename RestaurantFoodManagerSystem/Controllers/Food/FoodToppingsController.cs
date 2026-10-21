@@ -19,21 +19,12 @@ public class FoodToppingsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll(int foodId, CancellationToken ct = default)
     {
-        try
-        {
-            var toppings =
-                await _foodToppingService
-                    .GetToppingsByFoodIdAsync(foodId, ct);
+        // Món không tồn tại ⇒ KeyNotFoundException ⇒ 404.
+        var toppings =
+            await _foodToppingService
+                .GetToppingsByFoodIdAsync(foodId, ct);
 
-            return Ok(toppings);
-        }
-        catch (Exception ex)
-        {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok(toppings);
     }
 
 
@@ -45,35 +36,26 @@ public class FoodToppingsController : ControllerBase
         [FromBody] AssignFoodToppingRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var result = await _foodToppingService
-                .AssignAsync(
-                    foodId,
-                    request.ToppingId,
-                    ct
-                );
+        // Món/topping không tồn tại ⇒ 404; gán trùng ⇒ 409.
+        var result = await _foodToppingService
+            .AssignAsync(
+                foodId,
+                request.ToppingId,
+                ct
+            );
 
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Failed to assign topping"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Topping assigned successfully"
-            });
-        }
-        catch (Exception ex)
+        if (!result)
         {
             return BadRequest(new
             {
-                message = ex.Message
+                message = "Failed to assign topping"
             });
         }
+
+        return Ok(new
+        {
+            message = "Topping assigned successfully"
+        });
     }
 
 

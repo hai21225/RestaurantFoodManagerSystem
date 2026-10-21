@@ -210,12 +210,15 @@ Dùng để hiển thị "món này bị huỷ lúc 16:12 vì …".
 { "orderId": 42, "paymentMethod": "Cash", "transactionCode": "", "createdBy": 1 }
 ```
 `paymentMethod` ∈ `Cash`, `Card`, `Bank`, `EWallet`, `Transfer` (không phân biệt hoa thường, BE trả về tên chuẩn).
-Lỗi: `409 Order is not ready for payment` (đơn chưa `Ready`/`Completed` hoặc còn món chưa xong) · `409 Order is already paid` · `409 Order has no payable items` · `409 Order total must be greater than zero`.
+Lỗi: `409 Order is not ready for payment` (đơn chưa `Ready`/`Completed` hoặc còn món chưa xong) · `409 Order is already paid` · `409 Order has no payable items` · `409 Order total must be greater than zero` · `409 Transaction code '...' already exists` (mã giao dịch đã tồn tại).
+
+ℹ️ **C-19:** `transactionCode` **không** gửi (hoặc rỗng) ⇒ **server tự sinh mã** `PAY{yyyyMMddHHmmss}-{8 hex}`.
+Mọi giao dịch đều có mã **duy nhất** (index unique ở tầng DB).
 
 Response `200` (`PaymentResponse`):
 ```json
 { "paymentId": 9, "orderId": 42, "amount": 165.00, "paymentMethod": "Cash",
-  "status": "Paid", "transactionCode": "", "paidAt": "...", "createdBy": 1 }
+  "status": "Paid", "transactionCode": "PAY20261021153012-a1b2c3d4", "paidAt": "...", "createdBy": 1 }
 ```
 
 ### `GET /api/payments?page=1&pageSize=20&method=cash&from=&to=&orderId=&status=`
@@ -235,17 +238,36 @@ Response `200` (`PaymentResponse`):
 { "quantity": -2.5, "createdBy": 1, "note": "Kiểm kê hao mất" }
 ```
 - `quantity` âm = giảm, dương = tăng; không được để tồn âm (`409`); `0` → `400`.
+- ⚠️ **`note` BẮT BUỘC** (C-21) — là lý do điều chỉnh. Thiếu / rỗng ⇒ **`400`**
+  `{ "message": "Note (reason) is required for a manual stock adjustment" }`.
+  Lý do: ledger phải trả lời được "tồn giảm 3kg vì lý do gì" (báo cáo biến động kho).
+- Dòng ledger ghi thêm `referenceType: "ManualAdjustment"`, `referenceId: null`.
+
+### `GET /api/management/inventory/low-stock`
+```json
+[ { "ingredientId": 3, "ingredientName": "Cà phê", "unit": "kg",
+    "quanlity": 0.2, "minimumStock": 1, "shortage": 0.8, "isOutOfStock": false,
+    "stockStatus": "Available" } ]
+```
+- ⚠️ C-21: response **có thêm `stockStatus`** (`Available` / `OutOfStock` / `Spoiled`).
+- ⚠️ C-21: danh sách giờ **gồm cả nguyên liệu bị đánh dấu `OutOfStock`/`Spoiled`**
+  **dù tồn vẫn còn nhiều** (trước đây chỉ lọc `tồn ≤ mức tối thiểu` ⇒ nguyên liệu bếp
+  đánh dấu hư mà còn tồn nhiều thì **không hiện ở đâu cả**).
+  ⇒ **FE lọc hiển thị theo `stockStatus`**, đừng coi mọi dòng là "sắp hết".
 
 ### `GET /api/management/inventory-transactions?ingredientId=&type=&referenceType=&referenceId=&from=&to=&page=&pageSize=`
 ```json
 { "page": 1, "pageSize": 20, "total": 3,
   "items": [ { "id": 55, "ingredientId": 4, "ingredientName": "Thịt bò", "type": "Sale",
-               "quantity": 2.0, "quantityBefore": 20.0, "quantityAfter": 18.0,
+               "quanlity": 2.0, "quanlityBefore": 20.0, "quanlityAfter": 18.0,
+               "unit": "kg",
                "referenceType": "Order", "referenceId": 42, "note": null,
                "createdAt": "...", "createdBy": 1 } ] }
 ```
 `type` ∈ `Sale`, `AdjustmentIn`, `AdjustmentOut`, `Wastage`, `Purchase`.
 ⚠️ `referenceId` **bắt buộc** kèm `referenceType` (`Order` | `PurchaseOrder`) — thiếu → `400`.
+⚠️ Endpoint này dùng `quanlity` (giữ lỗi gõ cũ) — khác với `POST /api/management/inventory/{ingredientId}/adjust` nhận `quantity`.
+ℹ️ `unit` = đơn vị tính **snapshot lúc ghi dòng** (C-17) — có thể `null` với dòng rất cũ.
 
 ### `POST /api/management/purchase-orders`
 ```json
@@ -323,7 +345,11 @@ FE tải bằng `blob` (xem F0-3).
 | `POST /api/toppings` | `{ toppingName, toppingPrice, isAvailable?, isActive? }` |
 | `POST /api/categories` | `{ categoryName, categoryDescription?, displayOrder? }` |
 | `POST /api/management/recipes` | `{ sizeId, name, version?, ingredients: [ { ingredientId, quantity } ] }` |
+| `PUT /api/management/recipes/{id}` | `{ sizeId, name, version?, ingredients: [...] }` — **tạo phiên bản mới**, `recipeId` **đổi**; gửi version rỗng/trùng ⇒ server tự tăng; sửa bản đã bị thay thế ⇒ `409` (C-19) |
+| `PUT /api/management/promotions/{id}/targets` | `{ sizeIds: [], categoryIds: [] }` — **thay toàn bộ** target; mảng rỗng = áp cho toàn bộ hoá đơn (C-18) |
+| `PATCH /api/orders/{id}/note` | `{ note, changedBy? }` — ghi chú cho **cả hoá đơn**; `note` rỗng = xoá (Đợt 3) |
 | `POST /api/management/ingredients` | `{ name, unit, minimumStock? }` |
+| `PUT /api/management/ingredients/{id}` | `{ name, unit, minimumStock? }` — đổi `unit` của nguyên liệu **đã dùng** ⇒ `409` (C-17) |
 | `POST /api/management/suppliers` | `{ name, phone, email, address }` |
 | `POST /api/management/promotions` | `{ name, description?, discountType: "Percent"\|"Fixed", discountValue, startAt, endAt, minimumOrderAmount, maxDiscountAmount }` |
 | `POST /api/restaurant-tables` | `{ tableNumber, capacity, areaId? }` |

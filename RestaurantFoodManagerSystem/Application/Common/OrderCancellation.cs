@@ -89,6 +89,22 @@ internal static class OrderCancellation
                         ct);
                 }
             }
+            else if (KitchenStatuses.IsPreparing(kitchenStatus) ||
+                     KitchenStatuses.IsPreparing(orderItem.Status))
+            {
+                // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
+                // ghi hao hụt để báo cáo không mất dấu vết.
+                await OrderItemMutations.RecordWastageAsync(
+                    db,
+                    order.OrderId,
+                    orderItem,
+                    orderItem.Quanlity,
+                    changedBy,
+                    now,
+                    OrderItemMutations.KitchenError,
+                    reason,
+                    ct);
+            }
 
             OrderItemMutations.RecordItemHistory(
                 db,
@@ -104,13 +120,23 @@ internal static class OrderCancellation
             MarkItemCancelled(orderItem, now, changedBy, reason);
         }
 
+        // Phiếu/món đã đóng (Completed/Cancelled) là terminal: giữ nguyên để không phá lịch
+        // sử vận hành của bếp. Chỉ huỷ phần còn mở. (P0-08)
         foreach (var kitchenItem in kitchenItems)
         {
-            kitchenItem.Status = KitchenStatuses.Cancelled;
+            if (!KitchenStatuses.IsTerminal(kitchenItem.Status))
+            {
+                kitchenItem.Status = KitchenStatuses.Cancelled;
+            }
         }
 
         foreach (var kitchenOrder in kitchenOrders)
         {
+            if (KitchenStatuses.IsTerminal(kitchenOrder.Status))
+            {
+                continue;
+            }
+
             kitchenOrder.Status = KitchenStatuses.Cancelled;
             kitchenOrder.CompletedAt ??= now;
         }
@@ -162,6 +188,8 @@ internal static class OrderCancellation
         var stocks = await db.Inventories
             .Where(x => ingredientIds.Contains(x.IngredientId))
             .ToDictionaryAsync(x => x.IngredientId, ct);
+        // C-17: ledger ghi kèm đơn vị tính lúc hoàn kho.
+        var units = await IngredientUnits.LoadAsync(db, ingredientIds, ct);
 
         foreach (var (ingredientId, quantity) in returns)
         {
@@ -182,6 +210,7 @@ internal static class OrderCancellation
                 Quanlity = quantity,
                 QuanlityBefore = before,
                 QuanlityAfter = stock.Quanlity,
+                Unit = units.GetValueOrDefault(ingredientId),
                 ReferenceType = "Order",
                 ReferenceId = orderId,
                 OrderItemId = orderItem.Id,

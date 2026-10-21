@@ -1,5 +1,6 @@
 using System.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public sealed class KitchenService
@@ -8,21 +9,123 @@ public sealed class KitchenService
     private readonly RestaurantTableService _tables;
     private readonly ICurrentUser _currentUser;
     private readonly OrderLifecycleCoordinator _lifecycle;
+    private readonly ILogger<KitchenService> _logger;
+    private readonly RestaurantSettingsService _settings;
 
     public KitchenService(
         AppDbContext db,
         RestaurantTableService tables,
         ICurrentUser currentUser,
-        OrderLifecycleCoordinator lifecycle)
+        OrderLifecycleCoordinator lifecycle,
+        ILogger<KitchenService> logger,
+        RestaurantSettingsService settings)
     {
         _db = db;
         _tables = tables;
         _currentUser = currentUser;
         _lifecycle = lifecycle;
+        _logger = logger;
+        _settings = settings;
     }
 
-    public Task<List<KitchenOrder>> GetOrdersAsync(CancellationToken ct) =>
-        _db.KitchenOrders.AsNoTracking().OrderBy(x => x.Priority).ThenBy(x => x.SentAt).ToListAsync(ct);
+    /// <summary>
+    /// Danh sách phiếu bếp cho màn hình bếp.
+    ///
+    /// <para>
+    /// <c>status=open</c> ⇒ chỉ trả phiếu đang mở (bếp poll 3–5s nên không cần phiếu đã
+    /// đóng, tránh danh sách phình vô hạn). Kèm số bàn, tên phục vụ và số món để bếp
+    /// nhìn 1 màn hình là đủ, không phải gọi thêm <c>GET /api/orders/{id}</c> (C-13).
+    /// </para>
+    ///
+    /// <para>
+    /// <b>Đợt 3 / B6 — <c>since</c>:</b> chỉ trả phiếu **có thay đổi** kể từ mốc đó
+    /// (gửi mới / bắt đầu nấu / hoàn thành) ⇒ bếp poll liên tục mà không phải tải lại
+    /// toàn bộ phiếu đang mở mỗi lần. Mẫu dùng đúng: **lần đầu** gọi **không** kèm
+    /// <c>since</c> (lấy hết), các lần sau kèm mốc của lần trước.
+    /// </para>
+    /// </summary>
+    public async Task<List<KitchenOrderResponse>> GetOrdersAsync(
+        CancellationToken ct = default,
+        string? status = null,
+        DateTime? since = null,
+        int? page = null,
+        int? pageSize = null)
+    {
+        var openOnly = string.Equals(status, "open", StringComparison.OrdinalIgnoreCase);
+
+        var rows = await (
+            from ko in _db.KitchenOrders.AsNoTracking()
+            join o in _db.Orders.AsNoTracking() on ko.OrderId equals o.OrderId
+            join t in _db.RestaurantTables.AsNoTracking() on o.TableId equals t.TableId into tableGroup
+            from t in tableGroup.DefaultIfEmpty()
+            join u in _db.Users.AsNoTracking() on o.CreatedBy equals u.Id into userGroup
+            from u in userGroup.DefaultIfEmpty()
+            where !openOnly ||
+                  (ko.Status != KitchenStatuses.Completed && ko.Status != KitchenStatuses.Cancelled)
+            orderby ko.Priority, ko.SentAt
+            select new { ko, TableNumber = t.TableNumber, WaiterName = u.UserFullName })
+            .ToListAsync(ct);
+
+        // B6: lọc theo mốc thời gian — chỉ giữ phiếu có thay đổi (gửi mới / bắt đầu / xong).
+        //
+        // C-21: `since` phải bắt được cả thay đổi trạng thái **MÓN**, không chỉ mốc của phiếu.
+        // Trước đây phiếu chỉ có 3 mốc (Sent/Started/Completed) và mỗi mốc chỉ set **một lần** ⇒
+        // món A chuyển `Ready` trong khi món B còn `Preparing` (phiếu vẫn `Preparing`, các mốc
+        // không đổi) ⇒ phiếu không lọt qua `since` ⇒ màn bếp không thấy món A vừa xong.
+        if (since.HasValue)
+        {
+            var mark = since.Value;
+
+            var byTicketMark = rows
+                .Where(r => r.ko.SentAt > mark
+                         || (r.ko.StartedAt.HasValue && r.ko.StartedAt.Value > mark)
+                         || (r.ko.CompletedAt.HasValue && r.ko.CompletedAt.Value > mark))
+                .Select(r => r.ko.KitchenOrderId)
+                .ToHashSet();
+
+            // Thay đổi ở cấp món: lịch sử trạng thái món (order_item_status_histories).
+            var ticketIds = rows.Select(r => r.ko.KitchenOrderId).ToList();
+            var byItemMark = new HashSet<int>();
+            if (ticketIds.Count > 0)
+            {
+                byItemMark = (await (
+                    from history in _db.OrderItemStatusHistories.AsNoTracking()
+                    join ki in _db.KitchenOrderItems.AsNoTracking() on history.OrderItemId equals ki.OrderItemId
+                    where history.CreatedAt > mark
+                      && ticketIds.Contains(ki.KitchenOrderId)
+                    select ki.KitchenOrderId)
+                    .Distinct()
+                    .ToListAsync(ct)).ToHashSet();
+            }
+
+            rows = rows
+                .Where(r => byTicketMark.Contains(r.ko.KitchenOrderId)
+                         || byItemMark.Contains(r.ko.KitchenOrderId))
+                .ToList();
+        }
+
+        // B6: phân trang tuỳ chọn. Không truyền page/pageSize ⇒ trả về toàn bộ (hành vi cũ,
+        // màn hình bếp cần thấy hết phiếu đang mở).
+        if (page.HasValue || pageSize.HasValue)
+        {
+            var skip = Paging.ResolveSkip(page ?? 1, pageSize ?? Paging.DefaultPageSize);
+            rows = rows.Skip(skip).Take(pageSize ?? Paging.DefaultPageSize).ToList();
+        }
+
+        var itemCounts = await _db.KitchenOrderItems.AsNoTracking()
+            .GroupBy(x => x.KitchenOrderId)
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
+
+        return rows.Select(r =>
+        {
+            var dto = KitchenOrderResponse.From(r.ko);
+            dto.TableNumber = r.TableNumber ?? string.Empty;
+            dto.WaiterName = r.WaiterName;
+            dto.ItemCount = itemCounts.GetValueOrDefault(r.ko.KitchenOrderId);
+            return dto;
+        }).ToList();
+    }
 
     /// <summary>
     /// Danh sách món của phiếu bếp (Nhóm C/GĐ7). Bổ sung <c>foodName</c>/<c>sizeName</c>/<c>quantity</c>
@@ -34,6 +137,7 @@ public sealed class KitchenService
          join fs in _db.FoodSizes on oi.SizeId equals fs.SizeId
          join f in _db.Foods on fs.FoodId equals f.FoodId
          where ki.KitchenOrderId == kitchenOrderId
+         orderby ki.Id
          select new KitchenItemResponse
          {
              Id = ki.Id,
@@ -127,7 +231,8 @@ public sealed class KitchenService
         // tuyệt đối không ghi ngược trạng thái đơn — tránh "mở lại" đơn đã thanh toán/huỷ.
         if (order is not null && !OrderStatuses.IsTerminal(order.Status))
         {
-            var changedBy = _currentUser.UserId ?? order.CreatedBy;
+            var changedBy = await _currentUser.ResolveExistingActorAsync(
+                _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
 
             if (string.Equals(mappedStatus, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(status, KitchenStatuses.Accepted, StringComparison.OrdinalIgnoreCase) ||
@@ -152,7 +257,8 @@ public sealed class KitchenService
                     historyNote,
                     allowReopen: false,
                     cancelReason,
-                    ct);
+                    ct,
+                    reasonCode: reasonCode);
             }
         }
 
@@ -182,6 +288,9 @@ public sealed class KitchenService
             ? OrderItemMutations.NormalizeReasonCode(request.ReasonCode)
             : null;
 
+        // Đợt 2 / A1: cấu hình quán đọc trước transaction.
+        var settings = await _settings.GetAsync(ct);
+
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
         var item = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -203,7 +312,8 @@ public sealed class KitchenService
 
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
         var orderItem = await _db.OrderItems.FirstOrDefaultAsync(x => x.Id == item.OrderItemId, ct);
-        var changedBy = _currentUser.UserId ?? order?.CreatedBy ?? 0;
+        var changedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order?.CreatedBy ?? 0);
         var now = DateTime.UtcNow;
         var oldItemStatus = item.Status;
         var historyReason = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
@@ -250,6 +360,22 @@ public sealed class KitchenService
                             ct);
                     }
                 }
+                else if (KitchenStatuses.IsPreparing(item.Status) ||
+                         KitchenStatuses.IsPreparing(orderItem.Status))
+                {
+                    // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
+                    // ghi hao hụt. Lý do huỷ vẫn nằm ở item history + OrderItem.CancelReason.
+                    await OrderItemMutations.RecordWastageAsync(
+                        _db,
+                        order.OrderId,
+                        orderItem,
+                        orderItem.Quanlity,
+                        changedBy,
+                        now,
+                        OrderItemMutations.KitchenError,
+                        string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
+                        ct);
+                }
 
                 OrderCancellation.MarkItemCancelled(
                     orderItem,
@@ -270,8 +396,10 @@ public sealed class KitchenService
                 {
                     order.Subtotal = activeSiblings.Sum(x => x.UnitPrice * x.Quanlity);
                     order.DiscountAmount = 0m;
-                    order.TotalAmount = Math.Round(
-                        order.Subtotal + order.TaxAmount, 2, MidpointRounding.AwayFromZero);
+                    order.PromotionId = null;
+                    order.PromotionDiscountType = null;
+                    order.PromotionDiscountValue = null;
+                    OrderTotalsCalculator.Apply(order, settings);
                     order.UpdatedAt = now;
                 }
             }
@@ -311,7 +439,10 @@ public sealed class KitchenService
             note,
             string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ? note : null,
             now,
-            ct);
+            ct,
+            string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+                ? reasonCode
+                : null);
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -376,7 +507,8 @@ public sealed class KitchenService
             throw new InvalidOperationException("Order item is already cancelled");
 
         var oldStatus = kitchenItem.Status;
-        var changedBy = _currentUser.UserId ?? order.CreatedBy;
+        var changedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
         var reason = string.IsNullOrWhiteSpace(request.Reason)
             ? "Item reopened by kitchen"
@@ -399,8 +531,17 @@ public sealed class KitchenService
         var ticketItems = await _db.KitchenOrderItems
             .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
             .ToListAsync(ct);
-        OrderLifecycleCoordinator.RecalculateTicketStatus(
-            kitchenOrder, ticketItems.Select(x => x.Status).ToList(), now);
+
+        await _lifecycle.SyncTicketAndOrderAsync(
+            order,
+            kitchenOrder,
+            ticketItems.Select(x => x.Status).ToList(),
+            changedBy,
+            reason,
+            cancelReason: null,
+            now,
+            allowReopen: true,
+            ct);
 
         // Phiếu từng Ready có CompletedAt; khi quay lại Preparing thì mốc hoàn tất cũ
         // không còn đúng. Chỉ xoá khi phiếu thực sự đang Preparing.
@@ -408,14 +549,6 @@ public sealed class KitchenService
         {
             kitchenOrder.CompletedAt = null;
         }
-
-        await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
-            order,
-            changedBy,
-            reason,
-            allowReopen: true,
-            cancelReason: null,
-            ct);
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -473,7 +606,8 @@ public sealed class KitchenService
         if (request.PreparedQuantity > kitchenItem.Quanlity)
             throw new ArgumentException("Prepared quantity cannot exceed item quantity");
 
-        var changedBy = _currentUser.UserId ?? order.CreatedBy;
+        var changedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
 
         if (request.PreparedQuantity == kitchenItem.Quanlity)
@@ -498,15 +632,16 @@ public sealed class KitchenService
             var ticketItems = await _db.KitchenOrderItems
                 .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
                 .ToListAsync(ct);
-            OrderLifecycleCoordinator.RecalculateTicketStatus(
-                kitchenOrder, ticketItems.Select(x => x.Status).ToList(), now);
 
-            await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
+            await _lifecycle.SyncTicketAndOrderAsync(
                 order,
+                kitchenOrder,
+                ticketItems.Select(x => x.Status).ToList(),
                 changedBy,
                 "Kitchen reported all portions prepared",
-                allowReopen: false,
                 cancelReason: null,
+                now,
+                allowReopen: false,
                 ct);
 
             await _db.SaveChangesAsync(ct);
@@ -571,26 +706,26 @@ public sealed class KitchenService
             originalQuantity,
             request.PreparedQuantity,
             changedBy,
-            now,
             ct);
 
         var ticketItemsAfterSplit = await _db.KitchenOrderItems
             .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
             .ToListAsync(ct);
         ticketItemsAfterSplit.Add(preparedKitchenItem);
-        OrderLifecycleCoordinator.RecalculateTicketStatus(
-            kitchenOrder, ticketItemsAfterSplit.Select(x => x.Status).ToList(), now);
 
         // Tách phần đã nấu không đổi tổng số lượng/đơn giá, nên không reset discount.
         // Chỉ cập nhật thời điểm để audit.
         order.UpdatedAt = now;
 
-        await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
+        await _lifecycle.SyncTicketAndOrderAsync(
             order,
+            kitchenOrder,
+            ticketItemsAfterSplit.Select(x => x.Status).ToList(),
             changedBy,
             "Kitchen reported part of the item prepared",
-            allowReopen: false,
             cancelReason: null,
+            now,
+            allowReopen: false,
             ct);
 
         await _db.SaveChangesAsync(ct);
@@ -615,6 +750,9 @@ public sealed class KitchenService
         {
             throw new ArgumentException("Shortage reason must be OutOfStock or PhysicalShortage");
         }
+
+        // Đợt 2 / A1: cấu hình quán đọc trước transaction.
+        var settings = await _settings.GetAsync(ct);
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
@@ -659,10 +797,36 @@ public sealed class KitchenService
         var detail = string.IsNullOrWhiteSpace(request.Reason)
             ? null
             : request.Reason.Trim();
-        var changedBy = _currentUser.UserId ?? order.CreatedBy;
+        var changedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
         var originalQuantity = orderItem.Quanlity;
         var cancelledQuantity = originalQuantity - request.PreparedQuantity;
+
+        // P0-06: orderItem.Quanlity và kitchenItem.Quanlity có thể lệch nhau (dữ liệu cũ).
+        // Không để cancelledQuantity âm ⇒ dòng "Cancelled" số lượng âm + ledger sai.
+        if (cancelledQuantity < 0)
+        {
+            throw new ArgumentException(
+                "Prepared quantity cannot exceed the order item quantity");
+        }
+
+        // C-13: bếp chỉ định nguyên liệu nào thực sự hư/hết ⇒ hao hụt chỉ ghi cho nguyên
+        // liệu đó, và trạng thái nguyên liệu được đổi để kho quản lý + báo cáo.
+        if (request.IngredientId is int ingredientId)
+        {
+            var ingredient = await _db.Ingredients
+                .FirstOrDefaultAsync(x => x.IngredientId == ingredientId, ct);
+            if (ingredient is null)
+                throw new ArgumentException($"Ingredient {ingredientId} not found");
+            if (!ingredient.IsActive)
+                throw new InvalidOperationException("Cannot report shortage for an inactive ingredient");
+
+            ingredient.StockStatus = string.Equals(
+                reasonCode, OrderItemMutations.OutOfStock, StringComparison.Ordinal)
+                ? IngredientStockStatuses.OutOfStock
+                : IngredientStockStatuses.Spoiled;
+        }
 
         OrderItemMutations.EnsureGroupId(orderItem);
 
@@ -670,7 +834,8 @@ public sealed class KitchenService
         {
             await OrderItemMutations.RecordWastageAsync(
                 _db, order.OrderId, orderItem, cancelledQuantity,
-                changedBy, now, reasonCode, detail, ct);
+                changedBy, now, reasonCode, detail, ct,
+                request.IngredientId);
 
             OrderItemMutations.RecordItemHistory(
                 _db,
@@ -745,12 +910,36 @@ public sealed class KitchenService
                 originalQuantity,
                 cancelledQuantity,
                 changedBy,
-                now,
                 ct);
 
             await OrderItemMutations.RecordWastageAsync(
                 _db, order.OrderId, cancelledLine, cancelledQuantity,
-                changedBy, now, reasonCode, detail, ct);
+                changedBy, now, reasonCode, detail, ct,
+                request.IngredientId);
+        }
+
+        // C-13: lô nguyên liệu không còn đảm bảo ⇒ chấm dứt luôn món này (món biến mất khỏi
+        // menu POS) và lưu lý do để làm báo cáo. Nguyên liệu vẫn giữ nguyên làm minh chứng.
+        if (request.DeactivateDish)
+        {
+            var foodId = await _db.FoodSizes.AsNoTracking()
+                .Where(x => x.SizeId == orderItem.SizeId)
+                .Select(x => x.FoodId)
+                .FirstOrDefaultAsync(ct);
+            if (foodId <= 0)
+                throw new InvalidOperationException("Cannot deactivate the dish: food size not found");
+
+            var food = await _db.Foods.FirstOrDefaultAsync(x => x.FoodId == foodId, ct);
+            if (food is null)
+                throw new InvalidOperationException("Cannot deactivate the dish: food not found");
+
+            food.IsActive = false;
+            food.IsAvailable = false;
+            food.InactiveReason = string.IsNullOrWhiteSpace(request.InactiveReason)
+                ? detail ?? $"Shortage ({reasonCode})"
+                : request.InactiveReason.Trim();
+            food.InactiveAt = now;
+            food.UpdatedAt = now;
         }
 
         var ticketItems = await _db.KitchenOrderItems
@@ -762,9 +951,6 @@ public sealed class KitchenService
             .ToList();
         ticketItems.AddRange(cancelledKitchen);
 
-        OrderLifecycleCoordinator.RecalculateTicketStatus(
-            kitchenOrder, ticketItems.Select(x => x.Status).ToList(), now);
-
         var allItems = await _db.OrderItems
             .Where(x => x.OrderId == order.OrderId)
             .ToListAsync(ct);
@@ -772,16 +958,20 @@ public sealed class KitchenService
         // Nếu shortage huỷ luôn dòng cuối cùng, giữ tổng tiền lịch sử của đơn đã huỷ.
         if (allItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
-            OrderItemMutations.RecalculateTotals(order, allItems, now);
+            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
         }
 
-        await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
+        await _lifecycle.SyncTicketAndOrderAsync(
             order,
+            kitchenOrder,
+            ticketItems.Select(x => x.Status).ToList(),
             changedBy,
             $"Shortage reported ({reasonCode})",
+            detail ?? reasonCode,
+            now,
             allowReopen: false,
-            cancelReason: detail ?? reasonCode,
-            ct);
+            ct,
+            reasonCode);
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

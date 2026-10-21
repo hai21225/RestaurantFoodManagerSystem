@@ -47,7 +47,7 @@ public sealed class HistoryAndTransactionsServiceTests : TestBase
         var ingredientId = s.Ingredient.IngredientId;
 
         await InventorySvc.AdjustAsync(ingredientId, new InventoryAdjustmentRequest { Quanlity = 10m, CreatedBy = s.Staff.Id, Note = "+10" }, CancellationToken.None);
-        await InventorySvc.AdjustAsync(ingredientId, new InventoryAdjustmentRequest { Quanlity = -4m, CreatedBy = s.Staff.Id }, CancellationToken.None);
+        await InventorySvc.AdjustAsync(ingredientId, new InventoryAdjustmentRequest { Quanlity = -4m, CreatedBy = s.Staff.Id, Note = "-4" }, CancellationToken.None);
 
         var all = await InventorySvc.GetTransactionsAsync(new InventoryTransactionQuery { IngredientId = ingredientId });
 

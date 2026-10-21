@@ -7,6 +7,6 @@ public class CategoryDTO
     public string? Name { get; set; }
     [MaxLength(500)]
     public string? Description { get; set; }
-    public bool DisplayOrder { get; set; }
+    public int DisplayOrder { get; set; }
     public bool IsActive { get; set; }
 }

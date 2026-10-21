@@ -73,6 +73,25 @@ public abstract class TestBase : IDisposable
     /// </summary>
     protected TestCurrentUser CurrentUser { get; } = new();
 
+    /// <summary>
+    /// HttpClientFactory giả: ở chế độ <c>Payments:Provider=Mock</c> không có lệnh gọi mạng nào
+    /// được thực hiện — nếu lỡ gọi thì ném lỗi rõ ràng thay vì âm thầm trả về dữ liệu giả.
+    /// </summary>
+    protected sealed class StubHttpClientFactory : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) =>
+            new(new ThrowingHandler()) { BaseAddress = new Uri("https://invalid.local") };
+
+        private sealed class ThrowingHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request,
+                CancellationToken cancellationToken) =>
+                throw new InvalidOperationException(
+                    "HTTP calls are not available in tests (Payments:Provider=Mock).");
+        }
+    }
+
     protected sealed class TestCurrentUser : ICurrentUser
     {
         public int? UserId { get; set; }
@@ -102,9 +121,12 @@ public abstract class TestBase : IDisposable
     protected IOrderIdempotencyStore OrderIdempotency { get; } = new InMemoryOrderIdempotencyStore();
 
     protected OrderLifecycleCoordinator Lifecycle => new(Db);
-    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance, OrderIdempotency, Lifecycle);
-    protected PaymentService Payments => new(Db, Tables, CurrentUser, NullLogger<PaymentService>.Instance);
-    protected KitchenService Kitchen => new(Db, Tables, CurrentUser, Lifecycle);
+    protected RestaurantSettingsService SettingsService => new(Db);
+    protected OrderService Orders => new(Db, Tables, CurrentUser, NullLogger<OrderService>.Instance, OrderIdempotency, Lifecycle, SettingsService);
+    protected PaymentOptions PaymentOptions { get; } = new() { Provider = PaymentProviders.Mock };
+    protected MomoPaymentService Momo => new(PaymentOptions, new StubHttpClientFactory(), NullLogger<MomoPaymentService>.Instance);
+    protected PaymentService Payments => new(Db, Tables, CurrentUser, NullLogger<PaymentService>.Instance, Lifecycle, OrderIdempotency, Momo, PaymentOptions);
+    protected KitchenService Kitchen => new(Db, Tables, CurrentUser, Lifecycle, NullLogger<KitchenService>.Instance, SettingsService);
     protected MenuService Menu => new(Db);
 
     protected IngredientService Ingredients => new(Db);
@@ -213,12 +235,12 @@ public abstract class TestBase : IDisposable
         return topping;
     }
 
-    protected Ingredient SeedIngredient(decimal stock, decimal minimumStock = 0m)
+    protected Ingredient SeedIngredient(decimal stock, decimal minimumStock = 0m, string unit = "kg")
     {
         var ingredient = new Ingredient
         {
             Name = Unique("ingredient"),
-            Unit = "kg",
+            Unit = unit,
             MinimumStock = minimumStock,
             IsActive = true
         };

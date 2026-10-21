@@ -24,8 +24,12 @@ public sealed class ReportService
         var (period, fromUtc, toUtc, startVn, endVn) = VietnamTime.Resolve(query.Period, query.Date);
 
         var rows = await _db.Payments.AsNoTracking()
-            .Where(x => x.Status == OrderStatuses.Paid && x.PaidAt >= fromUtc && x.PaidAt < toUtc)
-            .Select(x => new { x.PaidAt, x.Amount, x.OrderId })
+            // Đợt 3: PaidAt nullable (giao dịch MoMo còn Pending thì chưa có thời điểm thu)
+            // ⇒ chỉ lấy dòng đã thu thật sự, và bỏ null rõ ràng trước khi nhóm theo bucket.
+            .Where(x => x.Status == PaymentStatuses.Paid
+                     && x.PaidAt != null
+                     && x.PaidAt >= fromUtc && x.PaidAt < toUtc)
+            .Select(x => new { PaidAt = x.PaidAt!.Value, x.Amount, x.OrderId })
             .ToListAsync(ct);
 
         var byBucket = rows
@@ -73,7 +77,9 @@ public sealed class ReportService
         var (_, fromUtc, toUtc, startVn, endVn) = VietnamTime.Resolve("day", null);
 
         var paidRows = await _db.Payments.AsNoTracking()
-            .Where(x => x.Status == OrderStatuses.Paid && x.PaidAt >= fromUtc && x.PaidAt < toUtc)
+            .Where(x => x.Status == PaymentStatuses.Paid
+                     && x.PaidAt != null
+                     && x.PaidAt >= fromUtc && x.PaidAt < toUtc)
             .Select(x => new { x.Amount, x.OrderId })
             .ToListAsync(ct);
 
@@ -179,18 +185,18 @@ public sealed class ReportService
 
         foreach (var group in report.Groups)
         {
-            csv.Append(Csv(report.Period)).Append(',')
-               .Append(Csv((group.From + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))).Append(',')
-               .Append(Csv((group.To + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))).Append(',')
-               .Append(Csv(group.Revenue.ToString("0.##", CultureInfo.InvariantCulture))).Append(',')
+            csv.Append(EscapeCsvCell(report.Period)).Append(',')
+               .Append(EscapeCsvCell((group.From + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))).Append(',')
+               .Append(EscapeCsvCell((group.To + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture))).Append(',')
+               .Append(EscapeCsvCell(group.Revenue.ToString("0.##", CultureInfo.InvariantCulture))).Append(',')
                .Append(group.OrderCount)
                .Append("\r\n");
         }
 
         csv.Append("TOTAL").Append(',')
-           .Append(Csv(((report.From + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)))).Append(',')
-           .Append(Csv(((report.To + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)))).Append(',')
-           .Append(Csv(report.TotalRevenue.ToString("0.##", CultureInfo.InvariantCulture))).Append(',')
+           .Append(EscapeCsvCell(((report.From + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)))).Append(',')
+           .Append(EscapeCsvCell(((report.To + VietnamTime.Offset).ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)))).Append(',')
+           .Append(EscapeCsvCell(report.TotalRevenue.ToString("0.##", CultureInfo.InvariantCulture))).Append(',')
            .Append(report.OrderCount)
            .Append("\r\n");
 
@@ -198,11 +204,56 @@ public sealed class ReportService
         return encoding.GetPreamble().Concat(encoding.GetBytes(csv.ToString())).ToArray();
     }
 
-    private static string Csv(string value)
+    /// <summary>
+    /// Escape 1 ô CSV. Ngoài escape dấu nháy/dấu phẩy, còn **chặn CSV formula injection**
+    /// (OWASP): ô bắt đầu bằng <c>=</c> <c>+</c> <c>-</c> <c>@</c> sẽ bị Excel/LibreOffice
+    /// hiểu là **công thức** khi mở file (ví dụ tên món do người dùng nhập) ⇒ tiền tên
+    /// dấu nháy đơn để buộc hiển thị dạng text.
+    ///
+    /// <para>
+    /// Số âm (ví dụ <c>-5</c>) là dữ liệu số hợp lệ nên **không** bị chặn — chỉ chuỗi
+    /// không phải số mới bị tiền tên dấu nháy.
+    /// </para>
+    ///
+    /// <para>Public để các báo cáo mới (top-dishes, by-staff…) dùng lại đúng hàm này.</para>
+    /// </summary>
+    public static string EscapeCsvCell(string value)
     {
+        if (NeedsFormulaGuard(value))
+        {
+            value = "'" + value;
+        }
+
         if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
             return value;
 
         return $"\"{value.Replace("\"", "\"\"")}\"";
+    }
+
+    /// <summary>
+    /// Ô có bắt đầu bằng ký tự công thức và **không** phải số ⇒ cần chặn formula injection.
+    /// </summary>
+    private static bool NeedsFormulaGuard(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.TrimStart();
+        if (trimmed.Length == 0)
+        {
+            return false;
+        }
+
+        var first = trimmed[0];
+        if (first is not ('=' or '+' or '-' or '@'))
+        {
+            return false;
+        }
+
+        // Số âm (-5) / số khoa học là dữ liệu số hợp lệ ⇒ không chặn.
+        return !decimal.TryParse(
+            trimmed, NumberStyles.Any, CultureInfo.InvariantCulture, out _);
     }
 }

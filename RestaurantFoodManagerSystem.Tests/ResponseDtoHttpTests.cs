@@ -235,7 +235,7 @@ public sealed class ResponseDtoHttpTests : IClassFixture<RestaurantApiFactory>
         });
 
         Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
-        Assert.Contains("different order payload", await conflict.Content.ReadAsStringAsync());
+        Assert.Contains("different request payload", await conflict.Content.ReadAsStringAsync());
     }
 
     [Fact]

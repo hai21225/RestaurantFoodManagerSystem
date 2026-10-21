@@ -13,6 +13,15 @@ public sealed class KitchenOrderResponse
     public DateTime? CompletedAt { get; set; }
     public int Priority { get; set; }
 
+    /// <summary>Số bàn — bếp cần biết món của bàn nào (C-13).</summary>
+    public string TableNumber { get; set; } = string.Empty;
+
+    /// <summary>Tên phục vụ đã gọi món (C-13).</summary>
+    public string? WaiterName { get; set; }
+
+    /// <summary>Số món trong phiếu (C-13).</summary>
+    public int ItemCount { get; set; }
+
     public static KitchenOrderResponse From(KitchenOrder x) => new()
     {
         KitchenOrderId = x.KitchenOrderId,

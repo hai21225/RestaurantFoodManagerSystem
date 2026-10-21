@@ -52,7 +52,8 @@ public sealed class BatchA2IntegrityTests : TestBase
             CurrentUser,
             NullLogger<OrderService>.Instance,
             OrderIdempotency,
-            new OrderLifecycleCoordinator(db));
+            new OrderLifecycleCoordinator(db),
+            new RestaurantSettingsService(db));
 
         await service.CreateAsync(
             CreateRequest(s.Table.TableId, s.Staff.Id, (s.Size.SizeId, 1)),
@@ -285,7 +286,11 @@ public sealed class BatchA2IntegrityTests : TestBase
         Assert.Equal("Cancelled", check.Orders.Single(x => x.OrderId == order.OrderId).Status);
         Assert.Equal(100m, check.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
 
-        var history = check.OrderStatusHistories.Single(x => x.OrderId == order.OrderId);
+        // Lịch sử có dòng "đơn được tạo" (P0-03) rồi mới tới dòng huỷ.
+        var history = check.OrderStatusHistories
+            .Where(x => x.OrderId == order.OrderId)
+            .OrderBy(x => x.Id)
+            .Last();
         Assert.Equal("Cancelled from kitchen", history.Note);
         Assert.Equal(s.Staff.Id, history.ChangedBy);
     }

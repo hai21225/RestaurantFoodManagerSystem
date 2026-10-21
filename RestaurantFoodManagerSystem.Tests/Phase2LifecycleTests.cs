@@ -203,6 +203,142 @@ public sealed class Phase2LifecycleTests : TestBase
         Assert.Single(check.KitchenOrders.Where(x => x.OrderId == created.Order.OrderId));
     }
 
+    /// <summary>
+    /// C-20: món đã vào nấu (Preparing) mà POS tăng số lượng ⇒ TÁCH thành dòng `Pending`
+    /// MỚI nằm trong cùng phiếu, KHÔNG cộng vào dòng đang nấu (giống cách bếp thật làm).
+    /// </summary>
+    [Fact]
+    public async Task IncreaseQuantity_WhilePreparing_SplitsIntoNewPendingLineInSameTicket()
+    {
+        var created = await CreateOrderAsync(quantity: 2);
+
+        created.Item.Status = KitchenStatuses.Preparing;
+        created.KitchenItem.Status = KitchenStatuses.Preparing;
+        created.Ticket.Status = KitchenStatuses.Preparing;
+        created.Order.Status = OrderStatuses.Preparing;
+        await Db.SaveChangesAsync();
+
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            created.Order.OrderId,
+            created.Item.Id,
+            new AdjustOrderItemQuantityRequest
+            {
+                Quantity = 5,
+                ChangedBy = created.Scenario.Staff.Id,
+                ReasonCode = "CustomerChange"
+            },
+            CancellationToken.None));
+
+        using var check = NewContext();
+        var orderItems = check.OrderItems
+            .Where(x => x.OrderId == created.Order.OrderId)
+            .OrderBy(x => x.Id)
+            .ToList();
+        var tickets = check.KitchenOrders
+            .Where(x => x.OrderId == created.Order.OrderId)
+            .ToList();
+        var kitchenItems = check.KitchenOrderItems
+            .Where(x => orderItems.Select(i => i.Id).Contains(x.OrderItemId))
+            .OrderBy(x => x.Id)
+            .ToList();
+
+        // Dòng gốc giữ nguyên 2 phần, vẫn đang nấu.
+        Assert.Equal(2, orderItems.Count);
+        Assert.Equal(2, orderItems[0].Quanlity);
+        Assert.Equal(KitchenStatuses.Preparing, orderItems[0].Status);
+
+        // 3 phần mới nằm ở dòng RIÊNG, trạng thái Pending, cùng nhóm với dòng gốc.
+        Assert.Equal(3, orderItems[1].Quanlity);
+        Assert.Equal(KitchenStatuses.Pending, orderItems[1].Status);
+        Assert.Equal(orderItems[0].OrderItemGroupId, orderItems[1].OrderItemGroupId);
+
+        // VẪN CHỈ 1 phiếu bếp — dòng mới nằm trong chính phiếu đang nấu.
+        Assert.Single(tickets);
+        Assert.Equal(KitchenStatuses.Preparing, tickets[0].Status);
+        Assert.Equal(2, kitchenItems.Count);
+        Assert.Equal(2, kitchenItems[0].Quanlity);
+        Assert.Equal(KitchenStatuses.Preparing, kitchenItems[0].Status);
+        Assert.Equal(3, kitchenItems[1].Quanlity);
+        Assert.Equal(KitchenStatuses.Pending, kitchenItems[1].Status);
+        Assert.Equal(tickets[0].KitchenOrderId, kitchenItems[0].KitchenOrderId);
+        Assert.Equal(tickets[0].KitchenOrderId, kitchenItems[1].KitchenOrderId);
+
+        // Tiền và kho vẫn đúng (5 phần × 50đ; công thức 2 đơn vị/phan ⇒ 100 − 5×2 = 90).
+        var order = check.Orders.Single(x => x.OrderId == created.Order.OrderId);
+        Assert.Equal(250m, order.Subtotal);
+        Assert.Equal(250m, order.TotalAmount);
+        Assert.Equal(90m, check.Inventories
+            .Single(x => x.IngredientId == created.Scenario.Ingredient.IngredientId).Quanlity);
+    }
+
+    /// <summary>
+    /// C-20: món còn `Pending` (bếp chưa bắt đầu) ⇒ GỘP chung vào dòng Pending, không tách dòng.
+    /// </summary>
+    [Fact]
+    public async Task IncreaseQuantity_WhilePending_MergesIntoExistingPendingLine()
+    {
+        var created = await CreateOrderAsync(quantity: 2);
+
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            created.Order.OrderId,
+            created.Item.Id,
+            new AdjustOrderItemQuantityRequest
+            {
+                Quantity = 3,
+                ChangedBy = created.Scenario.Staff.Id,
+                ReasonCode = "CustomerChange"
+            },
+            CancellationToken.None));
+
+        using var check = NewContext();
+        var orderItems = check.OrderItems
+            .Where(x => x.OrderId == created.Order.OrderId)
+            .ToList();
+        var kitchenItems = check.KitchenOrderItems
+            .Where(x => x.OrderItemId == orderItems[0].Id)
+            .ToList();
+
+        Assert.Single(orderItems);
+        Assert.Single(kitchenItems);
+        Assert.Equal(3, orderItems[0].Quanlity);
+        Assert.Equal(3, kitchenItems[0].Quanlity);
+        Assert.Single(check.KitchenOrders.Where(x => x.OrderId == created.Order.OrderId));
+    }
+
+    /// <summary>
+    /// C-20: dòng `Pending` mới phải hiện NGAY DƯỚI dòng đang nấu trên màn bếp.
+    /// </summary>
+    [Fact]
+    public async Task IncreaseQuantity_WhilePreparing_NewPendingLineListedLastInKitchenTicket()
+    {
+        var created = await CreateOrderAsync(quantity: 2);
+
+        created.Item.Status = KitchenStatuses.Preparing;
+        created.KitchenItem.Status = KitchenStatuses.Preparing;
+        created.Ticket.Status = KitchenStatuses.Preparing;
+        created.Order.Status = OrderStatuses.Preparing;
+        await Db.SaveChangesAsync();
+
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            created.Order.OrderId,
+            created.Item.Id,
+            new AdjustOrderItemQuantityRequest
+            {
+                Quantity = 5,
+                ChangedBy = created.Scenario.Staff.Id,
+                ReasonCode = "CustomerChange"
+            },
+            CancellationToken.None));
+
+        var items = await Kitchen.GetItemsAsync(created.Ticket.KitchenOrderId, CancellationToken.None);
+
+        Assert.Equal(2, items.Count);
+        Assert.Equal(KitchenStatuses.Preparing, items[0].Status);
+        Assert.Equal(2, items[0].Quanlity);
+        Assert.Equal(KitchenStatuses.Pending, items[1].Status);
+        Assert.Equal(3, items[1].Quanlity);
+    }
+
     [Fact]
     public async Task AdjustQuantity_OnLegacyLineWithoutGroup_StillWorks()
     {
@@ -309,8 +445,12 @@ public sealed class Phase2LifecycleTests : TestBase
             .Single(x => x.OrderId == created.Order.OrderId).Status);
     }
 
+    /// <summary>
+    /// C-13: món đã bấm "Preparing" thì nguyên liệu đã tiêu thật ⇒ KHÔNG hoàn kho.
+    /// Giảm số lượng chỉ ghi hao hụt (wastage), tồn kho giữ nguyên.
+    /// </summary>
     [Fact]
-    public async Task ReduceQuantity_WhilePreparingButNotCooked_ReturnsStockAndKeepsStatus()
+    public async Task ReduceQuantity_WhilePreparingButNotCooked_DoesNotReturnStock_RecordsWastage()
     {
         var created = await CreateOrderAsync(quantity: 2);
 
@@ -334,12 +474,82 @@ public sealed class Phase2LifecycleTests : TestBase
         using var check = NewContext();
         Assert.Equal(1, check.OrderItems.Single(x => x.Id == created.Item.Id).Quanlity);
         Assert.Equal(1, check.KitchenOrderItems.Single(x => x.Id == created.KitchenItem.Id).Quanlity);
-        Assert.Equal(98m, check.Inventories
+
+        // Tồn kho KHÔNG được hoàn lại: đã gọi 2 phần thì vẫn còn 96 (100 - 2*2).
+        Assert.Equal(96m, check.Inventories
             .Single(x => x.IngredientId == created.Scenario.Ingredient.IngredientId).Quanlity);
+
+        // Phần bị giảm được ghi hao hụt để báo cáo không mất dấu vết.
+        var wastage = check.InventoryTransactions
+            .Single(x => x.Type == "Wastage" && x.OrderItemId == created.Item.Id);
+        Assert.Equal(2m, wastage.Quanlity);
+        Assert.Equal(96m, wastage.QuanlityBefore);
+        Assert.Equal(96m, wastage.QuanlityAfter);
+
         Assert.Equal(OrderStatuses.Preparing, check.Orders
             .Single(x => x.OrderId == created.Order.OrderId).Status);
         Assert.Equal(KitchenStatuses.Preparing, check.KitchenOrders
             .Single(x => x.KitchenOrderId == created.Ticket.KitchenOrderId).Status);
+    }
+
+    /// <summary>
+    /// C-13: món đang nấu bị khóa với POS — chỉ bếp (Chef) hoặc Admin mới đổi được số lượng.
+    /// </summary>
+    [Fact]
+    public async Task ReduceQuantity_WhilePreparing_ByWaiter_IsForbidden()
+    {
+        var created = await CreateOrderAsync(quantity: 2);
+
+        created.Item.Status = KitchenStatuses.Preparing;
+        created.KitchenItem.Status = KitchenStatuses.Preparing;
+        created.Ticket.Status = KitchenStatuses.Preparing;
+        created.Order.Status = OrderStatuses.Preparing;
+        await Db.SaveChangesAsync();
+
+        CurrentUser.RoleList.Add(AuthPolicies.Roles.Waiter);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            Orders.AdjustItemQuantityAsync(
+                created.Order.OrderId,
+                created.Item.Id,
+                new AdjustOrderItemQuantityRequest
+                {
+                    Quantity = 1,
+                    ChangedBy = created.Scenario.Staff.Id,
+                    ReasonCode = "CustomerChange"
+                },
+                CancellationToken.None));
+    }
+
+    /// <summary>C-13: bếp vẫn dùng được món đang nấu (khóa chỉ áp cho POS).</summary>
+    [Fact]
+    public async Task ReduceQuantity_WhilePreparing_ByChef_IsAllowed()
+    {
+        var created = await CreateOrderAsync(quantity: 2);
+
+        created.Item.Status = KitchenStatuses.Preparing;
+        created.KitchenItem.Status = KitchenStatuses.Preparing;
+        created.Ticket.Status = KitchenStatuses.Preparing;
+        created.Order.Status = OrderStatuses.Preparing;
+        await Db.SaveChangesAsync();
+
+        CurrentUser.RoleList.Add(AuthPolicies.Roles.Chef);
+
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            created.Order.OrderId,
+            created.Item.Id,
+            new AdjustOrderItemQuantityRequest
+            {
+                Quantity = 1,
+                ChangedBy = created.Scenario.Staff.Id,
+                ReasonCode = "CustomerChange"
+            },
+            CancellationToken.None));
+
+        using var check = NewContext();
+        Assert.Equal(1, check.OrderItems.Single(x => x.Id == created.Item.Id).Quanlity);
+        Assert.Equal(96m, check.Inventories
+            .Single(x => x.IngredientId == created.Scenario.Ingredient.IngredientId).Quanlity);
     }
 
     [Fact]

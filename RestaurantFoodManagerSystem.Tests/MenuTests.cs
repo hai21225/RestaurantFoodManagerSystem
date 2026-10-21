@@ -86,8 +86,8 @@ public sealed class MenuTests : TestBase
     {
         var bravo = SeedCategory(name: "Bravo");
         var alpha = SeedCategory(name: "Alpha");
-        bravo.DisplayOrder = true;  // DisplayOrder is modelled as bool today
-        alpha.DisplayOrder = false;
+        bravo.DisplayOrder = 2;  // DisplayOrder is an int: số nhỏ hiển thị trước
+        alpha.DisplayOrder = 1;
         Db.SaveChanges();
 
         var menu = await Menu.GetMenuAsync(CancellationToken.None);

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class CategoryService
@@ -18,7 +18,7 @@ public class CategoryService
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         return new CategoryDTO
@@ -111,7 +111,7 @@ public class CategoryService
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         category.CategoryName = categoryDTO.Name ?? "";
@@ -138,7 +138,7 @@ public class CategoryService
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         category.IsActive = false;

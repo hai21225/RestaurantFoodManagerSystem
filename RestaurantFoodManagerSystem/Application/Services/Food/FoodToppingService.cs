@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class FoodToppingService
@@ -22,7 +22,7 @@ public class FoodToppingService
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
         var foodToppings = await _db.FoodToppings
@@ -71,7 +71,7 @@ public class FoodToppingService
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
         var topping = await _db.Toppings
@@ -79,7 +79,7 @@ public class FoodToppingService
 
         if (topping == null || !topping.IsActive)
         {
-            throw new Exception("Topping not found");
+            throw new KeyNotFoundException("Topping not found");
         }
 
         var exists = await _db.FoodToppings.AnyAsync(x =>
@@ -88,7 +88,7 @@ public class FoodToppingService
 
         if (exists)
         {
-            throw new Exception(
+            throw new InvalidOperationException(
                 "Topping already assigned to this food"
             );
         }

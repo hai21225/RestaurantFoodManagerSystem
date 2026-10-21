@@ -27,7 +27,8 @@ public sealed class ConcurrencyAndQueryGuardTests : TestBase
         Assert.True(await service.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
             Quanlity = 5m,
-            CreatedBy = staff.Id
+            CreatedBy = staff.Id,
+            Note = "serializable guard test"
         }, CancellationToken.None));
 
         Assert.Equal(IsolationLevel.Serializable, state.IsolationLevel);

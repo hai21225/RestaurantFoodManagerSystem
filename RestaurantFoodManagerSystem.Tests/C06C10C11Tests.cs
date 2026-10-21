@@ -224,7 +224,11 @@ public sealed class C06C10C11Tests : TestBase
 
         var history = await Orders.GetItemHistoryAsync(order.OrderId);
         Assert.NotNull(history);
-        var row = Assert.Single(history, x => x.OrderItemId == item.Id);
+        // Lịch sử món có dòng "dòng mới được tạo" (P0-04) rồi mới tới dòng giảm số lượng.
+        var row = history
+            .Where(x => x.OrderItemId == item.Id)
+            .OrderBy(x => x.Id)
+            .Last();
         Assert.Equal("Pending", row.OldStatus);
         Assert.Equal("Pending", row.NewStatus);
         Assert.Contains("3 -> 2", row.Reason);

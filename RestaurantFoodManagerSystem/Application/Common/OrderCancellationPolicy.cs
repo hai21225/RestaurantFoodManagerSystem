@@ -67,4 +67,19 @@ internal static class OrderCancellationPolicy
 
     public static bool HasRole(ICurrentUser user, string role) =>
         user.Roles.Any(x => string.Equals(x, role, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// Bếp (Chef) hoặc Admin. Dùng cho món đã bắt đầu nấu (<c>Preparing</c>): món đó bị
+    /// "khóa" với POS nhưng bếp vẫn dùng được (huỷ / báo thiếu nguyên liệu).
+    ///
+    /// <para>
+    /// Khi request chưa xác thực (<c>Roles</c> rỗng) thì cho qua — đồng bộ với
+    /// <see cref="CanCancelItem"/> để các luồng nội bộ và test cũ chưa gắn role vẫn chạy được.
+    /// Khi bật <c>Auth:Enforce</c> thì mọi request đều có role ⇒ khoá thật.
+    /// </para>
+    /// </summary>
+    public static bool IsKitchenOrAdmin(ICurrentUser user) =>
+        user.Roles.Count == 0
+        || HasRole(user, AuthPolicies.Roles.Admin)
+        || HasRole(user, AuthPolicies.Roles.Chef);
 }

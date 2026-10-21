@@ -37,7 +37,7 @@ public sealed class FoodCatalogTests : TestBase
     [Fact]
     public async Task AddFood_Throws_WhenCategoryDoesNotExist()
     {
-        var ex = await Assert.ThrowsAsync<Exception>(() => Foods.AddFoodAsync(new CreateFoodRequest
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => Foods.AddFoodAsync(new CreateFoodRequest
         {
             CategoryId = 999999,
             FoodName = "Ghost"
@@ -107,7 +107,7 @@ public sealed class FoodCatalogTests : TestBase
 
         Assert.Null(await Foods.UpdateFoodAsync(999999, new UpdateFoodRequest { CategoryId = category.CategoryId, FoodName = "x" }));
 
-        await Assert.ThrowsAsync<Exception>(() => Foods.UpdateFoodAsync(food.FoodId, new UpdateFoodRequest
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Foods.UpdateFoodAsync(food.FoodId, new UpdateFoodRequest
         {
             CategoryId = 999999,
             FoodName = "x"
@@ -172,7 +172,7 @@ public sealed class FoodCatalogTests : TestBase
         {
             Name = "Drinks",
             Description = "beverages",
-            DisplayOrder = false
+            DisplayOrder = 0
         }));
 
         var all = await Categories.GetAllCategoriesAsync();
@@ -189,7 +189,7 @@ public sealed class FoodCatalogTests : TestBase
             Id = created.Id,
             Name = "Cold Drinks",
             Description = "d",
-            DisplayOrder = false,
+            DisplayOrder = 2,
             IsActive = false
         }));
         Assert.False((await Categories.GetCategoryByIdAsync(created.Id)).IsActive);
@@ -201,12 +201,12 @@ public sealed class FoodCatalogTests : TestBase
     [Fact]
     public async Task Category_Throws_WhenEntityIsMissing()
     {
-        var ex = await Assert.ThrowsAsync<Exception>(() => Categories.GetCategoryByIdAsync(999999));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => Categories.GetCategoryByIdAsync(999999));
         Assert.Equal("Category not found", ex.Message);
 
         await Assert.ThrowsAsync<ArgumentNullException>(() => Categories.CreateCategoryAsync(null!));
         await Assert.ThrowsAsync<ArgumentNullException>(() => Categories.UpdateCategoryAsync(null!));
-        await Assert.ThrowsAsync<Exception>(() => Categories.DeleteCategoryAsync(999999));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => Categories.DeleteCategoryAsync(999999));
     }
 
     // ============================ FOOD SIZE ============================
@@ -214,7 +214,7 @@ public sealed class FoodCatalogTests : TestBase
     [Fact]
     public async Task FoodSize_Create_Throws_WhenFoodMissing()
     {
-        var ex = await Assert.ThrowsAsync<Exception>(() => FoodSizes.CreateAsync(999999, new CreateFoodSizeRequest { SizeName = "M", SizePrice = 10m }));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodSizes.CreateAsync(999999, new CreateFoodSizeRequest { SizeName = "M", SizePrice = 10m }));
         Assert.Equal("Food not found", ex.Message);
     }
 
@@ -225,7 +225,7 @@ public sealed class FoodCatalogTests : TestBase
         var food = SeedFood(category.CategoryId);
         SeedSize(food.FoodId, 10m, name: "M");
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => FoodSizes.CreateAsync(food.FoodId, new CreateFoodSizeRequest { SizeName = "M", SizePrice = 12m }));
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => FoodSizes.CreateAsync(food.FoodId, new CreateFoodSizeRequest { SizeName = "M", SizePrice = 12m }));
         Assert.Equal("This size already exists for this food", ex.Message);
     }
 
@@ -260,7 +260,7 @@ public sealed class FoodCatalogTests : TestBase
         inactive.IsActive = false;
         Db.SaveChanges();
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => FoodSizes.GetByFoodIdAsync(999999));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodSizes.GetByFoodIdAsync(999999));
         Assert.Equal("Food not found", ex.Message);
 
         var sizes = await FoodSizes.GetByFoodIdAsync(food.FoodId);
@@ -340,7 +340,7 @@ public sealed class FoodCatalogTests : TestBase
 
         Assert.Null(await FoodSizes.UpdateAsync(food.FoodId, 999999, new UpdateFoodSizeRequest { SizeName = "X", SizePrice = 1m }));
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => FoodSizes.UpdateAsync(food.FoodId, large.SizeId, new UpdateFoodSizeRequest
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => FoodSizes.UpdateAsync(food.FoodId, large.SizeId, new UpdateFoodSizeRequest
         {
             SizeName = "M",
             SizePrice = 15m
@@ -430,7 +430,7 @@ public sealed class FoodCatalogTests : TestBase
     {
         await Toppings.CreateAsync(new CreateToppingRequest { ToppingName = "Cheese", ToppingPrice = 5m });
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => Toppings.CreateAsync(new CreateToppingRequest
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Toppings.CreateAsync(new CreateToppingRequest
         {
             ToppingName = "Cheese",
             ToppingPrice = 6m
@@ -446,7 +446,7 @@ public sealed class FoodCatalogTests : TestBase
 
         Assert.Null(await Toppings.UpdateAsync(999999, new UpdateToppingRequest { ToppingName = "C", ToppingPrice = 1m }));
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => Toppings.UpdateAsync(second.ToppingId, new UpdateToppingRequest
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Toppings.UpdateAsync(second.ToppingId, new UpdateToppingRequest
         {
             ToppingName = "A",
             ToppingPrice = 2m
@@ -514,7 +514,7 @@ public sealed class FoodCatalogTests : TestBase
         var category = SeedCategory();
         var food = SeedFood(category.CategoryId);
 
-        var ex = await Assert.ThrowsAsync<Exception>(() => FoodToppings.GetToppingsByFoodIdAsync(999999));
+        var ex = await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodToppings.GetToppingsByFoodIdAsync(999999));
         Assert.Equal("Food not found", ex.Message);
 
         Assert.Empty(await FoodToppings.GetToppingsByFoodIdAsync(food.FoodId));
@@ -527,14 +527,14 @@ public sealed class FoodCatalogTests : TestBase
         var food = SeedFood(category.CategoryId);
         var topping = SeedTopping();
 
-        await Assert.ThrowsAsync<Exception>(() => FoodToppings.AssignAsync(999999, topping.ToppingId));
-        await Assert.ThrowsAsync<Exception>(() => FoodToppings.AssignAsync(food.FoodId, 999999));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodToppings.AssignAsync(999999, topping.ToppingId));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodToppings.AssignAsync(food.FoodId, 999999));
 
         var inactive = SeedTopping(isActive: false);
-        await Assert.ThrowsAsync<Exception>(() => FoodToppings.AssignAsync(food.FoodId, inactive.ToppingId));
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => FoodToppings.AssignAsync(food.FoodId, inactive.ToppingId));
 
         Assert.True(await FoodToppings.AssignAsync(food.FoodId, topping.ToppingId));
-        await Assert.ThrowsAsync<Exception>(() => FoodToppings.AssignAsync(food.FoodId, topping.ToppingId));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => FoodToppings.AssignAsync(food.FoodId, topping.ToppingId));
 
         var result = await FoodToppings.GetToppingsByFoodIdAsync(food.FoodId);
         Assert.Single(result);

@@ -23,20 +23,11 @@ public class FoodSizesController : ControllerBase
         [FromQuery] bool includeInactive = false,
         CancellationToken ct = default)
     {
-        try
-        {
-            var sizes = await _foodSizeService
-                .GetByFoodIdAsync(foodId, includeInactive, ct);
+        // Món không tồn tại ⇒ KeyNotFoundException ⇒ 404.
+        var sizes = await _foodSizeService
+            .GetByFoodIdAsync(foodId, includeInactive, ct);
 
-            return Ok(sizes);
-        }
-        catch (Exception ex)
-        {
-            return NotFound(new
-            {
-                message = ex.Message
-            });
-        }
+        return Ok(sizes);
     }
 
 
@@ -73,28 +64,19 @@ public class FoodSizesController : ControllerBase
         [FromBody] CreateFoodSizeRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var size = await _foodSizeService
-                .CreateAsync(foodId, request, ct);
+        // Món không tồn tại ⇒ 404; trùng tên size trong cùng món ⇒ 409.
+        var size = await _foodSizeService
+            .CreateAsync(foodId, request, ct);
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new
-                {
-                    foodId,
-                    sizeId = size.SizeId
-                },
-                size
-            );
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new
+        return CreatedAtAction(
+            nameof(GetById),
+            new
             {
-                message = ex.Message
-            });
-        }
+                foodId,
+                sizeId = size.SizeId
+            },
+            size
+        );
     }
 
 
@@ -107,33 +89,23 @@ public class FoodSizesController : ControllerBase
         [FromBody] UpdateFoodSizeRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var size = await _foodSizeService
-                .UpdateAsync(
-                    foodId,
-                    sizeId,
-                    request,
-                    ct
-                );
+        var size = await _foodSizeService
+            .UpdateAsync(
+                foodId,
+                sizeId,
+                request,
+                ct
+            );
 
-            if (size == null)
-            {
-                return NotFound(new
-                {
-                    message = "Food size not found"
-                });
-            }
-
-            return Ok(size);
-        }
-        catch (Exception ex)
+        if (size == null)
         {
-            return BadRequest(new
+            return NotFound(new
             {
-                message = ex.Message
+                message = "Food size not found"
             });
         }
+
+        return Ok(size);
     }
 
 
@@ -172,31 +144,22 @@ public class FoodSizesController : ControllerBase
         [FromBody] UpdateActiveRequest request,
         CancellationToken ct = default)
     {
-        try
+        // Bật lại size đã có tên trùng với size khác ⇒ 409 (InvalidOperationException).
+        var result = await _foodSizeService
+            .SetActiveAsync(foodId, sizeId, request.IsActive, ct);
+
+        if (!result)
         {
-            var result = await _foodSizeService
-                .SetActiveAsync(foodId, sizeId, request.IsActive, ct);
-
-            if (!result)
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "Food size not found"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Food size active status updated successfully"
+                message = "Food size not found"
             });
         }
-        catch (InvalidOperationException ex)
+
+        return Ok(new
         {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+            message = "Food size active status updated successfully"
+        });
     }
 
 

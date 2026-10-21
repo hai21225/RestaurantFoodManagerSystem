@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -22,7 +22,7 @@ public class FoodSizeService
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
         var query = _db.FoodSizes
@@ -83,7 +83,7 @@ public class FoodSizeService
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
         var name = request.SizeName.Trim();
@@ -95,7 +95,7 @@ public class FoodSizeService
 
         if (duplicate)
         {
-            throw new Exception(
+            throw new InvalidOperationException(
                 "This size already exists for this food"
             );
         }
@@ -126,7 +126,7 @@ public class FoodSizeService
 
         if (result <= 0)
         {
-            throw new Exception("Failed to create food size");
+            throw new InvalidOperationException("Failed to create food size");
         }
 
         await tx.CommitAsync(ct);
@@ -165,7 +165,7 @@ public class FoodSizeService
 
         if (duplicate)
         {
-            throw new Exception(
+            throw new InvalidOperationException(
                 "This size already exists for this food"
             );
         }

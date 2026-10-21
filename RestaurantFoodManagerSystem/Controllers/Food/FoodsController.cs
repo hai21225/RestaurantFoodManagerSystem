@@ -76,27 +76,18 @@ public class FoodsController : ControllerBase
         [FromBody] CreateFoodRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var food = await _foodService
-                .AddFoodAsync(request, ct);
+        // Danh mục không tồn tại ⇒ KeyNotFoundException ⇒ 404; trùng tên ⇒ 409.
+        var food = await _foodService
+            .AddFoodAsync(request, ct);
 
-            return CreatedAtAction(
-                nameof(GetById),
-                new
-                {
-                    id = food.FoodId
-                },
-                food
-            );
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new
+        return CreatedAtAction(
+            nameof(GetById),
+            new
             {
-                message = ex.Message
-            });
-        }
+                id = food.FoodId
+            },
+            food
+        );
     }
 
 
@@ -111,28 +102,18 @@ public class FoodsController : ControllerBase
         [FromBody] UpdateFoodRequest request,
         CancellationToken ct = default)
     {
-        try
-        {
-            var food = await _foodService
-                .UpdateFoodAsync(id, request, ct);
+        var food = await _foodService
+            .UpdateFoodAsync(id, request, ct);
 
-            if (food == null)
-            {
-                return NotFound(new
-                {
-                    message = "Food not found"
-                });
-            }
-
-            return Ok(food);
-        }
-        catch (Exception ex)
+        if (food == null)
         {
-            return BadRequest(new
+            return NotFound(new
             {
-                message = ex.Message
+                message = "Food not found"
             });
         }
+
+        return Ok(food);
     }
 
 

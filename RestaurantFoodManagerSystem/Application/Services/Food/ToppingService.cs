@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class ToppingService
@@ -62,7 +62,7 @@ public class ToppingService
 
         if (exists)
         {
-            throw new Exception("Topping already exists");
+            throw new InvalidOperationException("Topping already exists");
         }
 
         var topping = new Topping
@@ -79,7 +79,7 @@ public class ToppingService
 
         if (result <= 0)
         {
-            throw new Exception("Failed to create topping");
+            throw new InvalidOperationException("Failed to create topping");
         }
 
         return MapToDto(topping);
@@ -107,7 +107,7 @@ public class ToppingService
 
         if (duplicate)
         {
-            throw new Exception("Topping name already exists");
+            throw new InvalidOperationException("Topping name already exists");
         }
 
         topping.ToppingName = name;

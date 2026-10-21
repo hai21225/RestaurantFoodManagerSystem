@@ -3,13 +3,17 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using RestaurantFoodManagerSystem.Infrastructure.Auth;
+using RestaurantFoodManagerSystem.Infrastructure.Errors;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-builder.Services.AddControllers();
+// Đợt 1 (lỗi an toàn): mọi exception lọt ra khỏi controller đều được
+// ApiExceptionFilter đổi thành { "message": "..." } + status code chuẩn (400/404/409/500).
+// Nhờ vậy không controller nào phải `catch (Exception)` thủ công nữa.
+builder.Services.AddControllers(options => options.Filters.Add<ApiExceptionFilter>());
 
 // GĐ6/A0: frontend tĩnh chạy bằng `python -m http.server 5500 --bind localhost`
 // ⇒ origin http://localhost:5500. Thêm 5501/3000 cho các cổng dev thay thế.
@@ -59,6 +63,15 @@ if (!string.IsNullOrWhiteSpace(jwtOptions.Key) &&
 builder.Services.AddSingleton(jwtOptions);
 builder.Services.AddScoped<TokenService>();
 
+// Đợt 3 / MoMo: cấu hình thanh toán nạp từ section "Payments".
+// Mặc định Provider = "Mock" (môi trường test, không gọi ra ngoài). Muốn dùng MoMo thật:
+// đặt Payments__MoMo__PartnerCode / AccessKey / SecretKey (biến môi trường hoặc user-secrets)
+// rồi đổi Payments__Provider = "MoMo".
+var paymentOptions = builder.Configuration.GetSection(PaymentOptions.SectionName).Get<PaymentOptions>()
+    ?? new PaymentOptions();
+builder.Services.AddSingleton(paymentOptions);
+builder.Services.AddHttpClient();
+
 // GĐ6 (lát 6b): JWT authentication + policy phân quyền. Enforcement bật/tắt bằng Auth:Enforce
 // (dev mặc định false ⇒ [Authorize] chưa chặn cho tới khi frontend gửi Bearer token).
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -104,11 +117,13 @@ builder.Services.AddSingleton<IOrderIdempotencyStore, InMemoryOrderIdempotencySt
 builder.Services.AddScoped<OrderLifecycleCoordinator>();
 builder.Services.AddScoped<OrderService>();
 builder.Services.AddScoped<PaymentService>();
+builder.Services.AddScoped<MomoPaymentService>();
 builder.Services.AddScoped<IngredientService>();
 builder.Services.AddScoped<InventoryService>();
 builder.Services.AddScoped<SupplierService>();
 builder.Services.AddScoped<PurchaseOrderService>();
 builder.Services.AddScoped<PromotionService>();
+builder.Services.AddScoped<RestaurantSettingsService>();
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<KitchenService>();
 builder.Services.AddScoped<ReportService>();

@@ -6,6 +6,24 @@ public sealed class CreateOrderRequest
     [Range(1, int.MaxValue)] public int TableId { get; set; }
     [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
     [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
+
+    /// <summary>
+    /// Ghi chú cho **cả hoá đơn** (Đợt 3 / B3): "xuất hoá đơn công ty ABC", "chia đôi với bàn 6"…
+    /// Sửa sau bằng <c>PATCH /api/orders/{id}/note</c>.
+    /// </summary>
+    [MaxLength(500)] public string? Note { get; set; }
+}
+
+/// <summary>
+/// Ghi chú cho cả hoá đơn (<c>PATCH /api/orders/{id}/note</c>), Đợt 3 / B3.
+/// Gửi chuỗi rỗng để **xoá** ghi chú.
+/// </summary>
+public sealed class UpdateOrderNoteRequest
+{
+    [MaxLength(500)] public string? Note { get; set; }
+
+    /// <summary>Người thực hiện (bị ghi vào lịch sử đơn). 0 = lấy từ token, hoặc người tạo đơn.</summary>
+    [Range(0, int.MaxValue)] public int ChangedBy { get; set; }
 }
 
 public sealed class CreateOrderItemRequest
@@ -24,18 +42,8 @@ public sealed class CreateOrderToppingRequest
 }
 
 /// <summary>
-/// Thay toàn bộ dòng món của một đơn đang mở (<c>PUT /api/orders/{id}/items</c>).
-/// Đây là thao tác replace-all: dòng không gửi lên sẽ bị xoá, dòng mới sẽ được thêm.
-/// </summary>
-public sealed class UpdateOrderItemsRequest
-{
-    [Range(1, int.MaxValue)] public int ChangedBy { get; set; }
-    [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
-}
-
-/// <summary>
 /// Gọi thêm món vào một đơn đang mở (<c>POST /api/orders/{id}/items</c>).
-/// Khác với <see cref="UpdateOrderItemsRequest"/>: chỉ thêm dòng mới và luôn tạo một
+/// Khác với <see cref="AddOrderItemsRequest"/>: chỉ thêm dòng mới và luôn tạo một
 /// round/ticket bếp mới, không replace-all.
 /// </summary>
 public sealed class AddOrderItemsRequest
@@ -149,6 +157,24 @@ public sealed class PaymentListQuery
 
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
+}
+
+/// <summary>
+/// Chuyển đơn sang bàn khác (<c>PATCH /api/orders/{id}/table</c>) — B1.
+///
+/// <para>
+/// Dùng khi khách đổi chỗ ngồi. Bàn đích phải <b>đang trống</b> (không có đơn mở) và
+/// không ở trạng thái bảo trì. Bàn cũ tự động trở lại <c>Available</c>.
+/// </para>
+/// </summary>
+public sealed class ChangeOrderTableRequest
+{
+    /// <summary>Bàn đích.</summary>
+    [Range(1, int.MaxValue)]
+    public int TableId { get; set; }
+
+    /// <summary>Người thực hiện (khi request không có token thì dùng id này).</summary>
+    public int ChangedBy { get; set; }
 }
 
 public sealed class CreatePaymentRequest

@@ -12,6 +12,13 @@ public sealed class InventoryTransactionResponse
     public decimal Quanlity { get; set; }
     public decimal QuanlityBefore { get; set; }
     public decimal QuanlityAfter { get; set; }
+
+    /// <summary>
+    /// C-17: đơn vị tính của lượng, snapshot lúc ghi dòng ledger. Null với dòng cũ
+    /// chưa có đơn vị (và nguyên liệu cũng không còn để suy ra).
+    /// </summary>
+    public string? Unit { get; set; }
+
     public string? ReferenceType { get; set; }
     public int? ReferenceId { get; set; }
     public string? Note { get; set; }

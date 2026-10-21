@@ -185,6 +185,17 @@ public sealed class PurchaseOrderService
         var receivedBy = await _currentUser.ResolveExistingActorAsync(
             _db, r.ReceivedBy, _logger, nameof(r.ReceivedBy), ct);
 
+        // C-21: tên nhà cung cấp để ghi vào note của dòng ledger (truy nguồn gốc khi nhập kho).
+        var supplierName = await _db.Suppliers
+            .AsNoTracking()
+            .Where(s => s.SupplierId == p.SupplierId)
+            .Select(s => s.Name)
+            .FirstOrDefaultAsync(ct);
+
+        // C-17: ledger ghi kèm đơn vị tính của nguyên liệu lúc nhập kho.
+        var units = await IngredientUnits.LoadAsync(
+            _db, items.Select(x => x.IngredientId), ct);
+
         foreach (var item in items)
         {
             // Defect #26: nguyên liệu thiếu dòng tồn kho là lỗi dữ liệu nghiệp vụ,
@@ -201,8 +212,13 @@ public sealed class PurchaseOrderService
                 Quanlity = item.Quanlity,
                 QuanlityBefore = before,
                 QuanlityAfter = stock.Quanlity,
+                Unit = units.GetValueOrDefault(item.IngredientId),
                 ReferenceType = "PurchaseOrder",
                 ReferenceId = id,
+                // C-21: dòng nhập phiếu mua trước đây KHÔNG có note ⇒ báo cáo "biến động
+                // kho" không truy được nguồn gốc. Ghi rõ phiếu mua + nhà cung cấp.
+                Note = $"Nhập phiếu mua #{id}"
+                       + (supplierName is null ? "" : $" từ {supplierName}"),
                 CreatedAt = DateTime.UtcNow,
                 CreatedBy = receivedBy
             });

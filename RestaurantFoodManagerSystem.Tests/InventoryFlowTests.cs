@@ -116,7 +116,8 @@ public sealed class InventoryFlowTests : TestBase
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
             Quanlity = -4m,
-            CreatedBy = staff.Id
+            CreatedBy = staff.Id,
+            Note = "audit hao mat"
         }, CancellationToken.None));
 
         Assert.Equal(6m, Db.Inventories.Single(x => x.IngredientId == ingredient.IngredientId).Quanlity);

@@ -53,11 +53,13 @@ internal static class OrderItemMutations
         string? reason = null,
         string? reasonCode = null)
     {
-        // ChangedBy là FK tới users. Các luồng không xác thực vẫn phải resolve được actor
-        // từ body/order trước khi gọi; nếu không có actor thì bỏ qua thay vì làm hỏng giao dịch.
+        // ChangedBy là FK tới users. Mọi luồng đã resolve actor qua
+        // ICurrentUser.ResolveExistingActorAsync nên luôn > 0; nếu không thì đó là lỗi lập
+        // trình — ném lỗi để lỗi được thấy, không âm thầm mất dòng audit.
         if (changedBy <= 0)
         {
-            return;
+            throw new InvalidOperationException(
+                "Cannot record item history without a valid actor");
         }
 
         var normalizedReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
@@ -79,7 +81,7 @@ internal static class OrderItemMutations
             OrderId = item.OrderId,
             OrderItemId = item.Id > 0 ? item.Id : null,
             KitchenOrderItemId = kitchenOrderItemId is > 0 ? kitchenOrderItemId : null,
-            OldStatus = string.IsNullOrWhiteSpace(oldStatus) ? item.Status : oldStatus.Trim(),
+            OldStatus = oldStatus is null ? item.Status : oldStatus.Trim(),
             NewStatus = newStatus.Trim(),
             ChangedBy = changedBy,
             CreatedAt = now,
@@ -123,17 +125,36 @@ internal static class OrderItemMutations
         return items;
     }
 
-    public static void RecalculateTotals(Order order, IEnumerable<OrderItem> items, DateTime now)
+    /// <summary>
+    /// Tính lại tiền của đơn sau khi dòng món thay đổi.
+    ///
+    /// <para>
+    /// Mọi thay đổi dòng món làm thay đổi cơ sở khuyến mãi ⇒ bỏ discount và bỏ tham chiếu
+    /// khuyến mãi (nếu giữ <c>PromotionId</c> mà <c>DiscountAmount = 0</c> thì đơn nói dối:
+    /// có khuyến mãi nhưng không giảm tiền).
+    /// </para>
+    ///
+    /// <para>
+    /// Tiền được tính bởi <see cref="OrderTotalsCalculator"/> (Đợt 2 / A1) — VAT + phí dịch vụ
+    /// theo cấu hình quán.
+    /// </para>
+    /// </summary>
+    public static void RecalculateTotals(
+        Order order,
+        IEnumerable<OrderItem> items,
+        DateTime now,
+        RestaurantSettings settings)
     {
         var active = items
             .Where(x => !KitchenStatuses.IsCancelled(x.Status))
             .ToList();
 
         order.Subtotal = active.Sum(x => x.UnitPrice * x.Quanlity);
-        // Mọi thay đổi dòng món làm thay đổi cơ sở khuyến mãi; bỏ discount cũ.
         order.DiscountAmount = 0m;
-        order.TotalAmount = Math.Round(
-            order.Subtotal + order.TaxAmount, 2, MidpointRounding.AwayFromZero);
+        order.PromotionId = null;
+        order.PromotionDiscountType = null;
+        order.PromotionDiscountValue = null;
+        OrderTotalsCalculator.Apply(order, settings);
         order.UpdatedAt = now;
     }
 
@@ -246,7 +267,6 @@ internal static class OrderItemMutations
         int originalQuantity,
         int movedQuantity,
         int changedBy,
-        DateTime now,
         CancellationToken ct)
     {
         if (originalQuantity <= 0 || movedQuantity <= 0)
@@ -301,17 +321,33 @@ internal static class OrderItemMutations
                 transaction.Quanlity -= take;
                 remainingToMove -= take;
 
+                // C-21: giữ chuỗi running-balance của ledger khi tách dòng.
+                // Trước đây dòng gốc bị đổi Quanlity nhưng Before/After giữ nguyên, còn dòng
+                // tách copy nguyên Before/After của dòng gốc ⇒ "Before - After" ≠ Quanlity ở
+                // CẢ HAI dòng ⇒ báo cáo dựng lại tồn kho từ ledger ra số sai (nói tồn đi 2 lần
+                // trong khi thực tế đi 1 lần).
+                // Nay: dòng gốc giữ Before, After = Before - phần còn lại; dòng tách nối tiếp
+                // (Before = After của dòng gốc, After = After gốc) ⇒ chuỗi liên tục, tổng giữ nguyên.
+                var originalAfter = transaction.QuanlityAfter;
+                var remainingAfter = transaction.QuanlityBefore - transaction.Quanlity;
+                transaction.QuanlityAfter = remainingAfter;
+
                 additions.Add(new InventoryTransaction
                 {
                     IngredientId = ingredientId,
                     Type = transaction.Type,
                     Quanlity = take,
-                    QuanlityBefore = transaction.QuanlityBefore,
-                    QuanlityAfter = transaction.QuanlityAfter,
+                    QuanlityBefore = remainingAfter,
+                    QuanlityAfter = originalAfter,
+                    // C-17: dòng tách giữ nguyên đơn vị của dòng gốc.
+                    Unit = transaction.Unit,
                     ReferenceType = transaction.ReferenceType,
                     ReferenceId = transaction.ReferenceId,
                     OrderItemId = target.Id,
-                    CreatedAt = now,
+                    // Dòng tách là TÁCH LẬI một biến động đã có, KHÔNG phải biến động mới
+                    // ⇒ giữ nguyên thời điểm để chuỗi ledger liên tục khi sắp theo (CreatedAt, Id):
+                    // dòng gốc (Id cũ) đứng trước dòng tách (Id mới) trong cùng một thời điểm.
+                    CreatedAt = transaction.CreatedAt,
                     CreatedBy = changedBy,
                     Note = "Ledger split when an order line was split"
                 });
@@ -389,6 +425,8 @@ internal static class OrderItemMutations
         var stocks = await db.Inventories
             .Where(x => ingredientIds.Contains(x.IngredientId))
             .ToDictionaryAsync(x => x.IngredientId, ct);
+        // C-17: ledger ghi kèm đơn vị tính lúc hoàn kho.
+        var units = await IngredientUnits.LoadAsync(db, ingredientIds, ct);
 
         foreach (var (ingredientId, quantity) in returns)
         {
@@ -409,6 +447,7 @@ internal static class OrderItemMutations
                 Quanlity = quantity,
                 QuanlityBefore = before,
                 QuanlityAfter = stock.Quanlity,
+                Unit = units.GetValueOrDefault(ingredientId),
                 ReferenceType = "Order",
                 ReferenceId = orderId,
                 OrderItemId = item.Id,
@@ -433,7 +472,8 @@ internal static class OrderItemMutations
         DateTime now,
         string reasonCode,
         string? note,
-        CancellationToken ct)
+        CancellationToken ct,
+        int? onlyIngredientId = null)
     {
         if (quantity <= 0 || item.Quanlity <= 0)
         {
@@ -465,6 +505,9 @@ internal static class OrderItemMutations
                     x.Value * factor, 3, MidpointRounding.AwayFromZero)
             })
             .Where(x => x.Quantity > 0)
+            // C-13: bếp báo hư/thiếu đúng một nguyên liệu ⇒ chỉ ghi hao hụt cho nguyên liệu
+            // đó, không ghi cho cả công thức.
+            .Where(x => onlyIngredientId is null || x.Key == onlyIngredientId.Value)
             .ToList();
 
         if (amounts.Count == 0)
@@ -476,6 +519,8 @@ internal static class OrderItemMutations
         var stocks = await db.Inventories
             .Where(x => ingredientIds.Contains(x.IngredientId))
             .ToDictionaryAsync(x => x.IngredientId, ct);
+        // C-17: ledger ghi kèm đơn vị tính lúc ghi hao hụt.
+        var units = await IngredientUnits.LoadAsync(db, ingredientIds, ct);
 
         foreach (var amount in amounts)
         {
@@ -492,6 +537,7 @@ internal static class OrderItemMutations
                 Quanlity = amount.Quantity,
                 QuanlityBefore = stock.Quanlity,
                 QuanlityAfter = stock.Quanlity,
+                Unit = units.GetValueOrDefault(amount.Key),
                 ReferenceType = "Order",
                 ReferenceId = orderId,
                 OrderItemId = item.Id,

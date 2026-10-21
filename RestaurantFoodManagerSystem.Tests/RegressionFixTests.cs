@@ -254,7 +254,11 @@ public sealed class RegressionFixTests : TestBase
             new UpdateOrderStatusRequest { Status = OrderStatuses.Preparing },
             CancellationToken.None));
 
-        var history = Db.OrderStatusHistories.Single(x => x.OrderId == order.OrderId);
+        // Lịch sử có dòng "đơn được tạo" (P0-03) rồi mới tới dòng đổi trạng thái.
+        var history = Db.OrderStatusHistories
+            .Where(x => x.OrderId == order.OrderId)
+            .OrderBy(x => x.Id)
+            .Last();
         Assert.Equal(scenario.Staff.Id, history.ChangedBy);
     }
 

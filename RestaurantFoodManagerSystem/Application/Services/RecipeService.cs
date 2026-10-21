@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -163,7 +164,20 @@ public sealed class RecipeService
 
     /// <summary>
     /// Cập nhật công thức (GĐ6/A3) cho <c>PUT /api/management/recipes/{id}</c>.
-    /// Thay toàn bộ định lượng trong một transaction. Trả <c>false</c> nếu không tìm thấy công thức.
+    ///
+    /// <para>
+    /// <b>C-19 (gap-review C3): sửa công thức = tạo phiên bản mới, không ghi đè bản cũ.</b>
+    /// Bản cũ được chuyển sang <c>IsActive = false</c> (giữ nguyên định lượng để làm
+    /// minh chứng lịch sử) và một bản mới <c>IsActive = true</c> được tạo. Unique index
+    /// <c>(SizeId) WHERE IsActive = 1</c> đã có sẵn nên không cần đổi schema, và luôn
+    /// bảo đảm chỉ có đúng một bản đang chạy cho mỗi size.
+    /// </para>
+    ///
+    /// <para>
+    /// Phiên bản: nếu client gửi <b>đúng** version đang chạy thì server **tự tăng**
+    /// (1 → 2) — tránh tạo hai bản trùng tên phiên bản. Nếu client gửi version khác
+    /// thì giữ nguyên version đó.
+    /// </para>
     /// </summary>
     public async Task<bool> UpdateAsync(int id, RecipeRequest r, CancellationToken ct)
     {
@@ -171,6 +185,13 @@ public sealed class RecipeService
         if (recipe is null)
         {
             return false;
+        }
+
+        // C-19: chỉ sửa được bản đang chạy. Bản đã bị thay thế thì phải sửa bản mới nhất.
+        if (!recipe.IsActive)
+        {
+            throw new InvalidOperationException(
+                "This recipe version is no longer active; update the current version instead");
         }
 
         if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
@@ -192,44 +213,71 @@ public sealed class RecipeService
         if (await _db.Recipes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive && x.RecipeId != id, ct))
             throw new InvalidOperationException("This size already has an active recipe");
 
-        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+        // Serializable: đọc–ghi–ghi phải nguyên tử, nếu không sẽ có lúc size không còn
+        // công thức đang chạy (⇒ trừ kho sai) hoặc hai bản cùng active.
+        await using var tx = await _db.Database.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable, ct);
 
-        recipe.SizeId = r.SizeId;
-        recipe.Name = (r.Name ?? string.Empty).Trim();
-        recipe.Version = string.IsNullOrWhiteSpace(r.Version) ? "1" : r.Version.Trim();
+        // Bước 1: chuyển bản cũ sang không hoạt động. SaveChanges riêng để lệnh UPDATE
+        // chạy TRƯỚC lệnh INSERT của bản mới — unique index (SizeId) WHERE IsActive=1
+        // sẽ chặn INSERT nếu bản cũ chưa được chuyển sang inactive.
+        recipe.IsActive = false;
+        await _db.SaveChangesAsync(ct);
 
-        var existing = await _db.RecipeIngredients
-            .Where(x => x.RecipeId == id)
-            .ToListAsync(ct);
-
-        // Cập nhật theo chênh lệch thay vì xoá rồi chèn lại: xoá/insert cùng khóa
-        // (RecipeId, IngredientId) trong một SaveChanges phụ thuộc thứ tự lệnh của EF.
-        var requested = r.Ingredients.ToDictionary(i => i.IngredientId, i => i.Quanlity);
-
-        foreach (var row in existing)
+        // Bước 2: tạo bản mới.
+        var version = ResolveVersion(r.Version, recipe.Version);
+        var created = new Recipe
         {
-            if (requested.Remove(row.IngredientId, out var quantity))
-            {
-                row.Quanlity = quantity;
-            }
-            else
-            {
-                _db.RecipeIngredients.Remove(row);
-            }
-        }
+            SizeId = r.SizeId,
+            Name = (r.Name ?? string.Empty).Trim(),
+            Version = version,
+            IsActive = true
+        };
+        _db.Recipes.Add(created);
+        await _db.SaveChangesAsync(ct);
 
-        foreach (var (ingredientId, quantity) in requested)
+        foreach (var i in r.Ingredients)
         {
             _db.RecipeIngredients.Add(new RecipeIngredient
             {
-                RecipeId = id,
-                IngredientId = ingredientId,
-                Quanlity = quantity
+                RecipeId = created.RecipeId,
+                IngredientId = i.IngredientId,
+                Quanlity = i.Quanlity
             });
         }
-
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return true;
+    }
+
+    /// <summary>
+    /// C-19: chốt phiên bản của bản công thức mới.
+    /// Client gửi version rỗng hoặc **đúng bằng** version đang chạy ⇒ server tự tăng
+    /// (1 → 2) để không có hai bản cùng tên phiên bản. Ngược lại giữ nguyên version client gửi.
+    /// </summary>
+    private static string ResolveVersion(string? requested, string currentVersion)
+    {
+        var trimmed = (requested ?? string.Empty).Trim();
+
+        if (trimmed.Length == 0
+            || string.Equals(trimmed, currentVersion, StringComparison.OrdinalIgnoreCase))
+        {
+            return NextVersion(currentVersion);
+        }
+
+        return trimmed;
+    }
+
+    /// <summary>Phiên bản kế tiếp: "1" → "2"; "1.5" → "1.5-2" (giới hạn 50 ký tự của cột).</summary>
+    private static string NextVersion(string currentVersion)
+    {
+        var trimmed = (currentVersion ?? string.Empty).Trim();
+
+        if (int.TryParse(trimmed, NumberStyles.Integer, CultureInfo.InvariantCulture, out var number))
+        {
+            return (number + 1).ToString(CultureInfo.InvariantCulture);
+        }
+
+        return trimmed.Length >= 48 ? trimmed : trimmed + "-2";
     }
 }

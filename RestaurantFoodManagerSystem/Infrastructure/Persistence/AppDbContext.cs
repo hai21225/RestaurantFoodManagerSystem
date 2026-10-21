@@ -99,6 +99,14 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         public DbSet<RestaurantTable> RestaurantTables { get; set; }
 
 
+        // =========================================================
+        // SETTINGS (Đợt 2 / A1)
+        // =========================================================
+
+        /// <summary>Cấu hình quán — bảng chỉ có một bản ghi duy nhất (Id = 1).</summary>
+        public DbSet<RestaurantSettings> RestaurantSettings { get; set; }
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -270,6 +278,10 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
                 entity.Property(x => x.UpdatedAt)
                     .IsRequired();
+
+                // C-13: lý do + mốc thời gian vô hiệu hoá món (bếp báo lô nguyên liệu hỏng).
+                entity.Property(x => x.InactiveReason)
+                    .HasMaxLength(500);
 
                 // Food -> Category
                 entity.HasOne<Category>()
@@ -486,8 +498,29 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.TaxAmount)
                     .HasPrecision(18, 2);
 
+                // Đợt 2 / A1: phí dịch vụ.
+                entity.Property(x => x.ServiceChargeAmount)
+                    .HasPrecision(18, 2);
+
                 entity.Property(x => x.TotalAmount)
                     .HasPrecision(18, 2);
+
+                // Đợt 3 / B3: ghi chú cho cả hoá đơn.
+                entity.Property(x => x.Note)
+                    .HasMaxLength(500);
+
+                // Đợt 2 / A3: FK + snapshot khuyến mãi trên đơn.
+                entity.Property(x => x.PromotionDiscountType)
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.PromotionDiscountValue)
+                    .HasPrecision(18, 2);
+
+                // Order -> Promotion. Xoá khuyến mãi (soft-delete) không được xoá đơn.
+                entity.HasOne<Promotion>()
+                    .WithMany()
+                    .HasForeignKey(x => x.PromotionId)
+                    .OnDelete(DeleteBehavior.SetNull);
 
                 entity.Property(x => x.CreatedAt)
                     .IsRequired();
@@ -510,6 +543,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.HasIndex(x => x.TableId);
                 entity.HasIndex(x => x.CreatedBy);
                 entity.HasIndex(x => x.Status);
+                entity.HasIndex(x => x.PromotionId);
 
                 ConfigureRowVersion(entity);
 
@@ -643,6 +677,10 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.Note)
                     .HasMaxLength(500);
 
+                // P0-12: mã lý do của dòng lịch sử đơn (CustomerChange/OutOfStock/...).
+                entity.Property(x => x.ReasonCode)
+                    .HasMaxLength(50);
+
                 entity.Property(x => x.CreatedAt)
                     .IsRequired();
 
@@ -657,6 +695,54 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasIndex(x => x.OrderId);
+            });
+
+
+            // =====================================================
+            // RESTAURANT SETTINGS (Đợt 2 / A1)
+            // =====================================================
+
+            modelBuilder.Entity<RestaurantSettings>(entity =>
+            {
+                entity.ToTable("restaurant_settings");
+
+                entity.HasKey(x => x.Id);
+
+                // Bảng chỉ có một bản ghi: Id cố định = 1, không tự sinh.
+                entity.Property(x => x.Id)
+                    .ValueGeneratedNever();
+
+                entity.Property(x => x.RestaurantName)
+                    .IsRequired()
+                    .HasMaxLength(200);
+
+                entity.Property(x => x.Address)
+                    .IsRequired()
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.Phone)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.TaxCode)
+                    .IsRequired()
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.Currency)
+                    .IsRequired()
+                    .HasMaxLength(10);
+
+                entity.Property(x => x.TaxRate)
+                    .HasPrecision(5, 2);
+
+                entity.Property(x => x.TaxIncluded)
+                    .IsRequired();
+
+                entity.Property(x => x.ServiceChargeRate)
+                    .HasPrecision(5, 2);
+
+                entity.Property(x => x.UpdatedAt)
+                    .IsRequired();
             });
 
 
@@ -795,7 +881,17 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
             modelBuilder.Entity<Payment>(entity =>
             {
-                entity.ToTable("payments");
+                entity.ToTable("payments", table =>
+                {
+                    // Đợt 1: chặn trạng thái ngoài allow-list ở tầng DB, giống
+                    // CK_orders_Status / CK_order_items_Status.
+                    if (isSqlServer)
+                    {
+                        table.HasCheckConstraint(
+                            "CK_payments_Status",
+                            "[Status] IN ('Pending','Paid','Failed','Refunded','Cancelled')");
+                    }
+                });
 
                 entity.HasKey(x => x.PaymentId);
 
@@ -814,8 +910,29 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .IsRequired()
                     .HasMaxLength(100);
 
-                entity.Property(x => x.PaidAt)
+                // Đợt 3 / MoMo: giao dịch "intent" còn Pending thì chưa thu được tiền
+                // ⇒ PaidAt phải nullable.
+                entity.Property(x => x.PaidAt);
+
+                entity.Property(x => x.Provider)
+                    .IsRequired()
+                    .HasMaxLength(30);
+
+                entity.Property(x => x.RequestId)
+                    .HasMaxLength(50);
+
+                entity.Property(x => x.ProviderTransactionId)
+                    .HasMaxLength(100);
+
+                entity.Property(x => x.Note)
+                    .HasMaxLength(500);
+
+                entity.Property(x => x.ProviderResponse);
+
+                entity.Property(x => x.CreatedAt)
                     .IsRequired();
+
+                entity.Property(x => x.RefundedAt);
 
                 entity.HasOne<Order>()
                     .WithMany()
@@ -827,10 +944,17 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                     .HasForeignKey(x => x.CreatedBy)
                     .OnDelete(DeleteBehavior.Restrict);
 
+                // Chỉ 1 giao dịch "đã thu" cho mỗi đơn. Các dòng Pending/Failed/Refunded
+                // không bị ràng buộc này.
                 entity.HasIndex(x => x.OrderId)
                     .IsUnique()
                     .HasFilter(isSqlServer ? "[Status] = 'Paid'" : "\"Status\" = 'Paid'");
-                entity.HasIndex(x => x.TransactionCode);
+                entity.HasIndex(x => x.TransactionCode)
+                    .IsUnique()
+                    .HasFilter(isSqlServer
+                        ? "[TransactionCode] <> ''"
+                        : "\"TransactionCode\" <> ''");
+                entity.HasIndex(x => x.RequestId);
             });
 
 
@@ -958,6 +1082,13 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.IsActive)
                     .IsRequired();
 
+                // C-13: trạng thái đáp ứng (bình thường / hết hàng / hư hỏng) để kho quản lý
+                // và báo cáo. Nguyên liệu vẫn được giữ, không xoá.
+                entity.Property(x => x.StockStatus)
+                    .IsRequired()
+                    .HasMaxLength(30)
+                    .HasDefaultValue(IngredientStockStatuses.Available);
+
                 entity.HasIndex(x => x.Name)
                     .IsUnique()
                     .HasFilter(activeFilter);
@@ -1018,6 +1149,10 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
                 entity.Property(x => x.ReferenceType)
                     .HasMaxLength(100);
+
+                // C-17: ledger ghi kèm đơn vị tính (snapshot lúc ghi dòng).
+                entity.Property(x => x.Unit)
+                    .HasMaxLength(50);
 
                 entity.Property(x => x.Note)
                     .HasMaxLength(500);

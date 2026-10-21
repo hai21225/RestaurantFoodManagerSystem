@@ -4,6 +4,9 @@ public sealed class KitchenItemStatusRequest
 {
     [Required] public string Status { get; set; } = string.Empty;
 
+    /// <summary>Người thực hiện (bếp). Khi có token thì token thắng; không token thì dùng id này.</summary>
+    public int ChangedBy { get; set; }
+
     /// <summary>Lý do huỷ món (bắt buộc trên UI bếp; để trống sẽ dùng "Cancelled from kitchen").</summary>
     [MaxLength(500)]
     public string? Reason { get; set; }
@@ -23,6 +26,9 @@ public sealed class KitchenItemStatusRequest
 /// </summary>
 public sealed class ReopenKitchenItemRequest
 {
+    /// <summary>Người thực hiện (bếp). Khi có token thì token thắng; không token thì dùng id này.</summary>
+    public int ChangedBy { get; set; }
+
     [MaxLength(500)] public string? Reason { get; set; }
 }
 
@@ -55,4 +61,20 @@ public sealed class ReportShortageRequest
     public int ChangedBy { get; set; }
 
     [MaxLength(500)] public string? Reason { get; set; }
+
+    /// <summary>
+    /// Nguyên liệu nào thực sự hư/hết (C-13). Khi có, ledger wastage chỉ ghi cho đúng
+    /// nguyên liệu này thay vì ghi cho cả công thức, và trạng thái nguyên liệu được đổi
+    /// (OutOfStock / Spoiled) để kho quản lý.
+    /// </summary>
+    public int? IngredientId { get; set; }
+
+    /// <summary>
+    /// Ngừng bán món này (món bị vô hiệu hoá + lưu lý do) vì lô nguyên liệu hư/hết hạn
+    /// — dùng làm minh chứng cho báo cáo. Nguyên liệu vẫn được giữ nguyên.
+    /// </summary>
+    public bool DeactivateDish { get; set; }
+
+    /// <summary>Lý do vô hiệu hoá món (lưu cùng món để làm báo cáo).</summary>
+    [MaxLength(500)] public string? InactiveReason { get; set; }
 }

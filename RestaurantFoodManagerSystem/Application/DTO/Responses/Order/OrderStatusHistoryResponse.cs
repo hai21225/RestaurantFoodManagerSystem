@@ -12,5 +12,12 @@ public sealed class OrderStatusHistoryResponse
     public int ChangedBy { get; set; }
     public string? ChangedByName { get; set; }
     public string? Note { get; set; }
+
+    /// <summary>
+    /// Mã lý do của dòng lịch sử (P0-12): <c>CustomerChange</c> / <c>OutOfStock</c> /
+    /// <c>PhysicalShortage</c> / <c>KitchenError</c>. Null với các dòng không phải huỷ.
+    /// </summary>
+    public string? ReasonCode { get; set; }
+
     public DateTime CreatedAt { get; set; }
 }

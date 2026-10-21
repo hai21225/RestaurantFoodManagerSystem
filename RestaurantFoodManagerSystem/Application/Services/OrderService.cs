@@ -1,4 +1,4 @@
-using System.Data;
+﻿using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -13,6 +13,7 @@ public sealed class OrderService
     private readonly ILogger<OrderService> _logger;
     private readonly IOrderIdempotencyStore _idempotency;
     private readonly OrderLifecycleCoordinator _lifecycle;
+    private readonly RestaurantSettingsService _settings;
 
     public OrderService(
         AppDbContext db,
@@ -20,7 +21,8 @@ public sealed class OrderService
         ICurrentUser currentUser,
         ILogger<OrderService> logger,
         IOrderIdempotencyStore idempotency,
-        OrderLifecycleCoordinator lifecycle)
+        OrderLifecycleCoordinator lifecycle,
+        RestaurantSettingsService settings)
     {
         _db = db;
         _tables = tables;
@@ -28,27 +30,33 @@ public sealed class OrderService
         _logger = logger;
         _idempotency = idempotency;
         _lifecycle = lifecycle;
+        _settings = settings;
     }
 
     /// <summary>
-    /// Chi tiết đơn hàng cho <c>GET /api/orders/{id}</c> (Nhóm C/GĐ7).
-    /// Bổ sung <c>items[]</c> (kèm tên món/cỡ) so với entity <c>Order</c> thô; mọi field cũ được giữ nguyên.
+    /// Chi tiáº¿t Ä‘Æ¡n hÃ ng cho <c>GET /api/orders/{id}</c> (NhÃ³m C/GÄ7).
+    /// Bá»• sung <c>items[]</c> (kÃ¨m tÃªn mÃ³n/cá»¡) so vá»›i entity <c>Order</c> thÃ´; má»i field cÅ© Ä‘Æ°á»£c giá»¯ nguyÃªn.
     /// </summary>
     public async Task<OrderDetailResponse?> GetAsync(int id, CancellationToken ct)
     {
         var order = await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == id, ct);
         if (order is null) return null;
 
+        // LEFT JOIN: nếu món/size bị xoá cứng thì dòng món vẫn phải hiện trong chi tiết đơn
+        // (thiếu món ⇒ POS hiển thị sai, tổng tiền lệch). (P0: GetAsync dùng INNER JOIN)
         var items = await (from oi in _db.OrderItems.AsNoTracking()
-                           join fs in _db.FoodSizes on oi.SizeId equals fs.SizeId
-                           join f in _db.Foods on fs.FoodId equals f.FoodId
+                           join fs in _db.FoodSizes.AsNoTracking() on oi.SizeId equals fs.SizeId into sizeGroup
+                           from fs in sizeGroup.DefaultIfEmpty()
+                           join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId into foodGroup
+                           from f in foodGroup.DefaultIfEmpty()
                            where oi.OrderId == id
+                           orderby oi.Id
                            select new OrderItemDetailResponse
                            {
                                Id = oi.Id,
                                SizeId = oi.SizeId,
-                               FoodName = f.FoodName,
-                               SizeName = fs.SizeName,
+                               FoodName = f.FoodName ?? string.Empty,
+                               SizeName = fs.SizeName ?? string.Empty,
                                Quanlity = oi.Quanlity,
                                UnitPrice = oi.UnitPrice,
                                Note = oi.Note,
@@ -59,7 +67,7 @@ public sealed class OrderService
                                CancelledBy = oi.CancelledBy
                            }).ToListAsync(ct);
 
-        // Batch A: nạp topping của tất cả dòng món trong một truy vấn (tránh N+1).
+        // Batch A: náº¡p topping cá»§a táº¥t cáº£ dÃ²ng mÃ³n trong má»™t truy váº¥n (trÃ¡nh N+1).
         if (items.Count > 0)
         {
             var itemIds = items.Select(x => x.Id).ToList();
@@ -102,7 +110,12 @@ public sealed class OrderService
             Subtotal = order.Subtotal,
             DiscountAmount = order.DiscountAmount,
             TaxAmount = order.TaxAmount,
+            ServiceChargeAmount = order.ServiceChargeAmount,
             TotalAmount = order.TotalAmount,
+            PromotionId = order.PromotionId,
+            PromotionDiscountType = order.PromotionDiscountType,
+            PromotionDiscountValue = order.PromotionDiscountValue,
+            Note = order.Note,
             CreatedBy = order.CreatedBy,
             CreatedAt = order.CreatedAt,
             UpdatedAt = order.UpdatedAt,
@@ -111,9 +124,164 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Danh sách đơn có lọc + phân trang cho <c>GET /api/orders</c> (P1).
-    /// Lấy kèm <c>tableNumber</c> (join bàn) và <c>itemCount</c> (đếm dòng món) trong cùng truy vấn.
+    /// Danh sÃ¡ch Ä‘Æ¡n cÃ³ lá»c + phÃ¢n trang cho <c>GET /api/orders</c> (P1).
+    /// Láº¥y kÃ¨m <c>tableNumber</c> (join bÃ n) vÃ  <c>itemCount</c> (Ä‘áº¿m dÃ²ng mÃ³n) trong cÃ¹ng truy váº¥n.
     /// </summary>
+    /// <summary>
+    /// Hoá đơn gộp theo bàn — <c>GET /api/orders/table/{tableId}/bill</c> (Đợt 3 / B2).
+    ///
+    /// <para>
+    /// Khách ngồi 1 bàn gọi món nhiều lần ⇒ mỗi lần là 1 <c>Order</c> riêng. Thu ngân cần
+    /// **một** con số tổng của cả bàn (để chào khách và in hoá đơn), không phải cộng tay.
+    /// </para>
+    ///
+    /// <para>
+    /// Tổng tiền = **tổng của từng đơn** (mỗi đơn đã chốt tiền riêng theo khuyến mãi riêng)
+    /// ⇒ không bao giờ lệch với số tiền thực đã ghi trên từng đơn.
+    /// </para>
+    ///
+    /// <para>Trả <c>null</c> khi bàn không tồn tại hoặc không có đơn đang mở (controller → 404).</para>
+    /// </summary>
+    public async Task<TableBillResponse?> GetTableBillAsync(int tableId, CancellationToken ct = default)
+    {
+        var table = await _db.RestaurantTables.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TableId == tableId, ct);
+        if (table is null)
+        {
+            return null;
+        }
+
+        // "Đang mở" = chưa thanh toán và chưa huỷ (đúng cách các màn hình khác xác định).
+        var orders = await _db.Orders.AsNoTracking()
+            .Where(o => o.TableId == tableId
+                     && o.Status != OrderStatuses.Paid
+                     && o.Status != OrderStatuses.Cancelled)
+            .OrderBy(o => o.CreatedAt)
+            .ThenBy(o => o.OrderId)
+            .ToListAsync(ct);
+
+        if (orders.Count == 0)
+        {
+            return null;
+        }
+
+        var orderIds = orders.Select(x => x.OrderId).ToList();
+
+        // LEFT JOIN như GetAsync: món/size bị xoá cứng thì dòng vẫn phải hiện trên hoá đơn.
+        var itemRows = await (from oi in _db.OrderItems.AsNoTracking()
+                              join fs in _db.FoodSizes.AsNoTracking() on oi.SizeId equals fs.SizeId into sizeGroup
+                              from fs in sizeGroup.DefaultIfEmpty()
+                              join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId into foodGroup
+                              from f in foodGroup.DefaultIfEmpty()
+                              where orderIds.Contains(oi.OrderId)
+                                && oi.Status != KitchenStatuses.Cancelled
+                              select new
+                              {
+                                  oi.OrderId,
+                                  oi.SizeId,
+                                  FoodName = f.FoodName ?? string.Empty,
+                                  SizeName = fs.SizeName ?? string.Empty,
+                                  oi.Quanlity,
+                                  oi.UnitPrice,
+                                  oi.Note
+                              }).ToListAsync(ct);
+
+        // Gộp dòng: cùng món + cùng đơn giá + cùng ghi chú thì gộp làm một dòng.
+        // Tách theo ghi chú vì "bỏ hành" và "bỏ hành, ít cay" là 2 yêu cầu khác nhau.
+        var lines = itemRows
+            .GroupBy(x => new { x.SizeId, x.UnitPrice, x.Note })
+            .Select(g => new TableBillLineResponse
+            {
+                SizeId = g.Key.SizeId,
+                FoodName = g.First().FoodName,
+                SizeName = g.First().SizeName,
+                Quanlity = g.Sum(x => x.Quanlity),
+                UnitPrice = g.Key.UnitPrice,
+                LineTotal = g.Sum(x => x.UnitPrice * x.Quanlity),
+                Note = g.Key.Note
+            })
+            .OrderBy(x => x.FoodName)
+            .ThenBy(x => x.SizeName)
+            .ToList();
+
+        return new TableBillResponse
+        {
+            TableId = table.TableId,
+            TableNumber = table.TableNumber,
+            OrderIds = orderIds.ToArray(),
+            OrderCount = orders.Count,
+            Subtotal = orders.Sum(x => x.Subtotal),
+            DiscountAmount = orders.Sum(x => x.DiscountAmount),
+            TaxAmount = orders.Sum(x => x.TaxAmount),
+            ServiceChargeAmount = orders.Sum(x => x.ServiceChargeAmount),
+            TotalAmount = orders.Sum(x => x.TotalAmount),
+            Items = lines,
+            Notes = orders
+                .Select(x => x.Note)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Select(x => x!.Trim())
+                .Distinct(StringComparer.Ordinal)
+                .ToList(),
+            Orders = orders.Select(x => new TableBillOrderResponse
+            {
+                OrderId = x.OrderId,
+                Status = x.Status,
+                Subtotal = x.Subtotal,
+                DiscountAmount = x.DiscountAmount,
+                TotalAmount = x.TotalAmount,
+                PromotionId = x.PromotionId,
+                Note = x.Note,
+                CreatedAt = x.CreatedAt
+            }).ToList()
+        };
+    }
+
+    /// <summary>
+    /// Ghi chú cho cả hoá đơn — <c>PATCH /api/orders/{id}/note</c> (Đợt 3 / B3).
+    ///
+    /// <para>
+    /// Khác với <c>OrderItem.Note</c> (ghi chú cho từng món): đây là ghi chú cho **hoá đơn**
+    /// — "xuất hoá đơn công ty ABC", "chia đôi với bàn 6", "khách đợi bạn"…
+    /// </para>
+    ///
+    /// <para>Gửi chuỗi rỗng để **xoá** ghi chú. Mọi thay đổi đều được ghi 1 dòng lịch sử đơn.</para>
+    /// </summary>
+    public async Task<bool> UpdateNoteAsync(
+        int orderId,
+        UpdateOrderNoteRequest request,
+        CancellationToken ct = default)
+    {
+        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
+        if (order is null)
+        {
+            return false;
+        }
+
+        var trimmed = request.Note?.Trim();
+        var newNote = string.IsNullOrWhiteSpace(trimmed) ? null : trimmed;
+
+        if (string.Equals(order.Note, newNote, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        var actor = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct,
+            fallbackUserId: order.CreatedBy);
+
+        order.Note = newNote;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        // Ghi dòng audit: ghi chú hoá đơn là thay đổi cần truy vết (thu ngân ghi để in hoá đơn).
+        _lifecycle.RecordOrderNote(
+            order,
+            actor,
+            newNote is null ? "Cleared bill note" : $"Updated bill note: {newNote}");
+
+        await _db.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<PagedResponse<OrderListItemResponse>> GetListAsync(OrderListQuery query, CancellationToken ct = default)
     {
         var skip = Paging.ResolveSkip(query.Page, query.PageSize);
@@ -139,8 +307,10 @@ public sealed class OrderService
                 Subtotal = o.Subtotal,
                 DiscountAmount = o.DiscountAmount,
                 TaxAmount = o.TaxAmount,
+                ServiceChargeAmount = o.ServiceChargeAmount,
                 TotalAmount = o.TotalAmount,
                 ItemCount = _db.OrderItems.Count(x => x.OrderId == o.OrderId),
+                Note = o.Note,
                 CreatedBy = o.CreatedBy,
                 CreatedAt = o.CreatedAt,
                 UpdatedAt = o.UpdatedAt
@@ -167,8 +337,8 @@ public sealed class OrderService
         CreateCoreAsync(request, ct);
 
     /// <summary>
-    /// Tạo đơn có hỗ trợ header <c>Idempotency-Key</c>. Nếu key rỗng, giữ nguyên hành vi cũ.
-    /// Cùng key + cùng payload trả lại đúng response cũ; cùng key + payload khác trả 409.
+    /// Táº¡o Ä‘Æ¡n cÃ³ há»— trá»£ header <c>Idempotency-Key</c>. Náº¿u key rá»—ng, giá»¯ nguyÃªn hÃ nh vi cÅ©.
+    /// CÃ¹ng key + cÃ¹ng payload tráº£ láº¡i Ä‘Ãºng response cÅ©; cÃ¹ng key + payload khÃ¡c tráº£ 409.
     /// </summary>
     public async Task<OrderCreatedResponse> CreateIdempotentAsync(
         CreateOrderRequest request,
@@ -198,18 +368,21 @@ public sealed class OrderService
 
     private async Task<Order> CreateCoreAsync(CreateOrderRequest request, CancellationToken ct)
     {
-        // Nhóm B8: JSON `null` cho Items lọt qua [MinLength] ⇒ chặn sớm thay vì NRE.
+        // Đợt 2 / A1: cấu hình quán (VAT + phí dịch vụ) đọc TRƯỚC khi mở transaction để không
+        // giữ khoá đọc trên bảng settings suốt thời gian xử lý đơn.
+        var settings = await _settings.GetAsync(ct);
+        // NhÃ³m B8: JSON `null` cho Items lá»t qua [MinLength] â‡’ cháº·n sá»›m thay vÃ¬ NRE.
         if (request.Items is null || request.Items.Count == 0)
             throw new ArgumentException("Order must contain at least one item");
 
-        // Defect #3 + Batch A2 (15.1): mọi thao tác kiểm tra/trừ kho phải nằm trong cùng
-        // transaction Serializable. Kiểm tra "bàn đã có đơn mở" cũng phải ở trong transaction,
-        // nếu không hai request đồng thời cùng thấy "chưa có đơn" rồi cùng tạo đơn.
-        // Trên SQL Server, Serializable giữ key-range lock trên TableId tới khi commit.
+        // Defect #3 + Batch A2 (15.1): má»i thao tÃ¡c kiá»ƒm tra/trá»« kho pháº£i náº±m trong cÃ¹ng
+        // transaction Serializable. Kiá»ƒm tra "bÃ n Ä‘Ã£ cÃ³ Ä‘Æ¡n má»Ÿ" cÅ©ng pháº£i á»Ÿ trong transaction,
+        // náº¿u khÃ´ng hai request Ä‘á»“ng thá»i cÃ¹ng tháº¥y "chÆ°a cÃ³ Ä‘Æ¡n" rá»“i cÃ¹ng táº¡o Ä‘Æ¡n.
+        // TrÃªn SQL Server, Serializable giá»¯ key-range lock trÃªn TableId tá»›i khi commit.
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        // Defect #20: chỉ kiểm IsActive là chưa đủ — bàn đang bảo trì hoặc đang có đơn mở
-        // không được nhận thêm đơn. Trạng thái bàn có thể cũ, nên kiểm trực tiếp từ Orders.
+        // Defect #20: chá»‰ kiá»ƒm IsActive lÃ  chÆ°a Ä‘á»§ â€” bÃ n Ä‘ang báº£o trÃ¬ hoáº·c Ä‘ang cÃ³ Ä‘Æ¡n má»Ÿ
+        // khÃ´ng Ä‘Æ°á»£c nháº­n thÃªm Ä‘Æ¡n. Tráº¡ng thÃ¡i bÃ n cÃ³ thá»ƒ cÅ©, nÃªn kiá»ƒm trá»±c tiáº¿p tá»« Orders.
         var table = await _db.RestaurantTables
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.TableId == request.TableId && x.IsActive, ct);
@@ -217,8 +390,8 @@ public sealed class OrderService
         if (string.Equals(table.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Table is under maintenance");
 
-        // Completed chỉ là bếp/khách đã xong món; bàn chỉ được trả về trống sau khi Paid
-        // (hoặc Cancelled). Vì vậy Completed vẫn phải chặn tạo đơn mới trên cùng bàn.
+        // Completed chá»‰ lÃ  báº¿p/khÃ¡ch Ä‘Ã£ xong mÃ³n; bÃ n chá»‰ Ä‘Æ°á»£c tráº£ vá» trá»‘ng sau khi Paid
+        // (hoáº·c Cancelled). VÃ¬ váº­y Completed váº«n pháº£i cháº·n táº¡o Ä‘Æ¡n má»›i trÃªn cÃ¹ng bÃ n.
         var tableHasOpenOrder = await _db.Orders.AnyAsync(
             o => o.TableId == request.TableId
               && o.Status != OrderStatuses.Paid
@@ -242,17 +415,26 @@ public sealed class OrderService
             TableId = request.TableId,
             CreatedBy = createdBy,
             Status = OrderStatuses.Pending,
+            // Đợt 3 / B3: ghi chú cho cả hoá đơn (tuỳ chọn khi tạo đơn).
+            Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
 
-        var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, ct);
+        var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, createdBy, ct);
         order.Subtotal = orderItems.Sum(x => x.UnitPrice * x.Quanlity);
-        order.TotalAmount = order.Subtotal;
+        order.DiscountAmount = 0m;
+        // Đợt 2 / A1: trước đây chỗ này gán `Total = Subtotal` (thiếu VAT lẫn phí dịch vụ)
+        // ⇒ đơn sai ngay từ lúc tạo cho tới lần sửa món đầu tiên.
+        OrderTotalsCalculator.Apply(order, settings);
         order.Status = OrderStatuses.SentToKitchen;
         await _db.SaveChangesAsync(ct);
+
+        // P0-03: lịch sử đơn phải có điểm bắt đầu (Pending → SentToKitchen), không bắt đầu
+        // giữa chừng.
+        _lifecycle.RecordOrderCreated(order, createdBy, "Order created");
 
         // Create the kitchen ticket only after every order item has been persisted.
         var kitchenOrder = new KitchenOrder
@@ -267,7 +449,7 @@ public sealed class OrderService
 
         AddKitchenItems(kitchenOrder, orderItems);
 
-        // P1a: ghi ledger kho theo từng dòng món để huỷ món/đơn hoàn đúng phần đã trừ.
+        // P1a: ghi ledger kho theo tá»«ng dÃ²ng mÃ³n Ä‘á»ƒ huá»· mÃ³n/Ä‘Æ¡n hoÃ n Ä‘Ãºng pháº§n Ä‘Ã£ trá»«.
         ApplyItemStock(itemRequirements, orderItems, stockDeltas, order.OrderId, createdBy);
 
         await _db.SaveChangesAsync(ct);
@@ -276,131 +458,19 @@ public sealed class OrderService
         return order;
     }
 
-    /// <summary>
-    /// LEGACY (C-09) — KHÔNG còn expose qua HTTP.
-    ///
-    /// <para>
-    /// Route <c>PUT /api/orders/{id}/items</c> đã bị chặn (trả <c>410 Gone</c>) vì
-    /// replace-all xoá hẳn dòng món cũ (mất liên kết ledger + dấu vết huỷ), ghi ledger ở
-    /// cấp đơn nên huỷ món sau đó phải ước tính lại từ công thức, và không ghi history món.
-    /// Thay bằng: <c>AddItemsAsync</c> (gọi thêm), <c>AdjustItemQuantityAsync</c> (đổi số
-    /// lượng) và <c>CancelItemAsync</c> (hủy 1 món).
-    /// </para>
-    ///
-    /// <para>
-    /// Method này chỉ còn lại cho test mô tả hành vi cũ; không được gọi từ code mới.
-    /// Xoá hẳn khi không còn client nào dùng.
-    /// </para>
-    /// </summary>
-    public async Task<bool> UpdateItemsAsync(
-        int orderId,
-        UpdateOrderItemsRequest request,
-        CancellationToken ct)
-    {
-        if (request.Items is null || request.Items.Count == 0)
-            throw new ArgumentException("Order must contain at least one item");
-
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-
-        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
-        if (order is null) return false;
-
-        if (!string.Equals(order.Status, OrderStatuses.Pending, StringComparison.OrdinalIgnoreCase) &&
-            !string.Equals(order.Status, OrderStatuses.SentToKitchen, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException($"Order is {order.Status} and can no longer be edited");
-        }
-
-        var kitchenOrder = await _db.KitchenOrders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
-        if (kitchenOrder is not null)
-        {
-            if (!string.Equals(kitchenOrder.Status, "Pending", StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Kitchen has already started this order");
-
-            var kitchenItems = await _db.KitchenOrderItems
-                .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
-                .ToListAsync(ct);
-
-            if (kitchenItems.Any(x => !string.Equals(x.Status, "Pending", StringComparison.OrdinalIgnoreCase)))
-                throw new InvalidOperationException("Kitchen has already started this order");
-
-            _db.KitchenOrderItems.RemoveRange(kitchenItems);
-            await _db.SaveChangesAsync(ct);
-        }
-
-        var existingItems = await _db.OrderItems
-            .Where(x => x.OrderId == orderId)
-            .ToListAsync(ct);
-        var existingItemIds = existingItems.Select(x => x.Id).ToList();
-        var existingToppings = existingItemIds.Count == 0
-            ? []
-            : await _db.OrderItemToppings
-                .Where(x => existingItemIds.Contains(x.OrderItemId))
-                .ToListAsync(ct);
-
-        var oldRequirements = await LoadOrderConsumptionAsync(orderId, existingItems, ct);
-        var preparedItems = await PrepareItemsAsync(request.Items, ct);
-        var newRequirements = await CalculateRequirementsAsync(preparedItems, ct);
-        var stockDeltas = await PrepareStockDeltasAsync(oldRequirements, newRequirements, ct);
-
-        _db.OrderItemToppings.RemoveRange(existingToppings);
-        _db.OrderItems.RemoveRange(existingItems);
-        await _db.SaveChangesAsync(ct);
-
-        var orderItems = await AddOrderItemsAsync(orderId, preparedItems, ct);
-        order.Subtotal = orderItems.Sum(x => x.UnitPrice * x.Quanlity);
-        // Sửa món làm thay đổi cơ sở tính khuyến mãi; bỏ discount cũ để tránh áp sai.
-        order.DiscountAmount = 0m;
-        order.TotalAmount = Math.Round(order.Subtotal + order.TaxAmount, 2, MidpointRounding.AwayFromZero);
-        order.UpdatedAt = DateTime.UtcNow;
-
-        var changedBy = await _currentUser.ResolveExistingActorAsync(
-            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
-
-        if (kitchenOrder is null)
-        {
-            kitchenOrder = new KitchenOrder
-            {
-                OrderId = orderId,
-                Status = "Pending",
-                SentAt = DateTime.UtcNow,
-                Priority = 0
-            };
-            _db.KitchenOrders.Add(kitchenOrder);
-            await _db.SaveChangesAsync(ct);
-        }
-
-        AddKitchenItems(kitchenOrder, orderItems);
-
-        if (string.Equals(order.Status, OrderStatuses.Pending, StringComparison.OrdinalIgnoreCase))
-        {
-            await _lifecycle.ApplyOrderStatusAsync(
-                order,
-                OrderStatuses.SentToKitchen,
-                changedBy,
-                "Order items updated",
-                cancelReason: null,
-                ct);
-        }
-
-        ApplyStockDeltas(stockDeltas, orderId, changedBy, isEdit: true);
-
-        await _db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
-        await _tables.RefreshStatusForTableAsync(order.TableId, ct);
-        return true;
-    }
 
     /// <summary>
-    /// Gọi thêm món vào đơn đang mở. Luôn tạo một round/ticket bếp mới; không replace-all
-    /// và không đụng các dòng/ticket cũ. Order <c>Completed</c> được mở lại thành
-    /// <c>SentToKitchen</c> nhưng bàn vẫn <c>Occupied</c>.
+    /// Gá»i thÃªm mÃ³n vÃ o Ä‘Æ¡n Ä‘ang má»Ÿ. LuÃ´n táº¡o má»™t round/ticket báº¿p má»›i; khÃ´ng replace-all
+    /// vÃ  khÃ´ng Ä‘á»¥ng cÃ¡c dÃ²ng/ticket cÅ©. Order <c>Completed</c> Ä‘Æ°á»£c má»Ÿ láº¡i thÃ nh
+    /// <c>SentToKitchen</c> nhÆ°ng bÃ n váº«n <c>Occupied</c>.
     /// </summary>
     public async Task<bool> AddItemsAsync(
         int orderId,
         AddOrderItemsRequest request,
         CancellationToken ct)
     {
+        // Đợt 2 / A1: cấu hình quán đọc trước transaction.
+        var settings = await _settings.GetAsync(ct);
         if (request.Items is null || request.Items.Count == 0)
             throw new ArgumentException("Order must contain at least one item");
 
@@ -446,14 +516,14 @@ public sealed class OrderService
         _db.KitchenOrders.Add(kitchenOrder);
         await _db.SaveChangesAsync(ct);
 
-        var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, ct);
+        var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, changedBy, ct);
         AddKitchenItems(kitchenOrder, orderItems);
         ApplyItemStock(itemRequirements, orderItems, stockDeltas, order.OrderId, changedBy);
 
         var allItems = await _db.OrderItems
             .Where(x => x.OrderId == order.OrderId)
             .ToListAsync(ct);
-        OrderItemMutations.RecalculateTotals(order, allItems, now);
+        OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
 
         var statusChanged = await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
             order,
@@ -475,20 +545,102 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Giảm/tăng số lượng của một món, kể cả sau khi bếp đã nhận.
+    /// Gọi thêm món, hỗ trợ header <c>Idempotency-Key</c> (Đợt 2 / A5).
     ///
     /// <para>
-    /// Cách A: các dòng đã tách (prepared/pending) được cộng dồn theo <c>OrderItemGroupId</c>.
-    /// Giảm chỉ tác động phần chưa nấu; giảm xuống dưới số đã nấu bị chặn (409) trừ khi
-    /// Admin bật <c>AllowWastage</c>. Tăng sau ticket <c>Completed</c> tạo round/ticket mới.
+    /// Bấm "gọi thêm" 2 lần (double-click, retry mạng) chỉ tạo **một** round bếp và trừ kho
+    /// **một** lần. Không có header thì hành vi cũ (không chống trùng).
     /// </para>
     /// </summary>
+    public async Task<OrderDetailResponse?> AddItemsIdempotentAsync(
+        int orderId,
+        AddOrderItemsRequest request,
+        string? idempotencyKey,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            if (!await AddItemsAsync(orderId, request, ct)) return null;
+            return await GetAsync(orderId, ct);
+        }
+
+        var key = idempotencyKey.Trim();
+        if (key.Length > 128)
+        {
+            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
+        }
+
+        var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
+        var fingerprint = BuildFingerprint($"orders/{orderId}/items", request);
+
+        return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
+            $"{scope}:orders:{orderId}:items:{key}",
+            fingerprint,
+            async token =>
+            {
+                if (!await AddItemsAsync(orderId, request, token)) return null!;
+                return await GetAsync(orderId, token);
+            },
+            ct);
+    }
+
+    /// <summary>
+    /// Giáº£m/tÄƒng sá»‘ lÆ°á»£ng cá»§a má»™t mÃ³n, ká»ƒ cáº£ sau khi báº¿p Ä‘Ã£ nháº­n.
+    ///
+    /// <para>
+    /// CÃ¡ch A: cÃ¡c dÃ²ng Ä‘Ã£ tÃ¡ch (prepared/pending) Ä‘Æ°á»£c cá»™ng dá»“n theo <c>OrderItemGroupId</c>.
+    /// Giáº£m chá»‰ tÃ¡c Ä‘á»™ng pháº§n chÆ°a náº¥u; giáº£m xuá»‘ng dÆ°á»›i sá»‘ Ä‘Ã£ náº¥u bá»‹ cháº·n (409) trá»« khi
+    /// Admin báº­t <c>AllowWastage</c>. TÄƒng sau ticket <c>Completed</c> táº¡o round/ticket má»›i.
+    /// </para>
+    /// </summary>
+    /// <summary>
+    /// Đổi số lượng món, hỗ trợ header <c>Idempotency-Key</c> (Đợt 2 / A5).
+    ///
+    /// <para>
+    /// Bấm "giảm số lượng" 2 lần chỉ áp dụng **một** lần ⇒ không trừ/trả kho 2 lần.
+    /// </para>
+    /// </summary>
+    public async Task<OrderDetailResponse?> AdjustItemQuantityIdempotentAsync(
+        int orderId,
+        int itemId,
+        AdjustOrderItemQuantityRequest request,
+        string? idempotencyKey,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            if (!await AdjustItemQuantityAsync(orderId, itemId, request, ct)) return null;
+            return await GetAsync(orderId, ct);
+        }
+
+        var key = idempotencyKey.Trim();
+        if (key.Length > 128)
+        {
+            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
+        }
+
+        var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
+        var fingerprint = BuildFingerprint($"orders/{orderId}/items/{itemId}/quantity", request);
+
+        return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
+            $"{scope}:orders:{orderId}:items:{itemId}:quantity:{key}",
+            fingerprint,
+            async token =>
+            {
+                if (!await AdjustItemQuantityAsync(orderId, itemId, request, token)) return null!;
+                return await GetAsync(orderId, token);
+            },
+            ct);
+    }
+
     public async Task<bool> AdjustItemQuantityAsync(
         int orderId,
         int itemId,
         AdjustOrderItemQuantityRequest request,
         CancellationToken ct)
     {
+        // Đợt 2 / A1: cấu hình quán đọc trước transaction.
+        var settings = await _settings.GetAsync(ct);
         if ((request.Quantity is null) == (request.Delta is null))
             throw new ArgumentException("Provide exactly one of quantity or delta");
 
@@ -531,13 +683,27 @@ public sealed class OrderService
             throw new InvalidOperationException("Order item is already cancelled");
 
         var currentQuantity = activeItems.Sum(x => x.Quanlity);
+
+        // C-13: má»‘c "Preparing" lÃ  má»‘c KHÃ“A vá»›i POS â€” báº¿p Ä‘Ã£ báº¯t Ä‘áº§u lÃ m thÃ¬ nguyÃªn liá»‡u Ä‘Ã£
+        // tiÃªu tháº­t, mÃ³n Ä‘Ã³ khÃ´ng cÃ²n hoÃ n kho Ä‘Æ°á»£c, chá»‰ ghi hao há»¥t (wastage).
+        // TÃ¡ch 3 nhÃ³m Ä‘á»ƒ luá»“ng giáº£m xá»­ lÃ½ Ä‘Ãºng theo má»‘c tráº¡ng thÃ¡i:
+        //   notStarted (Pending)  â†’ cÃ²n hoÃ n kho Ä‘Æ°á»£c
+        //   inProgress (Preparing) â†’ Ä‘Ã£ tiÃªu tháº­t â‡’ wastage
+        //   prepared (Ready/Completed) â†’ Ä‘Ã£ ra Ä‘Ä©a â‡’ wastage (chá»‰ Admin Ä‘Æ°á»£c phÃ©p)
         var preparedItems = activeItems
             .Where(x => KitchenStatuses.IsDone(EffectiveStatus(x)))
             .ToList();
         var preparedQuantity = preparedItems.Sum(x => x.Quanlity);
-        var pendingItems = activeItems
-            .Where(x => !KitchenStatuses.IsDone(EffectiveStatus(x)))
+        var notStartedItems = activeItems
+            .Where(x => KitchenStatuses.IsPending(EffectiveStatus(x)))
             .ToList();
+        // Má»i thá»© chÆ°a "Pending" vÃ  chÆ°a "xong" (ká»ƒ cáº£ tráº¡ng thÃ¡i láº¡) â‡’ coi nhÆ° Ä‘Ã£ báº¯t Ä‘áº§u
+        // â‡’ khÃ´ng hoÃ n kho. An toÃ n hÆ¡n lÃ  nháº£ tá»“n kho cho mÃ³n Ä‘ang náº¥u.
+        var inProgressItems = activeItems
+            .Where(x => !KitchenStatuses.IsDone(EffectiveStatus(x))
+                     && !KitchenStatuses.IsPending(EffectiveStatus(x)))
+            .ToList();
+        var pendingItems = notStartedItems.Concat(inProgressItems).ToList();
 
         int targetQuantity;
         if (request.Quantity is not null)
@@ -571,33 +737,46 @@ public sealed class OrderService
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
         var affectedTicketIds = new HashSet<int>();
-        var createdNewRound = false;
+        string? quantityNote = null;
 
         if (targetQuantity > currentQuantity)
         {
             var added = targetQuantity - currentQuantity;
 
+            // C-20: nạp sẵn phiếu bếp của nhóm dòng (tránh truy vấn lặp trong vòng lặp).
+            var ticketIds = groupKitchenItems.Select(x => x.KitchenOrderId).Distinct().ToList();
+            var ticketsById = await _db.KitchenOrders
+                .Where(t => ticketIds.Contains(t.KitchenOrderId))
+                .ToDictionaryAsync(t => t.KitchenOrderId, ct);
+
+            // Phiếu vừa tạo trong chính lần này (chưa có trong DB) cũng phải dùng được.
+            foreach (var local in _db.KitchenOrders.Local)
+            {
+                ticketsById[local.KitchenOrderId] = local;
+            }
+
+            // C-20: chỉ GỘP vào dòng còn `Pending` (bếp chưa bắt đầu nấu).
+            // Món đã vào nấu / đã ra đĩa ⇒ TÁCH thành dòng `Pending` mới nằm dưới (nhánh else).
             var pendingCandidate = pendingItems
                 .Where(x =>
                 {
                     if (!kitchenByOrderItem.TryGetValue(x.Id, out var kitchenItem))
                         return false;
 
-                    var ticket = _db.KitchenOrders.Local
-                        .FirstOrDefault(t => t.KitchenOrderId == kitchenItem.KitchenOrderId);
-                    ticket ??= _db.KitchenOrders
-                        .FirstOrDefault(t => t.KitchenOrderId == kitchenItem.KitchenOrderId);
+                    if (!KitchenStatuses.IsPending(kitchenItem.Status))
+                        return false;
 
+                    var ticket = ticketsById.GetValueOrDefault(kitchenItem.KitchenOrderId);
                     return ticket is not null
                         && !KitchenStatuses.IsTerminal(ticket.Status)
-                        && !string.Equals(ticket.Status, KitchenStatuses.Ready, StringComparison.OrdinalIgnoreCase)
-                        && !KitchenStatuses.IsDone(kitchenItem.Status);
+                        && !string.Equals(ticket.Status, KitchenStatuses.Ready, StringComparison.OrdinalIgnoreCase);
                 })
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefault();
 
             if (pendingCandidate is not null)
             {
+                // Món vẫn chưa bếp bắt đầu ⇒ gộp chung vào dòng Pending, không tạo dòng mới.
                 var kitchenItem = kitchenByOrderItem[pendingCandidate.Id];
                 var oldQuantity = pendingCandidate.Quanlity;
                 pendingCandidate.Quanlity += added;
@@ -624,12 +803,45 @@ public sealed class OrderService
             }
             else
             {
-                // Tăng sau khi mọi phần đã nấu xong: tạo round/ticket mới, không mở lại dòng cũ.
+                // C-20: món đã vào nấu / đã ra đĩa ⇒ TÁCH thành dòng `Pending` MỚI nằm dưới,
+                // KHÔNG cộng vào dòng đang nấu (giống cách bếp thật xử lý).
+                //   - Món còn nằm trong một phiếu CHƯA ĐÓNG ⇒ dòng mới nằm trong chính phiếu đó,
+                //     bếp thấy "Gà rán 2 (đang nấu)" rồi "Gà rán 3 (chờ nấu)" ngay dưới.
+                //   - Phiếu đã Ready / đã đóng ⇒ tạo phiếu mới (giống "gọi thêm").
+                //
+                // Tách dòng (thay vì gộp) còn giúp phần mới vẫn giữ trạng thái `Pending`:
+                // sau này huỷ/giam ⇒ phần mới còn hoàn kho được, phần đang nấu mới thành wastage.
+                var reuseTicket = groupKitchenItems
+                    .OrderByDescending(x => x.Id)
+                    .Select(x => ticketsById.GetValueOrDefault(x.KitchenOrderId))
+                    .FirstOrDefault(t => t is not null
+                                          && !KitchenStatuses.IsTerminal(t.Status)
+                                          && !string.Equals(t.Status, KitchenStatuses.Ready, StringComparison.OrdinalIgnoreCase));
+
                 var newItem = OrderItemMutations.CloneLine(
                     source, added, KitchenStatuses.Pending, now);
                 _db.OrderItems.Add(newItem);
                 await _db.SaveChangesAsync(ct);
                 await OrderItemMutations.CopyToppingsAsync(_db, source.Id, newItem.Id, ct);
+
+                var targetTicket = reuseTicket;
+                if (targetTicket is null)
+                {
+                    targetTicket = new KitchenOrder
+                    {
+                        OrderId = order.OrderId,
+                        Status = KitchenStatuses.Pending,
+                        SentAt = now,
+                        Priority = 0
+                    };
+                    _db.KitchenOrders.Add(targetTicket);
+                    await _db.SaveChangesAsync(ct);
+                    quantityNote = "Quantity increased (new kitchen round)";
+                }
+                else
+                {
+                    quantityNote = "Quantity increased (new pending line, kitchen already started this dish)";
+                }
 
                 OrderItemMutations.RecordItemHistory(
                     _db,
@@ -639,22 +851,13 @@ public sealed class OrderService
                     KitchenStatuses.Pending,
                     changedBy,
                     now,
-                    $"Created with quantity {newItem.Quanlity} (new kitchen round)",
+                    $"Created with quantity {newItem.Quanlity}"
+                        + (reuseTicket is null ? " (new kitchen round)" : " (new pending line)"),
                     reasonCode);
-
-                var kitchenOrder = new KitchenOrder
-                {
-                    OrderId = order.OrderId,
-                    Status = KitchenStatuses.Pending,
-                    SentAt = now,
-                    Priority = 0
-                };
-                _db.KitchenOrders.Add(kitchenOrder);
-                await _db.SaveChangesAsync(ct);
 
                 _db.KitchenOrderItems.Add(new KitchenOrderItem
                 {
-                    KitchenOrderId = kitchenOrder.KitchenOrderId,
+                    KitchenOrderId = targetTicket.KitchenOrderId,
                     OrderItemId = newItem.Id,
                     Quanlity = newItem.Quanlity,
                     Status = KitchenStatuses.Pending,
@@ -668,12 +871,19 @@ public sealed class OrderService
                 ApplyItemStock(
                     [extraRequirements], [newItem], extraDeltas, order.OrderId, changedBy);
 
-                affectedTicketIds.Add(kitchenOrder.KitchenOrderId);
-                createdNewRound = true;
+                affectedTicketIds.Add(targetTicket.KitchenOrderId);
             }
         }
         else
         {
+            // C-13: mÃ³n Ä‘ang náº¥u Ä‘Ã£ bá»‹ "khÃ³a" vá»›i POS â€” chá»‰ báº¿p (Chef) hoáº·c Admin má»›i Ä‘Æ°á»£c
+            // Ä‘á»•i sá»‘ lÆ°á»£ng. Báº¿p váº«n dÃ¹ng Ä‘Æ°á»£c (C-13 Â§2.4).
+            if (inProgressItems.Count > 0 && !OrderCancellationPolicy.IsKitchenOrAdmin(_currentUser))
+            {
+                throw new UnauthorizedAccessException(
+                    "Only the kitchen can change the quantity of a dish that is already being prepared");
+            }
+
             if (targetQuantity < preparedQuantity)
             {
                 var isAdmin = _currentUser.Roles.Count == 0
@@ -697,92 +907,107 @@ public sealed class OrderService
                 _db, order.OrderId, ct);
             var returnsStock = OrderItemMutations.ReturnsStock(reasonCode);
 
-            // 1) Giảm/huỷ toàn bộ phần chưa nấu trước.
-            foreach (var line in pendingItems.OrderByDescending(x => x.Id))
+            // C-13: giáº£m theo má»‘c tráº¡ng thÃ¡i.
+            //   allowReturn = true  â†’ mÃ³n chÆ°a báº¯t Ä‘áº§u (Pending): cÃ²n hoÃ n kho Ä‘Æ°á»£c náº¿u lÃ½ do lÃ 
+            //                          khÃ¡ch Ä‘á»•i (CustomerChange).
+            //   allowReturn = false â†’ mÃ³n Ä‘Ã£ báº¯t Ä‘áº§u (Preparing) hoáº·c Ä‘Ã£ ra Ä‘Ä©a: nguyÃªn liá»‡u
+            //                          Ä‘Ã£ tiÃªu tháº­t â‡’ ghi hao há»¥t, khÃ´ng hoÃ n kho.
+            async Task ReduceAsync(List<OrderItem> lines, bool allowReturn)
             {
-                if (toRemove <= 0)
+                foreach (var line in lines.OrderByDescending(x => x.Id))
                 {
-                    break;
-                }
-
-                var take = Math.Min(line.Quanlity, toRemove);
-                kitchenByOrderItem.TryGetValue(line.Id, out var kitchenItem);
-
-                if (take >= line.Quanlity)
-                {
-                    if (returnsStock)
+                    if (toRemove <= 0)
                     {
-                        await OrderCancellation.ReturnStockForItemAsync(
-                            _db, order.OrderId, line, remainingConsumption, changedBy, now, ct);
+                        break;
+                    }
+
+                    var take = Math.Min(line.Quanlity, toRemove);
+                    kitchenByOrderItem.TryGetValue(line.Id, out var kitchenItem);
+
+                    if (take >= line.Quanlity)
+                    {
+                        if (allowReturn && returnsStock)
+                        {
+                            await OrderCancellation.ReturnStockForItemAsync(
+                                _db, order.OrderId, line, remainingConsumption, changedBy, now, ct);
+                        }
+                        else
+                        {
+                            await OrderItemMutations.RecordWastageAsync(
+                                _db, order.OrderId, line, line.Quanlity, changedBy, now,
+                                allowReturn ? reasonCode : OrderItemMutations.KitchenError,
+                                detail, ct);
+                        }
+
+                        OrderItemMutations.RecordItemHistory(
+                            _db,
+                            line,
+                            kitchenItem?.Id,
+                            line.Status,
+                            KitchenStatuses.Cancelled,
+                            changedBy,
+                            now,
+                            detail ?? $"Cancelled whole line (quantity {line.Quanlity})",
+                            reasonCode);
+
+                        OrderCancellation.MarkItemCancelled(
+                            line, now, changedBy, detail ?? reasonCode);
+
+                        if (kitchenItem is not null)
+                        {
+                            kitchenItem.Status = KitchenStatuses.Cancelled;
+                            affectedTicketIds.Add(kitchenItem.KitchenOrderId);
+                        }
                     }
                     else
                     {
-                        await OrderItemMutations.RecordWastageAsync(
-                            _db, order.OrderId, line, line.Quanlity, changedBy, now,
-                            reasonCode, detail, ct);
+                        if (allowReturn && returnsStock)
+                        {
+                            await OrderItemMutations.ReturnStockForPartialItemAsync(
+                                _db, order.OrderId, line, take, remainingConsumption, changedBy, now, ct);
+                        }
+                        else
+                        {
+                            await OrderItemMutations.RecordWastageAsync(
+                                _db, order.OrderId, line, take, changedBy, now,
+                                allowReturn ? reasonCode : OrderItemMutations.KitchenError,
+                                detail, ct);
+                        }
+
+                        var oldQuantity = line.Quanlity;
+                        line.Quanlity -= take;
+                        if (kitchenItem is not null)
+                        {
+                            kitchenItem.Quanlity = Math.Max(0, kitchenItem.Quanlity - take);
+                            affectedTicketIds.Add(kitchenItem.KitchenOrderId);
+                        }
+
+                        OrderItemMutations.RecordItemHistory(
+                            _db,
+                            line,
+                            kitchenItem?.Id,
+                            line.Status,
+                            line.Status,
+                            changedBy,
+                            now,
+                            detail is null
+                                ? $"Quantity {oldQuantity} -> {line.Quanlity}"
+                                : $"Quantity {oldQuantity} -> {line.Quanlity}: {detail}",
+                            reasonCode);
                     }
 
-                    OrderItemMutations.RecordItemHistory(
-                        _db,
-                        line,
-                        kitchenItem?.Id,
-                        line.Status,
-                        KitchenStatuses.Cancelled,
-                        changedBy,
-                        now,
-                        detail ?? $"Cancelled whole line (quantity {line.Quanlity})",
-                        reasonCode);
-
-                    OrderCancellation.MarkItemCancelled(
-                        line, now, changedBy, detail ?? reasonCode);
-
-                    if (kitchenItem is not null)
-                    {
-                        kitchenItem.Status = KitchenStatuses.Cancelled;
-                        affectedTicketIds.Add(kitchenItem.KitchenOrderId);
-                    }
+                    toRemove -= take;
                 }
-                else
-                {
-                    if (returnsStock)
-                    {
-                        await OrderItemMutations.ReturnStockForPartialItemAsync(
-                            _db, order.OrderId, line, take, remainingConsumption, changedBy, now, ct);
-                    }
-                    else
-                    {
-                        await OrderItemMutations.RecordWastageAsync(
-                            _db, order.OrderId, line, take, changedBy, now,
-                            reasonCode, detail, ct);
-                    }
-
-                    var oldQuantity = line.Quanlity;
-                    line.Quanlity -= take;
-                    if (kitchenItem is not null)
-                    {
-                        kitchenItem.Quanlity = Math.Max(0, kitchenItem.Quanlity - take);
-                        affectedTicketIds.Add(kitchenItem.KitchenOrderId);
-                    }
-
-                    OrderItemMutations.RecordItemHistory(
-                        _db,
-                        line,
-                        kitchenItem?.Id,
-                        line.Status,
-                        line.Status,
-                        changedBy,
-                        now,
-                        detail is null
-                            ? $"Quantity {oldQuantity} -> {line.Quanlity}"
-                            : $"Quantity {oldQuantity} -> {line.Quanlity}: {detail}",
-                        reasonCode);
-                }
-
-                toRemove -= take;
             }
 
-            // 2) Nếu vẫn còn phải giảm (target < prepared) thì đây là Admin override:
-            // phần đã nấu bị giảm, ghi wastage, tuyệt đối không hoàn kho.
+            // 1) Giáº£m pháº§n CHÆ¯A Báº®T Äáº¦U trÆ°á»›c (cÃ²n hoÃ n kho Ä‘Æ°á»£c).
+            await ReduceAsync(notStartedItems, allowReturn: true);
+
+            // 2) Giáº£m pháº§n ÄANG Náº¤U: nguyÃªn liá»‡u Ä‘Ã£ tiÃªu tháº­t â‡’ chá»‰ ghi hao há»¥t.
+            await ReduceAsync(inProgressItems, allowReturn: false);
+
+            // 2) Náº¿u váº«n cÃ²n pháº£i giáº£m (target < prepared) thÃ¬ Ä‘Ã¢y lÃ  Admin override:
+            // pháº§n Ä‘Ã£ náº¥u bá»‹ giáº£m, ghi wastage, tuyá»‡t Ä‘á»‘i khÃ´ng hoÃ n kho.
             foreach (var line in preparedItems.OrderByDescending(x => x.Id))
             {
                 if (toRemove <= 0)
@@ -873,26 +1098,25 @@ public sealed class OrderService
             .Where(x => x.OrderId == order.OrderId)
             .ToListAsync(ct);
 
-        // Huỷ dòng cuối cùng = huỷ cả đơn: giữ Subtotal/TotalAmount lịch sử, giống
-        // CancelItemAsync/CancelOrderAsync. Chỉ tính lại khi còn món hoạt động.
+        // Huá»· dÃ²ng cuá»‘i cÃ¹ng = huá»· cáº£ Ä‘Æ¡n: giá»¯ Subtotal/TotalAmount lá»‹ch sá»­, giá»‘ng
+        // CancelItemAsync/CancelOrderAsync. Chá»‰ tÃ­nh láº¡i khi cÃ²n mÃ³n hoáº¡t Ä‘á»™ng.
         if (allItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
-            OrderItemMutations.RecalculateTotals(order, allItems, now);
+            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
         }
 
         var statusChanged = await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
             order,
             changedBy,
-            createdNewRound
-                ? "Quantity increased (new kitchen round)"
-                : "Order item quantity adjusted",
+            quantityNote ?? "Order item quantity adjusted",
             allowReopen: targetQuantity > currentQuantity,
             cancelReason: targetQuantity == 0 ? (detail ?? reasonCode) : null,
-            ct);
+            ct,
+            reasonCode: reasonCode);
 
-        if (!statusChanged && createdNewRound)
+        if (!statusChanged && quantityNote is not null)
         {
-            _lifecycle.RecordOrderNote(order, changedBy, "Quantity increased (new kitchen round)");
+            _lifecycle.RecordOrderNote(order, changedBy, quantityNote);
         }
 
         await _db.SaveChangesAsync(ct);
@@ -915,8 +1139,8 @@ public sealed class OrderService
             if (itemRequest.Toppings is null)
                 throw new ArgumentException("Order item toppings cannot be null");
 
-            // P1: chỉ kiểm FoodSize.IsActive là chưa đủ — món đã ngừng bán/soft-delete
-            // vẫn có size active, nên phải join Foods và kiểm cả IsActive/IsAvailable.
+            // P1: chá»‰ kiá»ƒm FoodSize.IsActive lÃ  chÆ°a Ä‘á»§ â€” mÃ³n Ä‘Ã£ ngá»«ng bÃ¡n/soft-delete
+            // váº«n cÃ³ size active, nÃªn pháº£i join Foods vÃ  kiá»ƒm cáº£ IsActive/IsAvailable.
             var size = await (
                 from fs in _db.FoodSizes.AsNoTracking()
                 join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId
@@ -943,7 +1167,7 @@ public sealed class OrderService
 
             foreach (var toppingRequest in itemRequest.Toppings)
             {
-                // Defect #19: topping phải được gán cho đúng món qua FoodToppings.
+                // Defect #19: topping pháº£i Ä‘Æ°á»£c gÃ¡n cho Ä‘Ãºng mÃ³n qua FoodToppings.
                 var topping = await (
                     from t in _db.Toppings.AsNoTracking()
                     join ft in _db.FoodToppings.AsNoTracking() on t.ToppingId equals ft.ToppingId
@@ -975,8 +1199,8 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Nhu cầu nguyên liệu của từng dòng món, giữ đúng thứ tự với <paramref name="items"/>.
-    /// Dùng để ghi ledger kho theo món khi tạo đơn.
+    /// Nhu cáº§u nguyÃªn liá»‡u cá»§a tá»«ng dÃ²ng mÃ³n, giá»¯ Ä‘Ãºng thá»© tá»± vá»›i <paramref name="items"/>.
+    /// DÃ¹ng Ä‘á»ƒ ghi ledger kho theo mÃ³n khi táº¡o Ä‘Æ¡n.
     /// </summary>
     private async Task<List<Dictionary<int, decimal>>> CalculateItemRequirementsAsync(
         IReadOnlyList<PreparedOrderItem> items,
@@ -1009,11 +1233,6 @@ public sealed class OrderService
 
         return result;
     }
-
-    private async Task<Dictionary<int, decimal>> CalculateRequirementsAsync(
-        IReadOnlyList<PreparedOrderItem> items,
-        CancellationToken ct) =>
-        AggregateRequirements(await CalculateItemRequirementsAsync(items, ct));
 
     private static Dictionary<int, decimal> AggregateRequirements(
         IReadOnlyList<Dictionary<int, decimal>> itemRequirements)
@@ -1079,7 +1298,7 @@ public sealed class OrderService
                     $"Insufficient ingredient: {ingredientName}. Required {delta}, available {stock.Quanlity}");
             }
 
-            deltas.Add(new StockDelta(stock, ingredientId, delta));
+            deltas.Add(new StockDelta(stock, ingredientId, delta, ingredient?.Unit));
         }
 
         return deltas;
@@ -1088,6 +1307,7 @@ public sealed class OrderService
     private async Task<List<OrderItem>> AddOrderItemsAsync(
         int orderId,
         IReadOnlyList<PreparedOrderItem> preparedItems,
+        int changedBy,
         CancellationToken ct)
     {
         var now = DateTime.UtcNow;
@@ -1111,6 +1331,19 @@ public sealed class OrderService
         for (var i = 0; i < orderItems.Count; i++)
         {
             var orderItem = orderItems[i];
+
+            // P0-04: dÃ²ng mÃ³n vá»«a táº¡o cÅ©ng pháº£i cÃ³ dÃ²ng audit, náº¿u khÃ´ng lá»‹ch sá»­ mÃ³n chá»‰
+            // báº¯t Ä‘áº§u tá»« láº§n sá»­a Ä‘áº§u tiÃªn (khÃ´ng biáº¿t mÃ³n vÃ o báº¿p lÃºc nÃ o).
+            OrderItemMutations.RecordItemHistory(
+                _db,
+                orderItem,
+                kitchenOrderItemId: null,
+                oldStatus: string.Empty,
+                KitchenStatuses.Pending,
+                changedBy,
+                now,
+                "Dish added to order");
+
             foreach (var topping in preparedItems[i].Toppings)
             {
                 _db.OrderItemToppings.Add(new OrderItemTopping
@@ -1140,66 +1373,9 @@ public sealed class OrderService
         }));
     }
 
-    private async Task<Dictionary<int, decimal>> LoadOrderConsumptionAsync(
-        int orderId,
-        IReadOnlyList<OrderItem> existingItems,
-        CancellationToken ct)
-    {
-        var transactions = await _db.InventoryTransactions
-            .AsNoTracking()
-            .Where(x => x.ReferenceType == "Order" && x.ReferenceId == orderId)
-            .Select(x => new { x.IngredientId, x.Type, x.Quanlity })
-            .ToListAsync(ct);
-
-        var consumption = new Dictionary<int, decimal>();
-
-        foreach (var transaction in transactions)
-        {
-            var delta = transaction.Type switch
-            {
-                "Sale" => transaction.Quanlity,
-                "AdjustmentIn" => -transaction.Quanlity,
-                "AdjustmentOut" => transaction.Quanlity,
-                // Wastage zero-stock nhưng không còn là phần tiêu hao có thể hoàn.
-                "Wastage" => -transaction.Quanlity,
-                _ => 0m
-            };
-
-            consumption[transaction.IngredientId] =
-                consumption.GetValueOrDefault(transaction.IngredientId) + delta;
-        }
-
-        if (transactions.Count > 0)
-        {
-            return consumption
-                .Where(x => x.Value > 0)
-                .ToDictionary(x => x.Key, x => x.Value);
-        }
-
-        // Legacy order chưa có InventoryTransactions: ước tính lại từ món hiện tại.
-        foreach (var item in existingItems)
-        {
-            var recipeIngredients = await (
-                from recipe in _db.Recipes.AsNoTracking()
-                join recipeIngredient in _db.RecipeIngredients.AsNoTracking()
-                    on recipe.RecipeId equals recipeIngredient.RecipeId
-                where recipe.SizeId == item.SizeId && recipe.IsActive
-                select recipeIngredient).ToListAsync(ct);
-
-            foreach (var ingredient in recipeIngredients)
-            {
-                consumption[ingredient.IngredientId] =
-                    consumption.GetValueOrDefault(ingredient.IngredientId)
-                    + ingredient.Quanlity * item.Quanlity;
-            }
-        }
-
-        return consumption;
-    }
-
     /// <summary>
-    /// Trừ kho và ghi một giao dịch <c>Sale</c> cho mỗi cặp (dòng món, nguyên liệu) khi tạo đơn.
-    /// Nhờ <c>OrderItemId</c>, huỷ đúng món sẽ hoàn đúng phần nguyên liệu của món đó.
+    /// Trá»« kho vÃ  ghi má»™t giao dá»‹ch <c>Sale</c> cho má»—i cáº·p (dÃ²ng mÃ³n, nguyÃªn liá»‡u) khi táº¡o Ä‘Æ¡n.
+    /// Nhá» <c>OrderItemId</c>, huá»· Ä‘Ãºng mÃ³n sáº½ hoÃ n Ä‘Ãºng pháº§n nguyÃªn liá»‡u cá»§a mÃ³n Ä‘Ã³.
     /// </summary>
     private void ApplyItemStock(
         IReadOnlyList<Dictionary<int, decimal>> itemRequirements,
@@ -1210,6 +1386,7 @@ public sealed class OrderService
     {
         var now = DateTime.UtcNow;
         var stocks = stockDeltas.ToDictionary(x => x.IngredientId, x => x.Stock);
+        var units = stockDeltas.ToDictionary(x => x.IngredientId, x => x.Unit);
 
         for (var i = 0; i < orderItems.Count; i++)
         {
@@ -1237,6 +1414,8 @@ public sealed class OrderService
                     Quanlity = quantity,
                     QuanlityBefore = before,
                     QuanlityAfter = stock.Quanlity,
+                    // C-17: ledger ghi kèm đơn vị tính lúc tiêu hao.
+                    Unit = units.GetValueOrDefault(ingredientId),
                     ReferenceType = "Order",
                     ReferenceId = orderId,
                     OrderItemId = orderItems[i].Id,
@@ -1248,45 +1427,18 @@ public sealed class OrderService
         }
     }
 
-    private void ApplyStockDeltas(
-        IReadOnlyList<StockDelta> deltas,
-        int orderId,
-        int createdBy,
-        bool isEdit)
+    private static string BuildIdempotencyFingerprint(CreateOrderRequest request) =>
+        BuildFingerprint("orders", request);
+
+    /// <summary>
+    /// Fingerprint của payload: SHA-256 của <c>scope + JSON payload</c>. Cùng key nhưng
+    /// payload khác ⇒ báo lỗi (409) thay vì âm thầm trả kết quả cũ.
+    /// </summary>
+    private static string BuildFingerprint(string scope, object payload)
     {
-        var now = DateTime.UtcNow;
-
-        foreach (var delta in deltas)
-        {
-            var before = delta.Stock.Quanlity;
-            delta.Stock.Quanlity -= delta.Delta;
-            delta.Stock.UpdatedAt = now;
-
-            var isConsumption = delta.Delta > 0;
-            _db.InventoryTransactions.Add(new InventoryTransaction
-            {
-                IngredientId = delta.IngredientId,
-                Type = isConsumption ? "Sale" : "AdjustmentIn",
-                Quanlity = Math.Abs(delta.Delta),
-                QuanlityBefore = before,
-                QuanlityAfter = delta.Stock.Quanlity,
-                ReferenceType = "Order",
-                ReferenceId = orderId,
-                CreatedAt = now,
-                CreatedBy = createdBy,
-                Note = isEdit
-                    ? (isConsumption
-                        ? "Additional consumption when order items were updated"
-                        : "Returned stock when order items were updated")
-                    : "Automatically deducted when order was sent to kitchen"
-            });
-        }
-    }
-
-    private static string BuildIdempotencyFingerprint(CreateOrderRequest request)
-    {
-        var json = JsonSerializer.Serialize(request);
-        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
+        var json = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
+        return Convert.ToHexString(SHA256.HashData(bytes));
     }
 
     private sealed record PreparedOrderItem(
@@ -1304,11 +1456,12 @@ public sealed class OrderService
     private sealed record StockDelta(
         Inventory Stock,
         int IngredientId,
-        decimal Delta);
+        decimal Delta,
+        string? Unit);
 
     /// <summary>
-    /// Lịch sử trạng thái đơn cho <c>GET /api/orders/{id}/history</c> (P1), sắp xếp theo thời gian tăng dần.
-    /// Trả <c>null</c> khi đơn không tồn tại để controller map thành 404 (đơn rỗng cũng là 200 `[]`).
+    /// Lá»‹ch sá»­ tráº¡ng thÃ¡i Ä‘Æ¡n cho <c>GET /api/orders/{id}/history</c> (P1), sáº¯p xáº¿p theo thá»i gian tÄƒng dáº§n.
+    /// Tráº£ <c>null</c> khi Ä‘Æ¡n khÃ´ng tá»“n táº¡i Ä‘á»ƒ controller map thÃ nh 404 (Ä‘Æ¡n rá»—ng cÅ©ng lÃ  200 `[]`).
     /// </summary>
     public async Task<List<OrderStatusHistoryResponse>?> GetHistoryAsync(int orderId, CancellationToken ct = default)
     {
@@ -1330,13 +1483,14 @@ public sealed class OrderService
                 ChangedBy = h.ChangedBy,
                 ChangedByName = u != null ? u.UserFullName : null,
                 Note = h.Note,
+                ReasonCode = h.ReasonCode,
                 CreatedAt = h.CreatedAt
             }).ToListAsync(ct);
     }
 
     /// <summary>
-    /// C-10: lịch sử thay đổi trạng thái/số lượng từng dòng món của đơn.
-    /// Trả <c>null</c> khi đơn không tồn tại; đơn không có lịch sử trả <c>[]</c>.
+    /// C-10: lá»‹ch sá»­ thay Ä‘á»•i tráº¡ng thÃ¡i/sá»‘ lÆ°á»£ng tá»«ng dÃ²ng mÃ³n cá»§a Ä‘Æ¡n.
+    /// Tráº£ <c>null</c> khi Ä‘Æ¡n khÃ´ng tá»“n táº¡i; Ä‘Æ¡n khÃ´ng cÃ³ lá»‹ch sá»­ tráº£ <c>[]</c>.
     /// </summary>
     public async Task<List<OrderItemHistoryResponse>?> GetItemHistoryAsync(
         int orderId,
@@ -1368,12 +1522,12 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Huỷ một dòng món tại POS/bếp (P1a/P1b).
+    /// Huá»· má»™t dÃ²ng mÃ³n táº¡i POS/báº¿p (P1a/P1b).
     ///
     /// <para>
-    /// Chỉ hoàn nguyên liệu khi món còn <c>Pending</c>; món đang nấu/đã ra đĩa không hoàn.
-    /// Dòng bị huỷ không còn được tính vào <c>Subtotal/TotalAmount</c>, và nếu đây là dòng cuối
-    /// cùng thì đơn tự chuyển <c>Cancelled</c> và trả bàn.
+    /// Chá»‰ hoÃ n nguyÃªn liá»‡u khi mÃ³n cÃ²n <c>Pending</c>; mÃ³n Ä‘ang náº¥u/Ä‘Ã£ ra Ä‘Ä©a khÃ´ng hoÃ n.
+    /// DÃ²ng bá»‹ huá»· khÃ´ng cÃ²n Ä‘Æ°á»£c tÃ­nh vÃ o <c>Subtotal/TotalAmount</c>, vÃ  náº¿u Ä‘Ã¢y lÃ  dÃ²ng cuá»‘i
+    /// cÃ¹ng thÃ¬ Ä‘Æ¡n tá»± chuyá»ƒn <c>Cancelled</c> vÃ  tráº£ bÃ n.
     /// </para>
     /// </summary>
     public async Task<bool> CancelItemAsync(
@@ -1382,6 +1536,8 @@ public sealed class OrderService
         CancelOrderItemRequest request,
         CancellationToken ct)
     {
+        // Đợt 2 / A1: cấu hình quán đọc trước transaction.
+        var settings = await _settings.GetAsync(ct);
         var reason = request.Reason?.Trim();
         if (string.IsNullOrWhiteSpace(reason))
             throw new ArgumentException("Cancel reason is required");
@@ -1406,8 +1562,10 @@ public sealed class OrderService
         if (KitchenStatuses.IsCancelled(item.Status))
             throw new InvalidOperationException("Order item is already cancelled");
 
-        var kitchenItem = await _db.KitchenOrderItems
-            .FirstOrDefaultAsync(x => x.OrderItemId == item.Id, ct);
+        // Láº¥y kitchen item Má»šI NHáº¤T. Sau khi tÃ¡ch dÃ²ng (prepared-quantity/shortage) má»™t
+        // OrderItem cÃ³ nhiá»u KitchenOrderItem; FirstOrDefault khÃ´ng ORDER BY sáº½ huá»· nháº§m
+        // phiáº¿u báº¿p. (P0-07)
+        var kitchenItem = await OrderItemMutations.FindKitchenItemAsync(_db, item.Id, ct);
         var kitchenOrder = kitchenItem is null
             ? null
             : await _db.KitchenOrders
@@ -1421,8 +1579,8 @@ public sealed class OrderService
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
 
-        // Chỉ món bếp chưa nhận mới xử lý nguyên liệu. Khách đổi món thì hoàn kho;
-        // hết hàng/hỏng/lỗi bếp thì ghi wastage, không hoàn tồn kho ảo.
+        // Chá»‰ mÃ³n báº¿p chÆ°a nháº­n má»›i xá»­ lÃ½ nguyÃªn liá»‡u. KhÃ¡ch Ä‘á»•i mÃ³n thÃ¬ hoÃ n kho;
+        // háº¿t hÃ ng/há»ng/lá»—i báº¿p thÃ¬ ghi wastage, khÃ´ng hoÃ n tá»“n kho áº£o.
         if (KitchenStatuses.IsPending(currentStatus) && KitchenStatuses.IsPending(item.Status))
         {
             if (OrderItemMutations.ReturnsStock(reasonCode))
@@ -1437,6 +1595,14 @@ public sealed class OrderService
                     _db, order.OrderId, item, item.Quanlity,
                     changedBy, now, reasonCode, reason, ct);
             }
+        }
+        else if (KitchenStatuses.IsPreparing(currentStatus) || KitchenStatuses.IsPreparing(item.Status))
+        {
+            // C-13: mÃ³n Ä‘Ã£ báº¯t Ä‘áº§u náº¥u â‡’ nguyÃªn liá»‡u Ä‘Ã£ tiÃªu tháº­t â‡’ khÃ´ng hoÃ n kho,
+            // ghi hao há»¥t Ä‘á»ƒ bÃ¡o cÃ¡o khÃ´ng máº¥t dáº¥u váº¿t. LÃ½ do huá»· váº«n náº±m á»Ÿ item history.
+            await OrderItemMutations.RecordWastageAsync(
+                _db, order.OrderId, item, item.Quanlity,
+                changedBy, now, OrderItemMutations.KitchenError, reason, ct);
         }
 
         OrderItemMutations.RecordItemHistory(
@@ -1465,17 +1631,19 @@ public sealed class OrderService
 
         if (activeItems.Count == 0)
         {
-            // Dòng cuối cùng bị huỷ ⇒ huỷ đơn và trả bàn. ApplyAsync bỏ qua các món đã huỷ
-            // nên không hoàn kho lần hai.
+            // DÃ²ng cuá»‘i cÃ¹ng bá»‹ huá»· â‡’ huá»· Ä‘Æ¡n vÃ  tráº£ bÃ n. ApplyAsync bá» qua cÃ¡c mÃ³n Ä‘Ã£ huá»·
+            // nÃªn khÃ´ng hoÃ n kho láº§n hai.
             await _lifecycle.CancelOrderAsync(order, changedBy, reason, reason, ct, reasonCode);
         }
         else
         {
-            // Dòng huỷ không còn được tính tiền; bỏ discount cũ vì cơ sở khuyến mãi đã đổi.
+            // DÃ²ng huá»· khÃ´ng cÃ²n Ä‘Æ°á»£c tÃ­nh tiá»n; bá» discount cÅ© vÃ¬ cÆ¡ sá»Ÿ khuyáº¿n mÃ£i Ä‘Ã£ Ä‘á»•i.
             order.Subtotal = activeItems.Sum(x => x.UnitPrice * x.Quanlity);
             order.DiscountAmount = 0m;
-            order.TotalAmount = Math.Round(
-                order.Subtotal + order.TaxAmount, 2, MidpointRounding.AwayFromZero);
+            order.PromotionId = null;
+            order.PromotionDiscountType = null;
+            order.PromotionDiscountValue = null;
+            OrderTotalsCalculator.Apply(order, settings);
             order.UpdatedAt = now;
 
             if (kitchenOrder is not null && kitchenItem is not null)
@@ -1484,8 +1652,8 @@ public sealed class OrderService
                     .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
                     .ToListAsync(ct);
 
-                // Dùng effective statuses (gồm món vừa huỷ trong bộ nhớ), không đọc lại DB
-                // để tránh C-01: ticket/order bị kẹt ở Preparing.
+                // DÃ¹ng effective statuses (gá»“m mÃ³n vá»«a huá»· trong bá»™ nhá»›), khÃ´ng Ä‘á»c láº¡i DB
+                // Ä‘á»ƒ trÃ¡nh C-01: ticket/order bá»‹ káº¹t á»Ÿ Preparing.
                 await _lifecycle.SyncTicketAndOrderAfterItemChangeAsync(
                     order,
                     kitchenOrder,
@@ -1496,7 +1664,8 @@ public sealed class OrderService
                     reason,
                     reason,
                     now,
-                    ct);
+                    ct,
+                    reasonCode);
             }
             else
             {
@@ -1505,7 +1674,8 @@ public sealed class OrderService
                     allItems,
                     changedBy,
                     reason,
-                    ct);
+                    ct,
+                    reasonCode);
             }
         }
 
@@ -1519,12 +1689,12 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Cập nhật trạng thái đơn (Nhóm B2): chỉ nhận allow-list, từ chối chuỗi rỗng/không hợp lệ,
-    /// và không cho đổi khỏi trạng thái cuối (<c>Paid</c>/<c>Cancelled</c>).
+    /// Cáº­p nháº­t tráº¡ng thÃ¡i Ä‘Æ¡n (NhÃ³m B2): chá»‰ nháº­n allow-list, tá»« chá»‘i chuá»—i rá»—ng/khÃ´ng há»£p lá»‡,
+    /// vÃ  khÃ´ng cho Ä‘á»•i khá»i tráº¡ng thÃ¡i cuá»‘i (<c>Paid</c>/<c>Cancelled</c>).
     ///
     /// <para>
-    /// Batch A2: huỷ đơn là thao tác nhiều bước (trạng thái + phiếu bếp + tồn kho) nên chạy
-    /// trong transaction <c>Serializable</c>; hai request huỷ đồng thời không thể hoàn kho hai lần.
+    /// Batch A2: huá»· Ä‘Æ¡n lÃ  thao tÃ¡c nhiá»u bÆ°á»›c (tráº¡ng thÃ¡i + phiáº¿u báº¿p + tá»“n kho) nÃªn cháº¡y
+    /// trong transaction <c>Serializable</c>; hai request huá»· Ä‘á»“ng thá»i khÃ´ng thá»ƒ hoÃ n kho hai láº§n.
     /// </para>
     /// </summary>
     public async Task<bool> UpdateStatusAsync(int id, UpdateOrderStatusRequest request, CancellationToken ct)
@@ -1554,12 +1724,12 @@ public sealed class OrderService
         if (OrderStatuses.IsTerminal(order.Status))
             throw new InvalidOperationException($"Order is {order.Status} and can no longer change status");
 
-        // P1d: không cho quay lui (Ready → Pending) hoặc nhảy cóc (Pending → Completed).
+        // P1d: khÃ´ng cho quay lui (Ready â†’ Pending) hoáº·c nháº£y cÃ³c (Pending â†’ Completed).
         if (!OrderStatuses.CanTransition(order.Status, status))
             throw new InvalidOperationException(
                 $"Cannot change order status from {order.Status} to {status}");
 
-        // C-03: POS không được đánh dấu Ready/Completed khi bếp chưa xong.
+        // C-03: POS khÃ´ng Ä‘Æ°á»£c Ä‘Ã¡nh dáº¥u Ready/Completed khi báº¿p chÆ°a xong.
         await _lifecycle.EnsureOrderCanCloseAsync(id, status, ct);
 
         if (isCancelling)
@@ -1599,23 +1769,28 @@ public sealed class OrderService
     }
 
     /// <summary>
-    /// Áp khuyến mãi cho đơn đang mở (Batch A2).
+    /// Ãp khuyáº¿n mÃ£i cho Ä‘Æ¡n Ä‘ang má»Ÿ (Batch A2).
     ///
     /// <list type="bullet">
-    /// <item>Không áp cho đơn <c>Paid</c>/<c>Cancelled</c>.</item>
-    /// <item><c>DiscountType</c> chỉ nhận <c>Percent</c> hoặc <c>Fixed</c>; giá trị khác trả <c>false</c>
-    /// (dữ liệu cũ có thể sai vì trước đây không validate).</item>
-    /// <item>Nếu promotion có <c>PromotionFood</c>/<c>PromotionCategory</c>, giảm giá chỉ tính trên
-    /// phần tiền của các dòng món thuộc phạm vi; không có targeting thì áp toàn đơn như cũ.</item>
+    /// <item>KhÃ´ng Ã¡p cho Ä‘Æ¡n <c>Paid</c>/<c>Cancelled</c>.</item>
+    /// <item><c>DiscountType</c> chá»‰ nháº­n <c>Percent</c> hoáº·c <c>Fixed</c>; giÃ¡ trá»‹ khÃ¡c tráº£ <c>false</c>
+    /// (dá»¯ liá»‡u cÅ© cÃ³ thá»ƒ sai vÃ¬ trÆ°á»›c Ä‘Ã¢y khÃ´ng validate).</item>
+    /// <item>Náº¿u promotion cÃ³ <c>PromotionFood</c>/<c>PromotionCategory</c>, giáº£m giÃ¡ chá»‰ tÃ­nh trÃªn
+    /// pháº§n tiá»n cá»§a cÃ¡c dÃ²ng mÃ³n thuá»™c pháº¡m vi; khÃ´ng cÃ³ targeting thÃ¬ Ã¡p toÃ n Ä‘Æ¡n nhÆ° cÅ©.</item>
     /// </list>
     ///
     /// <para>
-    /// Giới hạn đã biết: schema <c>orders</c> không có cột lưu promotion id (Batch A2 không đổi schema),
-    /// nên không thể lưu snapshot promotion trên đơn ở bước này.
+    /// <para>
+    /// Đợt 2 / A3: đơn lưu FK <c>PromotionId</c> + snapshot <c>PromotionDiscountType</c>/
+    /// <c>PromotionDiscountValue</c> ⇒ tra lại được "đơn này dùng khuyến mãi nào", và
+    /// sửa/xoá khuyến mãi sau này không làm đổi nghĩa của đơn cũ.
+    /// </para>
     /// </para>
     /// </summary>
     public async Task<bool> ApplyPromotionAsync(int orderId, int promotionId, CancellationToken ct)
     {
+        var settings = await _settings.GetAsync(ct);
+
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
@@ -1641,25 +1816,156 @@ public sealed class OrderService
 
         if (promotion.MaxDiscountAmount > 0) discount = Math.Min(discount, promotion.MaxDiscountAmount);
 
-        // Defect #18: DB lưu decimal(18,2); làm tròn ngay tại đây để giá trị trả về/tính tiếp
-        // khớp với giá trị thực sự được lưu (SQL Server làm tròn half away from zero).
-        // Clamp 0..Subtotal để promotion cấu hình sai (giá trị âm) không làm tăng tổng tiền.
+        // Defect #18: DB lÆ°u decimal(18,2); lÃ m trÃ²n ngay táº¡i Ä‘Ã¢y Ä‘á»ƒ giÃ¡ trá»‹ tráº£ vá»/tÃ­nh tiáº¿p
+        // khá»›p vá»›i giÃ¡ trá»‹ thá»±c sá»± Ä‘Æ°á»£c lÆ°u (SQL Server lÃ m trÃ²n half away from zero).
+        // Clamp 0..Subtotal Ä‘á»ƒ promotion cáº¥u hÃ¬nh sai (giÃ¡ trá»‹ Ã¢m) khÃ´ng lÃ m tÄƒng tá»•ng tiá»n.
         var roundedDiscount = Math.Round(
             Math.Clamp(discount, 0m, order.Subtotal),
             2,
             MidpointRounding.AwayFromZero);
         order.DiscountAmount = roundedDiscount;
-        order.TotalAmount = Math.Round(order.Subtotal - roundedDiscount + order.TaxAmount, 2, MidpointRounding.AwayFromZero);
+        // Đợt 2 / A3: lưu FK + snapshot khuyến mãi. Nhờ vậy tra lại được "đơn này dùng
+        // khuyến mãi nào", và sửa/xoá khuyến mãi sau này không làm đổi nghĩa của đơn cũ.
+        order.PromotionId = promotion.Id;
+        order.PromotionDiscountType = promotion.DiscountType;
+        order.PromotionDiscountValue = promotion.DiscountValue;
+        OrderTotalsCalculator.Apply(order, settings);
         order.UpdatedAt = DateTime.UtcNow;
+
+        // Đổi tiền là thay đổi quan trọng ⇒ ghi dòng audit (không đổi trạng thái đơn).
+        _lifecycle.RecordOrderNote(
+            order,
+            _currentUser.UserId ?? order.CreatedBy,
+            $"Applied promotion {promotionId}");
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return true;
     }
 
     /// <summary>
-    /// Phần tiền được hưởng khuyến mãi: toàn bộ <c>Subtotal</c> khi promotion không targeting,
-    /// ngược lại chỉ các dòng món thuộc <c>PromotionFood.SizeId</c> hoặc
-    /// <c>PromotionCategory.CategoryId</c> của món.
+    /// Chuyển đơn sang bàn khác (B1) — dùng khi khách đổi chỗ ngồi.
+    ///
+    /// <para>Luật đã chốt 2026-10-21 (chủ dự án):</para>
+    /// <list type="bullet">
+    /// <item><description>Bàn đích phải <b>đang trống</b> — nếu bàn đó đang có đơn mở thì chặn
+    /// (ngoài bàn đó đang có người, không thể cho vào).</description></item>
+    /// <item><description>Bàn đích phải còn hoạt động và không ở trạng thái bảo trì.</description></item>
+    /// <item><description>Đơn phải chưa <c>Paid</c>/<c>Cancelled</c>.</description></item>
+    /// </list>
+    ///
+    /// <para>Bàn cũ tự động trở lại <c>Available</c>, bàn mới thành <c>Occupied</c> (trạng thái bàn
+    /// được tính tự động từ đơn mở).</para>
+    /// </summary>
+    public async Task<bool> ChangeTableAsync(
+        int orderId,
+        ChangeOrderTableRequest request,
+        CancellationToken ct)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
+        if (order is null) return false;
+
+        if (OrderStatuses.IsTerminal(order.Status))
+            throw new InvalidOperationException(
+                $"Order is {order.Status} and can no longer change status");
+
+        if (order.TableId == request.TableId)
+            throw new ArgumentException("The order is already on this table");
+
+        var target = await _db.RestaurantTables
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.TableId == request.TableId, ct);
+
+        if (target is null || !target.IsActive)
+            throw new KeyNotFoundException("Table not found");
+
+        if (string.Equals(target.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Target table is under maintenance");
+
+        // Bàn đích phải trống: nếu đang có đơn mở thì ngoài bàn đó đang có người.
+        var targetHasOpenOrder = await _db.Orders.AnyAsync(
+            o => o.TableId == request.TableId
+              && o.OrderId != order.OrderId
+              && o.Status != OrderStatuses.Paid
+              && o.Status != OrderStatuses.Cancelled,
+            ct);
+        if (targetHasOpenOrder)
+            throw new InvalidOperationException("Target table already has an open order");
+
+        var changedBy = await _currentUser.ResolveExistingActorAsync(
+            _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
+
+        var previousTableId = order.TableId;
+        order.TableId = request.TableId;
+        order.UpdatedAt = DateTime.UtcNow;
+
+        // Ghi 1 dòng audit: chuyển bàn không đổi trạng thái đơn (dùng lại đúng cơ chế
+        // RecordOrderNote mà "gọi thêm tạo round mới" đang dùng).
+        _lifecycle.RecordOrderNote(
+            order,
+            changedBy,
+            $"Moved from table {previousTableId} to table {request.TableId}");
+
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+
+        await _tables.RefreshStatusForTableAsync(previousTableId, ct);
+        await _tables.RefreshStatusForTableAsync(request.TableId, ct);
+        return true;
+    }
+
+    /// <summary>
+    /// Gỡ khuyến mãi khỏi đơn (Đợt 2 / A2).
+    ///
+    /// <para>
+    /// Trước Đợt 2 chỉ có chiều "áp" (<c>PATCH /api/orders/{id}/promotion/{promotionId}</c>).
+    /// Gỡ được chỉ gián tiếp khi sửa món, vì mọi luồng sửa đơn đều reset
+    /// <c>DiscountAmount = 0</c> ⇒ không có đường gỡ tường minh.
+    /// </para>
+    /// </summary>
+    /// <returns>
+    /// <c>true</c> nếu đã gỡ; <c>false</c> nếu đơn không tồn tại hoặc đang áp khuyến mãi khác.
+    /// </returns>
+    public async Task<bool> RemovePromotionAsync(int orderId, int promotionId, CancellationToken ct)
+    {
+        var settings = await _settings.GetAsync(ct);
+
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
+        var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
+        if (order is null) return false;
+
+        if (OrderStatuses.IsTerminal(order.Status))
+            throw new InvalidOperationException(
+                $"Order is {order.Status} and can no longer change status");
+
+        // Chỉ gỡ đúng khuyến mãi đang áp dụng cho đơn này.
+        if (order.PromotionId != promotionId) return false;
+
+        order.PromotionId = null;
+        order.PromotionDiscountType = null;
+        order.PromotionDiscountValue = null;
+        order.DiscountAmount = 0m;
+        OrderTotalsCalculator.Apply(order, settings);
+        order.UpdatedAt = DateTime.UtcNow;
+
+        // Đổi tiền là thay đổi quan trọng ⇒ ghi dòng audit (không đổi trạng thái đơn).
+        _lifecycle.RecordOrderNote(
+            order,
+            _currentUser.UserId ?? order.CreatedBy,
+            $"Removed promotion {promotionId}");
+
+        await _db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return true;
+    }
+
+    /// <summary>
+    /// Pháº§n tiá»n Ä‘Æ°á»£c hÆ°á»Ÿng khuyáº¿n mÃ£i: toÃ n bá»™ <c>Subtotal</c> khi promotion khÃ´ng targeting,
+    /// ngÆ°á»£c láº¡i chá»‰ cÃ¡c dÃ²ng mÃ³n thuá»™c <c>PromotionFood.SizeId</c> hoáº·c
+    /// <c>PromotionCategory.CategoryId</c> cá»§a mÃ³n.
     /// </summary>
     private async Task<decimal> ResolveDiscountBaseAsync(
         Order order,

@@ -146,7 +146,8 @@ public sealed class ActorFromTokenTests : TestBase
         Assert.True(await InventorySvc.AdjustAsync(ingredient.IngredientId, new InventoryAdjustmentRequest
         {
             Quanlity = 5m,
-            CreatedBy = bodyActor.Id
+            CreatedBy = bodyActor.Id,
+            Note = "body actor test"
         }, CancellationToken.None));
 
         Assert.Equal(bodyActor.Id, Db.InventoryTransactions.Single().CreatedBy);
