@@ -49,8 +49,8 @@ public sealed class OrdersFlowTests : TestBase
         var item = Db.OrderItems.Single(x => x.OrderId == order.OrderId);
         Assert.Equal(55m, item.UnitPrice); // 50 base + 5 topping, snapshot at creation time
         Assert.Equal(2, item.Quanlity);
-        // Defect #21: UnitPrice lÃ  Ä‘Æ¡n giÃ¡ cuá»‘i cÃ¹ng (Ä‘Ã£ gá»“m topping) vÃ  Subtotal pháº£i
-        // khá»›p chÃ­nh xÃ¡c vá»›i UnitPrice * quantity, khÃ´ng cá»™ng topping thÃªm láº§n ná»¯a.
+        // Defect #21: UnitPrice là đơn giá cuối cùng (đã gồm topping) và Subtotal phải
+        // khớp chính xác với UnitPrice * quantity, không cộng topping thêm lần nữa.
         Assert.Equal(order.Subtotal, item.UnitPrice * item.Quanlity);
         Assert.Equal("Pending", item.Status);
         Assert.Equal("no onion", item.Note);
@@ -267,7 +267,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task UpdateStatus_RejectsStatusOutsideAllowList()
     {
-        // NhÃ³m B2: nay cÃ³ allow-list (trÆ°á»›c Ä‘Ã¢y nháº­n má»i chuá»—i).
+        // Nhóm B2: nay có allow-list (trước đây nhận mọi chuỗi).
         var s = SeedOrderScenario();
         var order = SeedOrder(s.Table.TableId, s.Staff.Id);
 
@@ -301,7 +301,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task Create_Throws_WhenItemsIsNull()
     {
-        // NhÃ³m B8: JSON `null` cho Items lá»t qua [MinLength] â†’ pháº£i bÃ¡o lá»—i rÃµ thay vÃ¬ NRE.
+        // Nhóm B8: JSON `null` cho Items lọt qua [MinLength] → phải báo lỗi rõ thay vì NRE.
         var s = SeedOrderScenario();
         var request = new CreateOrderRequest { TableId = s.Table.TableId, CreatedBy = s.Staff.Id, Items = null! };
 
@@ -420,7 +420,7 @@ public sealed class OrdersFlowTests : TestBase
     public async Task ApplyPromotion_PercentDiscount_RoundsToTwoDecimalsBeforeSave()
     {
         // Defect #18: 12.5% cá»§a 100.05 = 12.50625; DB decimal(18,2) pháº£i nháº­n 12.51
-        // vÃ  TotalAmount pháº£i tÃ­nh tá»« chÃ­nh giÃ¡ trá»‹ Ä‘Ã£ lÃ m trÃ²n.
+        // và TotalAmount phải tính từ chính giá trị đã làm tròn.
         var s = SeedOrderScenario();
         var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 100.05m);
         Db.Promotions.Add(new Promotion
@@ -447,7 +447,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task Create_Throws_WhenToppingIsNotAssignedToFood()
     {
-        // Defect #19: topping active/available nhÆ°ng khÃ´ng cÃ³ dÃ²ng FoodToppings cho mÃ³n nÃ y.
+        // Defect #19: topping active/available nhưng không có dòng FoodToppings cho món này.
         var s = SeedOrderScenario();
         var unrelatedTopping = SeedTopping(3m);
         Db.SaveChanges();
@@ -462,7 +462,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task Create_Throws_WhenTableAlreadyHasAnOpenOrder()
     {
-        // Defect #20: khÃ´ng cho má»Ÿ thÃªm Ä‘Æ¡n thá»© hai trÃªn cÃ¹ng bÃ n khi Ä‘Æ¡n trÆ°á»›c chÆ°a Ä‘Ã³ng.
+        // Defect #20: không cho mở thêm đơn thứ hai trên cùng bàn khi đơn trước chưa đóng.
         var s = SeedOrderScenario();
         await Orders.CreateAsync(
             Request(s.Table.TableId, s.Staff.Id, s.Size.SizeId),
@@ -491,7 +491,7 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task Create_Throws_WhenTableIsUnderMaintenance()
     {
-        // Defect #20: tráº¡ng thÃ¡i Maintenance pháº£i bá»‹ cháº·n ká»ƒ cáº£ khi IsActive bá»‹ Ä‘áº·t sai.
+        // Defect #20: trạng thái Maintenance phải bị chặn kể cả khi IsActive bị đặt sai.
         var s = SeedOrderScenario();
         s.Table.Status = "Maintenance";
         Db.SaveChanges();
@@ -518,7 +518,7 @@ public sealed class OrdersFlowTests : TestBase
 
         using var fresh = NewContext();
         Assert.Single(fresh.Orders);
-        // Recipe dÃ¹ng 2 Ä‘Æ¡n vá»‹/nguyÃªn liá»‡u cho má»—i mÃ³n Ã— 2 mÃ³n = 4, chá»‰ trá»« má»™t láº§n.
+        // Recipe dùng 2 đơn vị/nguyên liệu cho mỗi món × 2 món = 4, chỉ trừ một lần.
         Assert.Equal(96m, fresh.Inventories.Single(x => x.IngredientId == s.Ingredient.IngredientId).Quanlity);
     }
 
@@ -574,8 +574,8 @@ public sealed class OrdersFlowTests : TestBase
     [Fact]
     public async Task Create_StartsTransaction_BeforeReadingInventory()
     {
-        // Defect #3: kiá»ƒm tra tá»“n kho pháº£i náº±m trong transaction, khÃ´ng Ä‘Æ°á»£c Ä‘á»c trÆ°á»›c
-        // rá»“i má»›i má»Ÿ transaction (khoáº£ng trá»‘ng cho hai Ä‘Æ¡n cÃ¹ng vÆ°á»£t check).
+        // Defect #3: kiểm tra tồn kho phải nằm trong transaction, không được đọc trước
+        // rồi mới mở transaction (khoảng trống cho hai đơn cùng vượt check).
         var s = SeedOrderScenario(stock: 1m);
         var state = new InterceptorState();
         using var db = NewContext(
