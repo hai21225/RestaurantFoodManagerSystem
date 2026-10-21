@@ -377,6 +377,12 @@ $table2Id = $table2.Json.data.tableId
 # ----------------------------------------------------------------------
 Write-Step "5. Cấu hình quán (VAT 10% + phí dịch vụ 5%)"
 
+# C-22: cấu hình quán là dữ liệu DÙNG CHUNG của quán (singleton) — E2E đổi VAT/phí DV
+# thì đổi luôn tiền thật của quán, và tên quán thành "Quán E2E Test".
+# ⇒ Lưu cấu hình cũ trước, và KHÔI PHỤC lại ở cuối script (xem phần "Khôi phục cấu hình quán").
+$settingsBackup = Invoke-Api -Method GET -Path "/management/settings" -Expect @(200)
+$script:SettingsBackup = $settingsBackup.Json
+
 Check "PUT /api/management/settings" -Method PUT -Path "/management/settings" -Body @{
     restaurantName = "Quán E2E Test"; address = "1 Đường Test"; phone = "0900123456"
     taxCode = "0101234567"; currency = "VND"
@@ -771,6 +777,30 @@ $dashboard = Check "GET /api/reports/dashboard" -Method GET -Path "/reports/dash
 if ($dashboard.Json -and $dashboard.Json.tables) {
     Assert-True ($null -ne $dashboard.Json.tables) `
         "Bàn: $(($dashboard.Json.tables | ForEach-Object { "$($_.total) tổng / $($_.occupied) có khách" }) -join ', ')"
+}
+
+# ----------------------------------------------------------------------
+# Khôi phục cấu hình quán (C-22)
+# ----------------------------------------------------------------------
+# Bắt buộc: E2E đã đổi VAT/phí DV/tên quán để kiểm tra công thức tiền.
+# Nếu không khôi phục thì quán thật bị để lại cấu hình "Quán E2E Test" (VAT 10%, phí DV 5%).
+if ($script:SettingsBackup) {
+    try {
+        $b = $script:SettingsBackup
+        Invoke-Api -Method PUT -Path "/management/settings" -Expect @(200) -Body @{
+            restaurantName = $b.restaurantName
+            address = $b.address
+            phone = $b.phone
+            taxCode = $b.taxCode
+            currency = $b.currency
+            taxRate = $b.taxRate
+            taxIncluded = $b.taxIncluded
+            serviceChargeRate = $b.serviceChargeRate
+        } | Out-Null
+        Write-Host "Đã khôi phục cấu hình quán (VAT $($b.taxRate)%, phí DV $($b.serviceChargeRate)%)." -ForegroundColor DarkGray
+    } catch {
+        Write-Host "CẢNH BÁO: không khôi phục được cấu hình quán — hãy tự PUT lại /api/management/settings" -ForegroundColor Yellow
+    }
 }
 
 # ----------------------------------------------------------------------

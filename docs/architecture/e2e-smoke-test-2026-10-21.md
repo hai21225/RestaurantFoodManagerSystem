@@ -29,6 +29,14 @@ Chỉ xoá bản ghi **liên quan tới chuỗi "E2E"** trong tên (danh mục /
 khuyến mãi / nhà cung cấp / khu vực / số bàn) và mọi bản ghi con của chúng. Dữ liệu thật
 của quán **không** bị đụng tới.
 
+> **C-22 (2026-10-21) — cấu hình quán được khôi phục.**
+> Bảng `restaurant_settings` là **singleton dùng chung** (VAT, phí dịch vụ, tên quán).
+> E2E phải đổi VAT/phí DV để kiểm tra công thức tiền ⇒ nếu không khôi phục thì quán thật
+> bị để lại cấu hình "Quán E2E Test" (VAT 10%, phí DV 5%) ⇒ **đổi luôn tiền thật của quán**.
+> Script nay **lưu cấu hình cũ trước** và **khôi phục lại ở cuối** (in ra dòng
+> "Đã khôi phục cấu hình quán (VAT …)"). `cleanup-e2e.sql` **không** đụng tới bảng này —
+> nếu script bị tắt giữa chừng thì phải `PUT /api/management/settings` lại bằng tay.
+
 > Lưu ý kỹ thuật: SQL Server cần `SET QUOTED_IDENTIFIER ON` khi xoá trên bảng có
 > **filtered index** (unique) — `sqlcmd` mặc định để OFF. Script đã bật sẵn.
 

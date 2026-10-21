@@ -83,6 +83,20 @@ script PowerShell phải lưu **UTF-8 có BOM**; gửi body JSON tiếng Việt 
 
 ---
 
+## C-22 — Khôi phục cấu hình quán sau khi chạy E2E (2026-10-21)
+
+- **Vấn đề:** `restaurant_settings` là **singleton dùng chung** (VAT, phí dịch vụ, tên quán).
+  `scripts\e2e-smoke.ps1` đổi VAT 10% / phí DV 5% / tên "Quán E2E Test" để kiểm tra công thức
+  tiền — nhưng **không khôi phục lại**, và `scripts\cleanup-e2e.sql` cũng không đụng bảng này.
+  ⇒ **chạy E2E là đổi luôn tiền thật của quán** (VAT + phí DV) và tên quán.
+- **Sửa:** script E2E nay **lưu cấu hình cũ trước** khi `PUT` và **khôi phục lại ở cuối**
+  (in dòng "Đã khôi phục cấu hình quán (VAT …, phí DV …)"). Nếu script bị tắt giữa chừng
+  thì phải `PUT /api/management/settings` lại bằng tay.
+- **Kiểm chứng:** đặt cấu hình "QUAN THAT CUA TOI" (VAT 8%, phí DV 3%) → chạy E2E
+  ⇒ **100 OK / 0 FAIL** và cấu hình được khôi phục **đúng như cũ**.
+
+---
+
 ## C-21 — Sửa 6 lỗi làm **báo cáo sai** (2026-10-21)
 
 > Đợt sửa **trước** khi làm thêm báo cáo vận hành (B5) — báo cáo trên nền dữ liệu sai thì ra báo cáo sai.
