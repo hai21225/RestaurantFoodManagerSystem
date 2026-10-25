@@ -27,7 +27,7 @@ public sealed record OrderTotals(
 /// </para>
 ///
 /// <para>
-/// Công thức (chủ dự án đã chốt 2026-10-21):
+/// Công thức:
 /// <list type="number">
 /// <item><description><c>base = Subtotal − Discount</c> (không âm).</description></item>
 /// <item><description>

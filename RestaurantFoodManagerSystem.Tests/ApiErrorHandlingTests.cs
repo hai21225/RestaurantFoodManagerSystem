@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Logging.Abstractions;
-using RestaurantFoodManagerSystem.Infrastructure.Errors;
+using RestaurantFoodManagerSystem.Api.Filters;
 using Xunit;
 
 namespace RestaurantFoodManagerSystem.Tests;

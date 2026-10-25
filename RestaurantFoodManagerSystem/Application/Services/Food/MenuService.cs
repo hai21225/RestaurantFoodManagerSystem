@@ -4,7 +4,10 @@ using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 public sealed class MenuService
 {
     private readonly AppDbContext _db;
-    public MenuService(AppDbContext db) => _db = db;
+    public MenuService(AppDbContext db)
+    {
+        _db = db;
+    }
 
     public async Task<object> GetMenuAsync(CancellationToken ct = default)
     {
@@ -14,9 +17,7 @@ public sealed class MenuService
         var sizes = await _db.FoodSizes.AsNoTracking().Where(s => s.IsActive).ToListAsync(ct);
         var toppings = await _db.Toppings.AsNoTracking().Where(t => t.IsActive && t.IsAvailable).ToListAsync(ct);
 
-        // Defect #6: nạp toàn bộ liên kết món–topping bằng MỘT truy vấn. Trước đây
-        // `_db.FoodToppings.Any(...)` nằm trong projection nên EF thực thi lúc serialize
-        // response (N+1 + truy cập DB ngoài phạm vi action).
+
         var toppingLinks = await _db.FoodToppings.AsNoTracking()
             .Select(ft => new { ft.FoodId, ft.ToppingId })
             .ToListAsync(ct);

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 
-namespace RestaurantFoodManagerSystem.Infrastructure.Errors;
+namespace RestaurantFoodManagerSystem.Api.Filters;
 
 /// <summary>
 /// Chuyển exception thành lỗi HTTP thống nhất cho **toàn bộ** API.

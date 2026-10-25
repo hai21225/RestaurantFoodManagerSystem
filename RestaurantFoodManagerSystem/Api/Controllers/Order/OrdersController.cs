@@ -53,6 +53,7 @@ public sealed class OrdersController : ControllerBase
         catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
         catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
+
     [Authorize(Policy = AuthPolicies.PosOperator)]
     [HttpPatch("{orderId:int}/items/{itemId:int}/quantity")]
     public async Task<IActionResult> AdjustQuantity(int orderId, int itemId, AdjustOrderItemQuantityRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct)
@@ -67,12 +68,41 @@ public sealed class OrdersController : ControllerBase
         catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
         catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
     }
+
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
-    [HttpGet("{id:int}/history")] public async Task<IActionResult> History(int id, [FromServices] OrderService service, CancellationToken ct) => (await service.GetHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+    [HttpGet("{id:int}/history")]
+    public async Task<IActionResult> History(int id, [FromServices] OrderService service, CancellationToken ct)
+    {
+        return (await service.GetHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+    }
+
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
-    [HttpGet("{id:int}/item-history")] public async Task<IActionResult> ItemHistory(int id, [FromServices] OrderService service, CancellationToken ct) => (await service.GetItemHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+    [HttpGet("{id:int}/item-history")]
+    public async Task<IActionResult> ItemHistory(int id, [FromServices] OrderService service, CancellationToken ct)
+    {
+        return (await service.GetItemHistoryAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+    }
+
     [Authorize(Policy = AuthPolicies.PosOperator)]
-    [HttpPatch("{id:int}/status")] public async Task<IActionResult> Status(int id, UpdateOrderStatusRequest request, [FromServices] OrderService service, CancellationToken ct) { try { return await service.UpdateStatusAsync(id, request, ct) ? NoContent() : NotFound(); } catch (ArgumentException e) { return BadRequest(new { message = e.Message }); } catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); } catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); } }
+    [HttpPatch("{id:int}/status")] public async Task<IActionResult> Status(int id, UpdateOrderStatusRequest request, [FromServices] OrderService service, CancellationToken ct)
+    {
+        try
+        {
+            return await service.UpdateStatusAsync(id, request, ct) ? NoContent() : NotFound(); 
+        } 
+        catch (ArgumentException e) 
+        { 
+            return BadRequest(new { message = e.Message }); 
+        } 
+        catch (UnauthorizedAccessException e) 
+        { 
+            return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); 
+        } 
+        catch (InvalidOperationException e) 
+        { 
+            return Conflict(new { message = e.Message }); 
+        } 
+    }
     [Authorize(Policy = AuthPolicies.OrderCancellation)]
     [HttpPost("{orderId:int}/items/{itemId:int}/cancel")]
     public async Task<IActionResult> CancelItem(int orderId, int itemId, CancelOrderItemRequest request, [FromServices] OrderService service, CancellationToken ct)
@@ -95,8 +125,10 @@ public sealed class OrdersController : ControllerBase
     /// </summary>
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet("table/{tableId:int}/bill")]
-    public async Task<IActionResult> TableBill(int tableId, [FromServices] OrderService service, CancellationToken ct) =>
-        await service.GetTableBillAsync(tableId, ct) is { } bill ? Ok(bill) : NotFound();
+    public async Task<IActionResult> TableBill(int tableId, [FromServices] OrderService service, CancellationToken ct)
+    {
+        return await service.GetTableBillAsync(tableId, ct) is { } bill ? Ok(bill) : NotFound();
+    }
 
     /// <summary>
     /// Đợt 3 / B3 — ghi chú cho **cả hoá đơn** ("xuất hoá đơn công ty ABC", "chia đôi với bàn 6"…).

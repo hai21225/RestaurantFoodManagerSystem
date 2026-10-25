@@ -30,9 +30,7 @@ public sealed class OrderLifecycleCoordinator
     /// Phiếu không có món (legacy) được bỏ qua; phiếu mà mọi món đã huỷ phải đi đường
     /// <c>Cancelled</c>, không được đóng như hoàn tất.
     /// </summary>
-    public static void EnsureTicketCanClose(
-        string targetStatus,
-        IReadOnlyCollection<string> itemStatuses)
+    public static void EnsureTicketCanClose(string targetStatus,IReadOnlyCollection<string> itemStatuses)
     {
         if (!IsClosingStatus(targetStatus))
         {
@@ -67,10 +65,7 @@ public sealed class OrderLifecycleCoordinator
     /// Kiểm tra cả order item và kitchen item để không bỏ sót dữ liệu cũ bị lệch.
     /// Đơn legacy không có dòng món được bỏ qua (giữ hành vi cũ).
     /// </summary>
-    public async Task EnsureOrderCanCloseAsync(
-        int orderId,
-        string targetStatus,
-        CancellationToken ct)
+    public async Task EnsureOrderCanCloseAsync(int orderId, string targetStatus, CancellationToken ct)
     {
         if (!IsClosingStatus(targetStatus))
         {
@@ -120,18 +115,9 @@ public sealed class OrderLifecycleCoordinator
     /// Sau khi một món bếp đổi trạng thái: tính lại phiếu từ <paramref name="ticketItems"/>,
     /// rồi map phiếu sang đơn nếu transition hợp lệ.
     /// </summary>
-    public async Task<bool> SyncTicketAndOrderAfterItemChangeAsync(
-        Order? order,
-        KitchenOrder ticket,
-        IReadOnlyCollection<KitchenOrderItem> ticketItems,
-        int changedItemId,
-        string changedStatus,
-        int changedBy,
-        string? historyNote,
-        string? cancelReason,
-        DateTime now,
-        CancellationToken ct,
-        string? reasonCode = null)
+    public async Task<bool> SyncTicketAndOrderAfterItemChangeAsync(Order? order,KitchenOrder ticket,IReadOnlyCollection<KitchenOrderItem> ticketItems,
+        int changedItemId,string changedStatus,int changedBy,string? historyNote,
+        string? cancelReason,DateTime now,CancellationToken ct,string? reasonCode = null)
     {
         var effectiveStatuses = ticketItems
             .Select(x => x.Id == changedItemId ? changedStatus : x.Status)
@@ -216,14 +202,10 @@ public sealed class OrderLifecycleCoordinator
     /// <summary>
     /// Fallback khi order không có kitchen ticket: suy trạng thái đơn trực tiếp từ các dòng món.
     /// </summary>
-    public Task<bool> SyncOrderFromItemsAsync(
-        Order order,
-        IReadOnlyCollection<OrderItem> orderItems,
-        int changedBy,
-        string? historyNote,
-        CancellationToken ct,
-        string? reasonCode = null) =>
-        RefreshOrderStatusFromAllItemsAsync(
+    public Task<bool> SyncOrderFromItemsAsync(Order order,IReadOnlyCollection<OrderItem> orderItems,int changedBy,
+        string? historyNote,CancellationToken ct,string? reasonCode = null)
+    {
+        return RefreshOrderStatusFromAllItemsAsync(
             order,
             changedBy,
             historyNote,
@@ -232,6 +214,7 @@ public sealed class OrderLifecycleCoordinator
             ct,
             orderItems,
             reasonCode);
+    }
 
     /// <summary>
     /// Tính lại trạng thái đơn từ tất cả dòng món còn hoạt động của tất cả round.
@@ -554,14 +537,9 @@ public sealed class OrderLifecycleCoordinator
     }
 
     /// <summary>Huỷ toàn bộ đơn và ghi history trong cùng transaction của caller.</summary>
-    public Task<bool> CancelOrderAsync(
-        Order order,
-        int changedBy,
-        string reason,
-        string? historyNote,
-        CancellationToken ct,
-        string? reasonCode = null) =>
-        ApplyOrderStatusIfAllowedAsync(
+    public Task<bool> CancelOrderAsync(Order order,int changedBy,string reason,string? historyNote,CancellationToken ct,string? reasonCode = null)
+    {
+        return ApplyOrderStatusIfAllowedAsync(
             order,
             OrderStatuses.Cancelled,
             changedBy,
@@ -569,6 +547,7 @@ public sealed class OrderLifecycleCoordinator
             reason,
             ct,
             reasonCode);
+    }
 
     /// <summary>
     /// Đánh dấu đơn đã hoàn tiền + ghi history. <c>Paid</c> là trạng thái terminal nên cần
@@ -597,8 +576,9 @@ public sealed class OrderLifecycleCoordinator
     }
 
     /// <summary>Map trạng thái phiếu bếp sang trạng thái order hiện có.</summary>
-    public static string MapTicketStatusToOrder(string kitchenStatus) =>
-        kitchenStatus.Trim().ToLowerInvariant() switch
+    public static string MapTicketStatusToOrder(string kitchenStatus)
+    {
+        return kitchenStatus.Trim().ToLowerInvariant() switch
         {
             "preparing" => OrderStatuses.Preparing,
             "ready" => OrderStatuses.Ready,
@@ -606,8 +586,11 @@ public sealed class OrderLifecycleCoordinator
             "cancelled" => OrderStatuses.Cancelled,
             _ => OrderStatuses.SentToKitchen // Pending, Accepted
         };
+    }
 
-    private static bool IsClosingStatus(string status) =>
-        string.Equals(status, KitchenStatuses.Ready, StringComparison.OrdinalIgnoreCase) ||
+    private static bool IsClosingStatus(string status)
+    {
+        return string.Equals(status, KitchenStatuses.Ready, StringComparison.OrdinalIgnoreCase) ||
         string.Equals(status, KitchenStatuses.Completed, StringComparison.OrdinalIgnoreCase);
+    }
 }

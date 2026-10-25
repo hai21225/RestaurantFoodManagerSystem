@@ -17,7 +17,7 @@ public class UsersController : ControllerBase
         _currentUser = currentUser;
     }
 
-    // GET: /api/users/me  (P4) — hồ sơ của chính mình; mọi role đã đăng nhập.
+    // GET: /api/users/me  profile for own user
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpGet("me")]
     public async Task<IActionResult> GetMe(CancellationToken ct)
@@ -37,12 +37,10 @@ public class UsersController : ControllerBase
         return Ok(profile);
     }
 
-    // PUT: /api/users/me  (P4) — tự sửa fullName/email/phone; không đổi được quyền/trạng thái.
+    // PUT: /api/users/me  update profile for own user
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpPut("me")]
-    public async Task<IActionResult> UpdateMe(
-        [FromBody] UpdateProfileRequest request,
-        CancellationToken ct)
+    public async Task<IActionResult> UpdateMe([FromBody] UpdateProfileRequest request,CancellationToken ct)
     {
         if (_currentUser.UserId is not int userId)
         {
@@ -68,7 +66,7 @@ public class UsersController : ControllerBase
         }
     }
 
-    // GET: /api/users/{id}  (Batch A) — chi tiết một nhân viên cho màn hình quản lý.
+    // GET: /api/users/{id}  user details for admin
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct)
@@ -162,9 +160,7 @@ public class UsersController : ControllerBase
     // POST: /api/users  (GĐ6/A2) — tạo nhân viên, gán role ngay nếu có roleName.
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost]
-    public async Task<IActionResult> Create(
-        [FromBody] CreateUserRequest request,
-        CancellationToken ct)
+    public async Task<IActionResult> Create([FromBody] CreateUserRequest request,CancellationToken ct)
     {
         if (request.Password != request.ConfirmPassword)
         {
@@ -220,10 +216,7 @@ public class UsersController : ControllerBase
     // POST: /api/users/{userId}/roles
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("{userId:int}/roles")]
-    public async Task<IActionResult> AssignRole(
-        int userId,
-        [FromBody] AssignRoleRequest request,
-        CancellationToken ct = default)
+    public async Task<IActionResult> AssignRole(int userId,[FromBody] AssignRoleRequest request,CancellationToken ct = default)
     {
         try
         {

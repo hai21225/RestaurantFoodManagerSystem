@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -59,12 +58,10 @@ public class AuthController : ControllerBase
     }
 
 
-    // POST: /api/auth/change-password  (P4) — tự đổi mật khẩu, mọi role đã đăng nhập.
+    // POST: /api/auth/change-password  everyone can change their own password
     [Authorize(Policy = AuthPolicies.Authenticated)]
     [HttpPost("change-password")]
-    public async Task<IActionResult> ChangePassword(
-        [FromBody] ChangePasswordRequest request,
-        CancellationToken ct = default)
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request,CancellationToken ct = default)
     {
         if (_currentUser.UserId is not int userId)
         {
@@ -94,9 +91,7 @@ public class AuthController : ControllerBase
     // POST: /api/auth/register  (AdminOnly)
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("register")]
-    public async Task<IActionResult> Register(
-        [FromBody] RegisterRequest request,
-        CancellationToken ct = default)
+    public async Task<IActionResult> Register([FromBody] RegisterRequest request,CancellationToken ct = default)
     {
         if (request.Password != request.ConfirmPassword)
         {

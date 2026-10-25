@@ -4,7 +4,7 @@
 /// Tên role trùng đúng 5 role được seed trong <c>Program.cs</c>:
 /// <c>Admin</c>, <c>WarehouseManager</c>, <c>Chef</c>, <c>Cashier</c>, <c>Waiter</c>.
 ///
-/// Ma trận policy theo thiết kế đã chốt (mục 4.3/4.4 của refactor-plan).
+///
 /// </summary>
 public static class AuthPolicies
 {
