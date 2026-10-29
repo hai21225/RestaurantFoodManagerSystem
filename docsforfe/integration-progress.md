@@ -2,6 +2,9 @@
 
 Cập nhật 2026-10-29. Nhánh làm việc **`dong`**; không tạo nhánh làm việc khác.
 
+Tiến độ sau F0: đã nối các luồng POS chính; xem [bàn giao F1](f1-pos-progress.md).
+Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
+
 ## Mã nguồn đã gộp
 
 - Đông: `8d6769c`; Hải: `dd258d2`; merge commit: `c210d87`.

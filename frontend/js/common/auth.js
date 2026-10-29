@@ -25,7 +25,7 @@
 
     function clearOrderContext() {
         [window.localStorage, window.sessionStorage].forEach((storage) => {
-            ["restaurant.currentRole", "restaurant.selectedTable", "restaurant.lastOrder"].forEach((key) => storage.removeItem(key));
+            ["restaurant.currentRole", "restaurant.selectedTable", "restaurant.lastOrder", "restaurant.posPending"].forEach((key) => storage.removeItem(key));
         });
     }
 

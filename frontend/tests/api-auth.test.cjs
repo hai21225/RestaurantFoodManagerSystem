@@ -67,12 +67,14 @@ test('401 xoá phiên, dữ liệu đơn cũ và quay về login kèm trang cầ
     const b = await browser();
     b.localStorage.setItem('restaurant.selectedTable', '2');
     b.localStorage.setItem('restaurant.lastOrder', 'old-order');
+    b.sessionStorage.setItem('restaurant.posPending', 'previous-session-request');
     b.respond(async () => new Response('invalid-json', { status: 401, headers: { 'content-type': 'application/json' } }));
     await assert.rejects(b.api.get('/menu'), (e) => e.status === 401);
     assert.equal(b.auth.getToken(), null);
     assert.equal(b.sessionStorage.getItem('restaurant.currentUser'), null);
     assert.equal(b.localStorage.getItem('restaurant.selectedTable'), null);
     assert.equal(b.localStorage.getItem('restaurant.lastOrder'), null);
+    assert.equal(b.sessionStorage.getItem('restaurant.posPending'), null);
     assert.equal(new URL(b.redirects[0]).searchParams.get('returnUrl'), b.window.location.href);
 });
 

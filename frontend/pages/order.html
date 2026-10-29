@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/layout.css">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/order.css?v=20261001">
+    <link rel="stylesheet" href="../css/pages/order.css?v=20261029">
 </head>
 <body>
     <div class="app-shell">
@@ -58,10 +58,36 @@
                         </div>
                         <div class="order-actions">
                             <button class="secondary-action" type="button" id="chooseTableButton">Chọn bàn</button>
+                            <button class="secondary-action" type="button" id="refreshOrderButton">Làm mới đơn</button>
                             <button class="secondary-action" type="button" id="clearOrderButton">Xóa đơn tạm</button>
                             <button class="primary-action" type="button" id="sendKitchenButton">Gửi bếp</button>
                         </div>
                     </div>
+
+                    <div class="pos-message" role="status" aria-live="polite">
+                        <p id="orderMessage"></p>
+                        <button class="secondary-action" type="button" id="retryOrderButton" hidden>Thử xác nhận lại yêu cầu</button>
+                        <a id="pendingTableLink" hidden>Quay lại bàn có yêu cầu chưa xác nhận</a>
+                    </div>
+
+                    <section class="panel sent-order-panel" id="activeOrderPanel" aria-labelledby="activeOrderTitle" hidden>
+                        <div class="panel-header sent-order-heading">
+                            <div><h3 id="activeOrderTitle">Món đã gửi</h3><p id="activeOrderStatus"></p></div>
+                            <div class="order-actions">
+                                <button class="secondary-action" type="button" id="orderHistoryButton">Lịch sử</button>
+                                <button class="secondary-action" type="button" id="cancelWholeOrderButton" hidden>Hủy toàn bộ đơn</button>
+                            </div>
+                        </div>
+                        <p class="field-hint">Phục vụ chỉ giảm/hủy phần chưa được bếp nhận. Phần đã nhận cần quản trị viên xử lý.</p>
+                        <div id="sentOrderItems" class="sent-order-items"></div>
+                        <dl class="server-order-totals" aria-label="Số tiền đơn do máy chủ trả về">
+                            <div><dt>Tiền hàng</dt><dd id="serverSubtotal">—</dd></div>
+                            <div><dt>Giảm giá</dt><dd id="serverDiscount">—</dd></div>
+                            <div><dt>Phí phục vụ</dt><dd id="serverService">—</dd></div>
+                            <div><dt>Thuế</dt><dd id="serverTax">—</dd></div>
+                            <div><dt>Tổng đơn đã gửi</dt><dd id="serverTotal">—</dd></div>
+                        </dl>
+                    </section>
 
                     <div class="order-layout">
                         <aside class="panel category-panel" aria-labelledby="category-title">
@@ -98,22 +124,12 @@
 
                             <label class="order-note">
                                 <span>Ghi chú đơn</span>
-                                <textarea id="orderNoteInput" rows="3" placeholder="Nhập ghi chú cho đơn"></textarea>
+                                <textarea id="orderNoteInput" rows="3" maxlength="500" placeholder="Ghi chú hóa đơn khi mở đơn mới"></textarea>
                             </label>
 
-                            <div class="cart-summary" aria-label="Tạm tính đơn hàng">
-                                <div>
-                                    <span>Tạm tính</span>
-                                    <strong id="subtotalAmount">0đ</strong>
-                                </div>
-                                <div>
-                                    <span>Phí phục vụ</span>
-                                    <strong id="serviceAmount">0đ</strong>
-                                </div>
-                                <div class="total-row">
-                                    <span>Tổng cộng</span>
-                                    <strong id="totalAmount">0đ</strong>
-                                </div>
+                            <div class="cart-summary">
+                                <p class="field-hint">Món trong giỏ chưa được gửi. Tổng tiền, giảm giá, thuế và phí dịch vụ sẽ do máy chủ tính sau khi gửi.</p>
+                                <button class="primary-action" type="button" id="cartSendButton">Gửi bếp</button>
                             </div>
                         </aside>
                     </div>
@@ -123,7 +139,7 @@
                             <strong id="cartDockCount">0 món</strong>
                             <small>Đơn tạm</small>
                         </span>
-                        <strong id="cartDockTotal">0đ</strong>
+                        <strong id="cartDockTotal">Chưa gửi bếp</strong>
                     </button>
                 </section>
             </main>
@@ -138,55 +154,49 @@
             </div>
             <button class="dialog-close-button" type="button" id="closeSizeDialog" aria-label="Đóng">×</button>
         </div>
-        <div class="dialog-form">
+        <form id="dishForm" class="dialog-form">
             <div id="sizeOptions" class="size-options" aria-label="Các kích cỡ đang bán"></div>
+            <fieldset id="toppingOptions" class="pos-topping-options"><legend>Topping mỗi phần</legend><div id="toppingChoices"></div></fieldset>
+            <label class="form-field"><span>Số phần</span><input id="dishQuantity" type="number" min="1" max="2147483647" step="1" value="1" required></label>
             <p id="sizeDialogMessage" class="form-message" role="alert"></p>
             <div class="dialog-actions">
                 <button class="secondary-action" type="button" id="cancelSizeButton">Hủy</button>
-            </div>
-        </div>
-    </dialog>
-
-    <dialog id="weightDialog" class="form-dialog weight-dialog" aria-labelledby="weightDialogTitle">
-        <div class="form-dialog-header">
-            <div>
-                <h2 id="weightDialogTitle">Nhập khối lượng</h2>
-                <p id="weightDialogDescription">Giá món được tính theo kilôgam.</p>
-            </div>
-            <button class="dialog-close-button" type="button" id="closeWeightDialog" aria-label="Đóng">×</button>
-        </div>
-        <form id="weightForm" class="dialog-form">
-            <label class="form-field">
-                <span>Khối lượng (kg)</span>
-                <input id="weightQuantity" name="quantity" type="number" inputmode="decimal"
-                    min="0.001" max="999999999" step="0.001" value="1" required>
-                <small class="field-hint">Có thể nhập tối đa 3 chữ số thập phân, ví dụ 0,5 hoặc 1,25.</small>
-            </label>
-            <div class="weight-presets" aria-label="Khối lượng chọn nhanh">
-                <button type="button" data-weight-value="0.5">0,5 kg</button>
-                <button type="button" data-weight-value="1">1 kg</button>
-                <button type="button" data-weight-value="1.5">1,5 kg</button>
-                <button type="button" data-weight-value="2">2 kg</button>
-            </div>
-            <div class="weight-preview" aria-live="polite">
-                <span>Tạm tính</span>
-                <strong id="weightPreviewTotal">0đ</strong>
-            </div>
-            <p id="weightFormMessage" class="form-message" role="alert"></p>
-            <div class="dialog-actions">
-                <button class="secondary-action" type="button" id="cancelWeightButton">Hủy</button>
-                <button class="primary-action" type="submit">Thêm vào đơn</button>
+                <button class="primary-action" type="submit">Thêm vào giỏ</button>
             </div>
         </form>
+    </dialog>
+
+    <dialog id="orderMutationDialog" class="form-dialog" aria-labelledby="mutationTitle">
+        <div class="form-dialog-header">
+            <div><h2 id="mutationTitle">Cập nhật món</h2><p id="mutationDescription"></p></div>
+            <button class="dialog-close-button" type="button" data-close-mutation aria-label="Đóng">×</button>
+        </div>
+        <form id="orderMutationForm" class="dialog-form">
+            <label class="form-field" id="mutationQuantityField"><span>Tổng số phần còn phục vụ của lượt gọi này</span><input id="mutationQuantity" type="number" min="0" max="2147483647" step="1"></label>
+            <label class="form-field"><span>Lý do</span><textarea id="mutationReason" rows="3" maxlength="500"></textarea></label>
+            <label class="form-field" id="mutationReasonCodeField"><span>Loại lý do hủy</span><select id="mutationReasonCode"><option value="CustomerChange">Khách thay đổi</option><option value="OutOfStock">Hết nguyên liệu</option><option value="PhysicalShortage">Thiếu / hỏng nguyên liệu thực tế</option><option value="KitchenError">Sự cố chế biến</option></select></label>
+            <label id="mutationWastageField" class="pos-wastage-check" hidden>
+                <input type="checkbox" id="mutationWastage"> Tôi xác nhận phần đã nấu bị giảm sẽ ghi hao hụt, không hoàn kho.
+            </label>
+            <p class="field-hint" id="mutationStockHint"></p>
+            <p id="mutationMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions">
+                <button class="secondary-action" type="button" data-close-mutation>Đóng</button>
+                <button class="primary-action" type="submit" id="mutationConfirm">Xác nhận</button>
+            </div>
+        </form>
+    </dialog>
+
+    <dialog id="orderHistoryDialog" class="form-dialog pos-history-dialog" aria-labelledby="historyTitle">
+        <div class="form-dialog-header"><h2 id="historyTitle">Lịch sử đơn</h2><button class="dialog-close-button" id="closeOrderHistory" type="button" aria-label="Đóng lịch sử">×</button></div>
+        <div class="dialog-form" id="orderHistoryContent" aria-live="polite"></div>
     </dialog>
 
     <script src="../js/common/auth.js"></script>
     <script src="../js/common/navigation.js?v=20261001"></script>
     <script src="../js/common/api.js"></script>
     <script src="../js/common/dialogs.js"></script>
-    <script src="../js/common/food-units.js"></script>
-    <script src="../js/common/food-sizes.js"></script>
-    <script src="../js/data/order.data.js"></script>
-    <script src="../js/pages/order.js?v=20261001"></script>
+    <script src="../js/common/order-session.js"></script>
+    <script src="../js/pages/order.js?v=20261029"></script>
 </body>
 </html>

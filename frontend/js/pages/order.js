@@ -1,626 +1,356 @@
 (function () {
-    const orderData = window.orderData || {
-        table: {},
-        categories: [],
-        foods: []
-    };
+    const $ = (selector) => document.querySelector(selector);
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const money = (value) => typeof value === "number" && Number.isFinite(value) ? `${value.toLocaleString("vi-VN")}đ` : "—";
+    const statusLabel = (value) => ({ Pending: "Chờ bếp nhận", SentToKitchen: "Đã gửi bếp", Accepted: "Phiếu đã được nhận", Preparing: "Bếp đang làm", Ready: "Sẵn sàng phục vụ", Completed: "Bếp đã hoàn tất", Paid: "Đã thanh toán", Cancelled: "Đã hủy" }[value] || value || "Chưa rõ");
+    const state = { foods: [], categories: [], category: "all", search: "", cart: [], dish: null, mutation: null };
+    const api = window.restaurantApi;
+    const auth = window.restaurantAuth;
+    const pos = window.restaurantPos;
+    let savedTable = null;
+    try { savedTable = JSON.parse(window.localStorage.getItem("restaurant.selectedTable")); } catch (_) { /* Lấy lại bàn từ API. */ }
+    const tableId = new URLSearchParams(window.location.search).get("tableId") || savedTable?.id;
+    const session = new pos.OrderSession({ tableId, api, auth, storage: window.sessionStorage });
+    const dialog = $("#orderMutationDialog");
+    const dishDialog = $("#sizeDialog");
+    let sentVersion = "";
+    const closed = () => session.order && pos.terminal(session.order.status);
+    const locked = () => !session.loaded || session.loading || session.busy || Boolean(session.pending) || !session.isOperator() || closed() || !session.table?.isActive || session.table.status === "Maintenance" || (!session.order && session.table.status !== "Available");
+    const findFood = (sizeId) => state.foods.find((food) => food.sizes.some((size) => size.sizeId === sizeId));
 
-    const state = {
-        categoryId: "all",
-        searchTerm: "",
-        cart: [],
-        selectedTable: getSelectedTable(),
-        sizeFoodId: null,
-        weightFoodId: null,
-        weightSizeId: null
-    };
-
-    const orderTitle = document.querySelector("#order-title");
-    const orderContext = document.querySelector("#orderContext");
-    const categoryList = document.querySelector("#categoryList");
-    const categoryCount = document.querySelector("#categoryCount");
-    const foodGrid = document.querySelector("#foodGrid");
-    const foodCount = document.querySelector("#foodCount");
-    const foodSearchInput = document.querySelector("#foodSearchInput");
-    const cartList = document.querySelector("#cartList");
-    const cartItemCount = document.querySelector("#cartItemCount");
-    const subtotalAmount = document.querySelector("#subtotalAmount");
-    const serviceAmount = document.querySelector("#serviceAmount");
-    const totalAmount = document.querySelector("#totalAmount");
-    const cartDock = document.querySelector("#cartDock");
-    const cartDockCount = document.querySelector("#cartDockCount");
-    const cartDockTotal = document.querySelector("#cartDockTotal");
-    const cartPanel = document.querySelector(".cart-panel");
-    const closeCartButton = document.querySelector("#closeCartButton");
-    const chooseTableButton = document.querySelector("#chooseTableButton");
-    const clearOrderButton = document.querySelector("#clearOrderButton");
-    const sendKitchenButton = document.querySelector("#sendKitchenButton");
-    const sizeDialog = document.querySelector("#sizeDialog");
-    const sizeDialogTitle = document.querySelector("#sizeDialogTitle");
-    const sizeDialogDescription = document.querySelector("#sizeDialogDescription");
-    const sizeOptions = document.querySelector("#sizeOptions");
-    const sizeDialogMessage = document.querySelector("#sizeDialogMessage");
-    const closeSizeDialog = document.querySelector("#closeSizeDialog");
-    const cancelSizeButton = document.querySelector("#cancelSizeButton");
-    const weightDialog = document.querySelector("#weightDialog");
-    const weightForm = document.querySelector("#weightForm");
-    const weightDialogTitle = document.querySelector("#weightDialogTitle");
-    const weightDialogDescription = document.querySelector("#weightDialogDescription");
-    const weightQuantity = document.querySelector("#weightQuantity");
-    const weightPreviewTotal = document.querySelector("#weightPreviewTotal");
-    const weightFormMessage = document.querySelector("#weightFormMessage");
-    const closeWeightDialog = document.querySelector("#closeWeightDialog");
-    const cancelWeightButton = document.querySelector("#cancelWeightButton");
-    const navButtons = document.querySelectorAll("[data-page]");
-
-    async function loadMenu() {
-        foodGrid.innerHTML = '<div class="empty-state"><strong>Đang tải thực đơn...</strong></div>';
-        try {
-            const menu = await window.restaurantApi.get("/menu");
-            orderData.categories = [{ id: "all", name: "Tất cả" }, ...menu.map((category) => ({
-                id: String(category.categoryId),
-                name: category.categoryName
-            }))];
-            orderData.foods = menu.flatMap((category) => category.foods.map((food) => {
-                const supportedSizes = window.foodSizes.sort(
-                    food.sizes.filter((size) => window.foodSizes.isSupported(size.sizeName))
-                );
-                const sizes = supportedSizes.map((size) => ({
-                    id: size.sizeId,
-                    name: window.foodSizes.normalize(size.sizeName) || size.sizeName,
-                    price: Number(size.sizePrice) || 0,
-                    isDefault: Boolean(size.isDefault)
-                }));
-                const defaultSize = sizes.find((size) => size.isDefault) || sizes[0];
-                return {
-                    id: food.foodId,
-                    sizeId: defaultSize?.id || null,
-                    sizes,
-                    categoryId: String(category.categoryId),
-                    name: food.foodName,
-                    description: food.foodDescription || "Chưa có mô tả",
-                    price: Number(defaultSize?.price ?? food.foodPrice) || 0,
-                    unit: window.foodUnits.normalize(food.saleUnit),
-                    allowsFractionalQuantity: Boolean(food.allowsFractionalQuantity)
-                        || window.foodUnits.allowsFractionalQuantity(food.saleUnit),
-                    prepTime: 0,
-                    status: defaultSize ? "available" : "out"
-                };
-            }));
-            renderCategories();
-            renderFoods();
-            renderCart();
-        } catch (error) {
-            orderData.foods = [];
-            renderCategories();
-            foodGrid.innerHTML = `<div class="empty-state"><strong>Không tải được thực đơn</strong><span>${error.message}</span></div>`;
-        }
+    function message(text, error = false) {
+        $("#orderMessage").textContent = text;
+        $(".pos-message").classList.toggle("is-error", error);
     }
 
-    function getSelectedTable() {
-        const params = new URLSearchParams(window.location.search);
-        const tableId = params.get("tableId");
-        const savedTable = window.localStorage.getItem("restaurant.selectedTable");
-
-        if (savedTable) {
-            try {
-                const table = JSON.parse(savedTable);
-
-                if (!tableId || String(table.id) === tableId) {
-                    return table;
-                }
-            } catch (error) {
-                window.localStorage.removeItem("restaurant.selectedTable");
-            }
-        }
-
-        if (orderData.table?.id) {
-            return orderData.table;
-        }
-
-        if (tableId) {
-            return {
-                id: tableId,
-                name: `Bàn ${tableId}`,
-                areaLabel: "",
-                guestCount: 0,
-                orderCode: ""
-            };
-        }
-
-        return null;
-    }
-
-    function formatCurrency(value) {
-        return `${value.toLocaleString("vi-VN")}đ`;
-    }
-
-    function roundQuantity(value) {
-        return Math.round((Number(value) + Number.EPSILON) * 1000) / 1000;
-    }
-
-    function escapeHtml(value) {
-        return String(value)
-            .replace(/&/g, "&amp;")
-            .replace(/"/g, "&quot;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;");
-    }
-
-    function getFoodById(foodId) {
-        return orderData.foods.find((food) => food.id === foodId);
-    }
-
-    function getFoodSize(food, sizeId) {
-        return food?.sizes.find((size) => size.id === sizeId) || null;
-    }
-
-    function getCartItem(foodId, sizeId) {
-        return state.cart.find((item) => item.foodId === foodId && item.sizeId === sizeId);
-    }
-
-    function getFilteredFoods() {
-        return orderData.foods.filter((food) => {
-            const matchCategory = state.categoryId === "all" || food.categoryId === state.categoryId;
-            const matchSearch = food.name.toLowerCase().includes(state.searchTerm.toLowerCase());
-
-            return matchCategory && matchSearch;
+    function renderButtons() {
+        const isLocked = locked();
+        const sendLabel = session.busy ? "Đang xử lý…" : session.order ? "Gửi món gọi thêm" : "Gửi bếp";
+        [$("#sendKitchenButton"), $("#cartSendButton")].forEach((button) => {
+            button.textContent = sendLabel;
+            button.disabled = isLocked || !state.cart.length;
         });
+        $("#clearOrderButton").disabled = !state.cart.length || session.busy || Boolean(session.pending);
+        $("#refreshOrderButton").disabled = session.busy || session.loading;
+        $("#orderHistoryButton").disabled = session.busy || !session.order;
+        $("#cancelWholeOrderButton").hidden = !session.isAdmin() || !session.isOpen();
+        $("#cancelWholeOrderButton").disabled = isLocked;
+        const ownPending = session.pending?.tableId === session.tableId;
+        $("#retryOrderButton").hidden = !ownPending;
+        $("#retryOrderButton").disabled = session.busy || session.loading;
+        $("#pendingTableLink").hidden = !session.pending || ownPending;
+        if (session.pending) $("#pendingTableLink").href = `order.html?tableId=${encodeURIComponent(session.pending.tableId)}`;
+        $("#orderNoteInput").disabled = isLocked || Boolean(session.order);
+        $("#cartList").querySelectorAll("button, input").forEach((input) => { input.disabled = isLocked; });
+        $("#foodGrid").querySelectorAll("button").forEach((button) => { button.disabled = isLocked; });
+        $("#sentOrderItems").querySelectorAll("button").forEach((button) => { button.disabled = isLocked; });
+        $("#orderMutationForm").querySelectorAll("input, textarea, select, button").forEach((input) => { input.disabled = session.busy || Boolean(session.pending); });
+        $("#orderMutationForm").querySelectorAll("[data-close-mutation]").forEach((button) => { button.disabled = session.busy; });
+        if (state.mutation) {
+            const mutation = state.mutation;
+            const allowed = mutation.kind === "cancelItem" ? session.order?.items.some((item) => item.id === mutation.item.id && session.canCancel(item))
+                : mutation.kind === "cancelOrder" ? session.isAdmin() && session.isOpen()
+                : session.isOpen() && pos.groups(session.order).some((group) => group.key === mutation.group.key && group.active.length);
+            $("#mutationConfirm").disabled = isLocked || !allowed;
+        }
+        $("#mutationConfirm").textContent = session.busy ? "Đang xử lý…" : "Xác nhận";
+        if (session.pending && !session.busy) message("Yêu cầu trước chưa được xác nhận đầy đủ. Hãy thử xác nhận lại; không gửi một yêu cầu mới.", true);
+    }
+
+    function renderTable() {
+        const table = session.table;
+        $("#order-title").textContent = table ? `Bàn ${table.tableNumber}` : tableId ? `Bàn ${tableId}` : "Chưa chọn bàn";
+        $("#orderContext").textContent = !session.loaded ? "Chọn bàn hoặc làm mới để tải đơn thật."
+            : closed() ? "Đơn đã kết thúc. Chọn bàn để mở lượt phục vụ mới."
+            : !session.isOperator() ? "Bạn đang xem đơn; chỉ phục vụ và quản trị viên được sửa tại POS."
+            : session.order ? [table.areaName, `Đơn #${session.order.orderId}`, "Chọn món bên dưới để gọi thêm."].filter(Boolean).join(" · ")
+            : table.status === "Maintenance" ? "Bàn đang bảo trì. Hãy chọn bàn khác."
+            : table.status !== "Available" ? "Chưa xác định được đơn của bàn đang sử dụng. Hãy làm mới hoặc chọn lại bàn."
+            : "Bàn chưa có đơn đang mở. Chọn món rồi gửi bếp.";
+    }
+
+    function renderSentItems() {
+        $("#activeOrderPanel").hidden = !session.order;
+        if (!session.order) { sentVersion = ""; return; }
+        const order = session.order;
+        const version = JSON.stringify([order, auth.getUser()?.roles]);
+        if (version === sentVersion) return;
+        sentVersion = version;
+        $("#orderNoteInput").value = order.note || "";
+        $("#activeOrderTitle").textContent = `Món đã gửi · Đơn #${order.orderId}`;
+        $("#activeOrderStatus").textContent = statusLabel(order.status);
+        const isLocked = locked();
+        $("#sentOrderItems").innerHTML = pos.groups(order).map((group) => {
+            const first = group.items[0];
+            const groupHint = !session.canReduce(group) && group.active.length ? "Bếp đã nhận món: chỉ được gọi tăng; cần quản trị viên để giảm." : "";
+            return `<article class="sent-dish">
+                <div class="sent-dish-heading"><div><strong>${escapeHtml(first.foodName || "Món đã ngừng bán")}</strong><p>${escapeHtml(first.sizeName)} · ${group.quantity} phần còn phục vụ</p></div>
+                ${group.active.length && session.isOperator() && session.isOpen() ? `<button class="secondary-action" type="button" data-edit-group="${escapeHtml(group.key)}" ${isLocked ? "disabled" : ""}>${session.canReduce(group) ? "Đổi số lượng" : "Gọi tăng"}</button>` : ""}</div>
+                ${group.items.map((item) => `<div class="sent-dish-line ${pos.cancelled(item) ? "is-cancelled" : ""}">
+                    <div><span class="pos-item-status">${escapeHtml(statusLabel(item.status))} · ${item.quantity} phần</span><span class="sent-unit-price">Đơn giá: ${money(item.unitPrice)}</span>
+                    ${item.note ? `<p>Ghi chú: ${escapeHtml(item.note)}</p>` : ""}
+                    ${item.toppings?.length ? `<p>Topping mỗi phần: ${item.toppings.map((t) => `${escapeHtml(t.toppingName)} × ${t.quantity}`).join(", ")}</p>` : ""}
+                    ${item.cancelReason ? `<p>Lý do hủy: ${escapeHtml(item.cancelReason)}</p>` : ""}</div>
+                    ${session.canCancel(item) ? `<button class="secondary-action" type="button" data-cancel-item="${item.id}" ${isLocked ? "disabled" : ""}>Hủy ${item.quantity} phần</button>` : ""}
+                </div>`).join("")}
+                ${groupHint ? `<p class="field-hint">${groupHint}</p>` : ""}
+            </article>`;
+        }).join("") || '<p class="cart-empty">Đơn chưa có dòng món.</p>';
+        [["#serverSubtotal", "subtotal"], ["#serverDiscount", "discountAmount"], ["#serverService", "serviceChargeAmount"], ["#serverTax", "taxAmount"], ["#serverTotal", "totalAmount"]]
+            .forEach(([selector, field]) => { $(selector).textContent = money(order[field]); });
     }
 
     function renderCategories() {
-        categoryCount.textContent = `${orderData.categories.length} mục`;
-
-        categoryList.innerHTML = orderData.categories.map((category) => {
-            const count = category.id === "all"
-                ? orderData.foods.length
-                : orderData.foods.filter((food) => food.categoryId === category.id).length;
-
-            return `
-                <button
-                    class="category-button${category.id === state.categoryId ? " is-active" : ""}"
-                    type="button"
-                    data-category-id="${category.id}"
-                >
-                    <strong>${category.name}</strong>
-                    <span>${count}</span>
-                </button>
-            `;
-        }).join("");
-
-        categoryList.querySelectorAll("[data-category-id]").forEach((button) => {
-            button.addEventListener("click", () => {
-                state.categoryId = button.dataset.categoryId;
-                renderCategories();
-                renderFoods();
-            });
-        });
+        $("#categoryCount").textContent = `${state.categories.length} mục`;
+        $("#categoryList").innerHTML = [{ id: "all", name: "Tất cả" }, ...state.categories].map((category) => `<button type="button" class="category-button${state.category === category.id ? " is-active" : ""}" data-category-id="${escapeHtml(category.id)}"><strong>${escapeHtml(category.name)}</strong></button>`).join("");
     }
 
     function renderFoods() {
-        const filteredFoods = getFilteredFoods();
-
-        foodCount.textContent = `${filteredFoods.length} món`;
-
-        if (!filteredFoods.length) {
-            foodGrid.innerHTML = `
-                <div class="empty-state">
-                    <strong>Chưa có dữ liệu món</strong>
-                    <span>Danh sách món sẽ hiển thị tại đây sau khi kết nối nguồn dữ liệu thật.</span>
-                </div>
-            `;
-            return;
-        }
-
-        foodGrid.innerHTML = filteredFoods.map((food) => {
-            const isDisabled = food.status !== "available" || !state.selectedTable;
-            const minimumPrice = food.sizes.length
-                ? Math.min(...food.sizes.map((size) => size.price))
-                : 0;
-            const priceLabel = food.sizes.length > 1
-                ? `Từ ${formatCurrency(minimumPrice)}`
-                : food.sizes.length === 1
-                    ? `${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}`
-                    : "Chưa có kích cỡ";
-
-            return `
-                <button
-                    class="food-card${isDisabled ? " is-disabled" : ""}"
-                    type="button"
-                    data-food-id="${food.id}"
-                    ${isDisabled ? "disabled" : ""}
-                >
-                    <div class="food-card-top">
-                        <h4>${escapeHtml(food.name)}</h4>
-                        <span class="food-price">${priceLabel}</span>
-                    </div>
-                    <p>${escapeHtml(food.description)}</p>
-                    <div class="food-meta">
-                        <span class="food-size-count">${food.sizes.length} kích cỡ</span>
-                        <span>${!state.selectedTable ? "Chọn bàn trước" : food.status !== "available" ? "Tạm hết" : "Đang bán"}</span>
-                    </div>
-                </button>
-            `;
-        }).join("");
-
-        foodGrid.querySelectorAll("[data-food-id]").forEach((button) => {
-            button.addEventListener("click", () => addFoodToCart(Number(button.dataset.foodId)));
-        });
+        const foods = state.foods.filter((food) => (state.category === "all" || food.categoryId === state.category) && food.foodName.toLocaleLowerCase("vi-VN").includes(state.search));
+        $("#foodCount").textContent = `${foods.length} món`;
+        $("#foodGrid").innerHTML = foods.length ? foods.map((food) => {
+            const priceSize = food.sizes.find((size) => size.isDefault) || food.sizes[0];
+            return `<button class="food-card" type="button" data-food-id="${food.foodId}" ${locked() ? "disabled" : ""}>
+            <div class="food-card-top"><h4>${escapeHtml(food.foodName)}</h4></div><p>${escapeHtml(food.foodDescription || "")}</p>
+            <div class="food-meta"><span class="food-price">${escapeHtml(priceSize.sizeName)} · ${money(priceSize.sizePrice)}</span><span>${food.sizes.length} kích cỡ</span><span>Chọn món</span></div></button>`;
+        }).join("")
+            : '<div class="empty-state"><strong>Chưa có món phù hợp</strong><span>Thực đơn được tải từ máy chủ. Hãy đổi bộ lọc hoặc kiểm tra món đang bán.</span></div>';
     }
 
-    function addFoodToCart(foodId) {
-        const food = getFoodById(foodId);
-
-        if (!state.selectedTable || !food || food.status !== "available") {
-            return;
+    async function loadMenu() {
+        $("#foodGrid").innerHTML = '<div class="empty-state"><strong>Đang tải thực đơn…</strong></div>';
+        try {
+            const menu = await api.get("/menu");
+            state.categories = menu.map((category) => ({ id: String(category.categoryId), name: category.categoryName }));
+            state.foods = menu.flatMap((category) => category.foods.filter((food) => food.sizes.length).map((food) => ({ ...food, categoryId: String(category.categoryId) })));
+            renderCategories(); renderFoods(); renderCart();
+        } catch (error) {
+            $("#foodGrid").innerHTML = `<div class="empty-state"><strong>Không tải được thực đơn</strong><span>${escapeHtml(error.message)}</span></div>`;
         }
-
-        if (food.sizes.length > 1) {
-            openSizeSelection(food);
-            return;
-        }
-
-        const size = food.sizes[0];
-        if (size) {
-            addFoodSizeToCart(food, size);
-        }
-    }
-
-    function openSizeSelection(food) {
-        state.sizeFoodId = food.id;
-        sizeDialogTitle.textContent = food.name;
-        sizeDialogDescription.textContent = "Chọn kích cỡ và giá bán.";
-        sizeDialogMessage.textContent = "";
-        sizeOptions.innerHTML = food.sizes.map((size) => `
-            <button class="size-option" type="button" data-select-size-id="${size.id}">
-                <strong>${escapeHtml(size.name)}</strong>
-                <span>${formatCurrency(size.price)}</span>
-            </button>
-        `).join("");
-        sizeDialog.showModal();
-        sizeOptions.querySelector("[data-select-size-id]")?.focus();
-    }
-
-    function closeSizeSelection() {
-        state.sizeFoodId = null;
-        if (sizeDialog.open) {
-            sizeDialog.close();
-        }
-    }
-
-    function addFoodSizeToCart(food, size) {
-        if (food.allowsFractionalQuantity) {
-            if (sizeDialog.open) {
-                closeSizeSelection();
-            }
-            openWeightDialog(food.id, size.id);
-            return;
-        }
-
-        const existingItem = getCartItem(food.id, size.id);
-
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            state.cart.push({
-                foodId: food.id,
-                sizeId: size.id,
-                quantity: 1,
-                note: ""
-            });
-        }
-
-        if (sizeDialog.open) {
-            closeSizeSelection();
-        }
-        renderCart();
-    }
-
-    function updateQuantity(foodId, sizeId, amount) {
-        const item = getCartItem(foodId, sizeId);
-
-        if (!item) {
-            return;
-        }
-
-        item.quantity = roundQuantity(item.quantity + amount);
-
-        if (item.quantity <= 0) {
-            state.cart = state.cart.filter((cartItem) => (
-                cartItem.foodId !== foodId || cartItem.sizeId !== sizeId
-            ));
-        }
-
-        renderCart();
-    }
-
-    function updateWeightPreview() {
-        const food = getFoodById(state.weightFoodId);
-        const size = getFoodSize(food, state.weightSizeId);
-        const quantity = roundQuantity(Number(String(weightQuantity.value).replace(",", ".")));
-        const isValid = food && size && quantity >= 0.001;
-
-        weightPreviewTotal.textContent = formatCurrency(isValid ? size.price * quantity : 0);
-        weightFormMessage.textContent = isValid ? "" : "Khối lượng phải lớn hơn 0 kg.";
-        weightFormMessage.className = isValid ? "form-message" : "form-message is-error";
-    }
-
-    function openWeightDialog(foodId, sizeId) {
-        const food = getFoodById(foodId);
-        const size = getFoodSize(food, sizeId);
-        if (!food || !size) return;
-
-        const existingItem = getCartItem(foodId, sizeId);
-        state.weightFoodId = foodId;
-        state.weightSizeId = sizeId;
-        weightDialogTitle.textContent = food.name;
-        weightDialogDescription.textContent = `${size.name} · ${formatCurrency(size.price)} / ${window.foodUnits.getShortLabel(food.unit)}`;
-        weightQuantity.value = existingItem?.quantity || 1;
-        updateWeightPreview();
-        weightDialog.showModal();
-        weightQuantity.focus();
-        weightQuantity.select();
-    }
-
-    function closeWeightEntry() {
-        state.weightFoodId = null;
-        state.weightSizeId = null;
-        if (weightDialog.open) {
-            weightDialog.close();
-        }
-    }
-
-    function updateItemNote(foodId, sizeId, value) {
-        const item = getCartItem(foodId, sizeId);
-
-        if (item) {
-            item.note = value;
-        }
-    }
-
-    function getSubtotal() {
-        return state.cart.reduce((sum, item) => {
-            const food = getFoodById(item.foodId);
-            const size = getFoodSize(food, item.sizeId);
-            return sum + (size ? size.price * item.quantity : 0);
-        }, 0);
     }
 
     function renderCart() {
-        const totalQuantity = state.cart.length;
-
-        cartItemCount.textContent = `${totalQuantity} món`;
-        cartDockCount.textContent = `${totalQuantity} món`;
-
-        if (state.cart.length === 0) {
-            cartList.innerHTML = '<p class="cart-empty">Chưa có món nào trong đơn tạm.</p>';
-        } else {
-            cartList.innerHTML = state.cart.map((item) => {
-                const food = getFoodById(item.foodId);
-                const size = getFoodSize(food, item.sizeId);
-
-                if (!food || !size) {
-                    return "";
-                }
-
-                return `
-                    <article class="cart-item">
-                        <div class="cart-item-top">
-                            <div class="cart-item-name">
-                                <strong>${escapeHtml(food.name)}</strong>
-                                <span class="cart-item-size">${escapeHtml(size.name)} · ${formatCurrency(size.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
-                            </div>
-                            <strong>${formatCurrency(size.price * item.quantity)}</strong>
-                        </div>
-
-                        <div class="quantity-control">
-                            <button class="quantity-button" type="button" data-quantity-change="-${food.allowsFractionalQuantity ? "0.1" : "1"}" data-food-id="${food.id}" data-size-id="${size.id}" aria-label="Giảm số lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">-</button>
-                            ${food.allowsFractionalQuantity
-                                ? `<button class="quantity-value" type="button" data-edit-weight="${food.id}" data-size-id="${size.id}" aria-label="Sửa khối lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">${window.foodUnits.formatQuantity(item.quantity, food.unit)}</button>`
-                                : `<strong>${window.foodUnits.formatQuantity(item.quantity, food.unit)}</strong>`}
-                            <button class="quantity-button" type="button" data-quantity-change="${food.allowsFractionalQuantity ? "0.1" : "1"}" data-food-id="${food.id}" data-size-id="${size.id}" aria-label="Tăng số lượng ${escapeHtml(food.name)} cỡ ${escapeHtml(size.name)}">+</button>
-                        </div>
-
-                        <input
-                            class="cart-item-note"
-                            type="text"
-                            value="${escapeHtml(item.note)}"
-                            placeholder="Ghi chú riêng cho món"
-                            data-note-food-id="${food.id}"
-                            data-note-size-id="${size.id}"
-                        >
-                    </article>
-                `;
-            }).join("");
-        }
-
-        cartList.querySelectorAll("[data-quantity-change]").forEach((button) => {
-            button.addEventListener("click", () => updateQuantity(
-                Number(button.dataset.foodId),
-                Number(button.dataset.sizeId),
-                Number(button.dataset.quantityChange)
-            ));
-        });
-
-        cartList.querySelectorAll("[data-edit-weight]").forEach((button) => {
-            button.addEventListener("click", () => openWeightDialog(
-                Number(button.dataset.editWeight),
-                Number(button.dataset.sizeId)
-            ));
-        });
-
-        cartList.querySelectorAll("[data-note-food-id]").forEach((input) => {
-            input.addEventListener("input", () => updateItemNote(
-                Number(input.dataset.noteFoodId),
-                Number(input.dataset.noteSizeId),
-                input.value
-            ));
-        });
-
-        renderTotals();
-        sendKitchenButton.disabled = !state.selectedTable || state.cart.length === 0;
-        clearOrderButton.disabled = state.cart.length === 0;
+        $("#cartItemCount").textContent = `${state.cart.length} món`;
+        $("#cartDockCount").textContent = `${state.cart.length} món chưa gửi`;
+        $("#cartList").innerHTML = state.cart.length ? state.cart.map((item, index) => {
+            const food = findFood(item.sizeId);
+            const size = food?.sizes.find((entry) => entry.sizeId === item.sizeId);
+            const name = food?.foodName || "Món từ yêu cầu trước";
+            return `<article class="cart-item"><div class="cart-item-top"><div class="cart-item-name"><strong>${escapeHtml(name)}</strong><span class="cart-item-size">${escapeHtml(size?.sizeName || "Cỡ đã chọn")} · Đơn giá cỡ: ${money(size?.sizePrice)}</span></div></div>
+                ${item.toppings.length ? `<p class="field-hint">Topping mỗi phần: ${item.toppings.map((t) => escapeHtml(food?.toppings.find((entry) => entry.toppingId === t.toppingId)?.toppingName || "Topping đã chọn")).join(", ")}</p>` : ""}
+                <div class="quantity-control"><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="-1" aria-label="Giảm ${escapeHtml(name)}">−</button><strong>${item.quantity} phần</strong><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="1" aria-label="Tăng ${escapeHtml(name)}">+</button></div>
+                <input class="cart-item-note" maxlength="500" value="${escapeHtml(item.note)}" data-cart-note="${index}" aria-label="Ghi chú ${escapeHtml(name)}" placeholder="Ghi chú riêng cho món"></article>`;
+        }).join("") : '<p class="cart-empty">Giỏ món chưa gửi đang trống.</p>';
+        renderButtons();
     }
 
-    function renderTotals() {
-        const subtotal = getSubtotal();
-        const service = 0;
-        const total = subtotal + service;
+    function render() { renderTable(); renderSentItems(); renderButtons(); }
 
-        subtotalAmount.textContent = formatCurrency(subtotal);
-        serviceAmount.textContent = formatCurrency(service);
-        totalAmount.textContent = formatCurrency(total);
-        cartDockTotal.textContent = formatCurrency(total);
-    }
-
-    function setupNavigation() {
-        navButtons.forEach((button) => {
-            button.addEventListener("click", () => {
-                window.location.href = button.dataset.page;
-            });
-        });
-    }
-
-    function renderSelectedTable() {
-        if (!state.selectedTable) {
-            orderTitle.textContent = "Chưa chọn bàn";
-            orderContext.textContent = "Hãy chọn bàn trước khi đặt món.";
-            sendKitchenButton.disabled = true;
-            return;
-        }
-
-        const details = [
-            state.selectedTable.areaLabel,
-            state.selectedTable.guestCount ? `${state.selectedTable.guestCount} khách` : "",
-            state.selectedTable.orderCode ? `Đơn ${state.selectedTable.orderCode}` : ""
-        ].filter(Boolean).join(" · ");
-
-        orderTitle.textContent = state.selectedTable.name || `Bàn ${state.selectedTable.id}`;
-        orderContext.textContent = details || "Sẵn sàng nhận món cho bàn này.";
-    }
-
-    foodSearchInput.addEventListener("input", () => {
-        state.searchTerm = foodSearchInput.value.trim();
-        renderFoods();
-    });
-
-    chooseTableButton.addEventListener("click", () => {
-        window.location.href = "tables.html";
-    });
-
-    clearOrderButton.addEventListener("click", () => {
-        state.cart = [];
-        renderCart();
-    });
-
-    cartDock.addEventListener("click", () => {
-        cartPanel.classList.add("is-open");
-    });
-
-    closeCartButton.addEventListener("click", () => {
-        cartPanel.classList.remove("is-open");
-    });
-
-    sizeOptions.addEventListener("click", (event) => {
-        const button = event.target.closest("[data-select-size-id]");
-        if (!button) return;
-
-        const food = getFoodById(state.sizeFoodId);
-        const size = getFoodSize(food, Number(button.dataset.selectSizeId));
-        if (food && size) {
-            addFoodSizeToCart(food, size);
-        }
-    });
-
-    closeSizeDialog.addEventListener("click", closeSizeSelection);
-    cancelSizeButton.addEventListener("click", closeSizeSelection);
-    sizeDialog.addEventListener("close", () => {
-        state.sizeFoodId = null;
-    });
-
-    weightQuantity.addEventListener("input", updateWeightPreview);
-
-    document.querySelectorAll("[data-weight-value]").forEach((button) => {
-        button.addEventListener("click", () => {
-            weightQuantity.value = button.dataset.weightValue;
-            updateWeightPreview();
-            weightQuantity.focus();
-        });
-    });
-
-    closeWeightDialog.addEventListener("click", closeWeightEntry);
-    cancelWeightButton.addEventListener("click", closeWeightEntry);
-    weightDialog.addEventListener("close", () => {
-        state.weightFoodId = null;
-        state.weightSizeId = null;
-    });
-
-    weightForm.addEventListener("submit", (event) => {
-        event.preventDefault();
-        const food = getFoodById(state.weightFoodId);
-        const size = getFoodSize(food, state.weightSizeId);
-        const quantity = roundQuantity(Number(String(weightQuantity.value).replace(",", ".")));
-
-        if (!food || !size || quantity < 0.001 || quantity > 999999999) {
-            weightFormMessage.textContent = "Nhập khối lượng hợp lệ lớn hơn 0 kg.";
-            weightFormMessage.className = "form-message is-error";
-            weightQuantity.focus();
-            return;
-        }
-
-        const existingItem = getCartItem(food.id, size.id);
-        if (existingItem) {
-            existingItem.quantity = quantity;
-        } else {
-            state.cart.push({ foodId: food.id, sizeId: size.id, quantity, note: "" });
-        }
-
-        closeWeightEntry();
-        renderCart();
-    });
-
-    sendKitchenButton.addEventListener("click", async () => {
-        if (state.cart.length === 0) {
-            return;
-        }
-
-        const user = JSON.parse(window.sessionStorage.getItem("restaurant.currentUser") || "null");
-        if (!user?.userId) {
-            window.alert("Bạn cần đăng nhập trước khi gửi đơn.");
-            return;
-        }
-
-        sendKitchenButton.disabled = true;
-        sendKitchenButton.textContent = "Đang gửi...";
+    async function refresh(quiet = false) {
+        if (session.busy || session.loading) return;
+        const task = session.refresh();
+        renderButtons();
         try {
-            const order = await window.restaurantApi.post("/orders", {
-                tableId: Number(state.selectedTable.id),
-                createdBy: user.userId,
-                items: state.cart.map((item) => ({
-                    sizeId: item.sizeId,
-                    quantity: item.quantity,
-                    note: item.note,
-                    toppings: []
-                }))
-            });
-            window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(order));
-            state.cart = [];
-            renderCart();
-            sendKitchenButton.textContent = "Đã gửi bếp";
+            await task;
+            if (session.order) window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(session.order));
+            if (!quiet) message(session.order ? "Đã tải trạng thái mới nhất từ máy chủ." : "Bàn chưa có đơn đang mở.");
+            render();
         } catch (error) {
-            window.alert(error.message);
-        } finally {
-            window.setTimeout(() => {
-                sendKitchenButton.disabled = state.cart.length === 0;
-                sendKitchenButton.textContent = "Gửi bếp";
-            }, 900);
+            message(error.message, true);
+            render();
         }
-    });
+    }
 
-    setupNavigation();
-    renderSelectedTable();
-    renderCategories();
-    renderFoods();
-    renderCart();
-    loadMenu();
+    function openDish(foodId) {
+        if (locked()) return;
+        const food = state.foods.find((item) => item.foodId === foodId);
+        if (!food) return;
+        state.dish = food;
+        $("#dishForm").reset();
+        $("#sizeDialogTitle").textContent = food.foodName;
+        $("#sizeDialogDescription").textContent = "Chọn cỡ, topping mỗi phần và số phần cần gọi.";
+        const selected = food.sizes.find((size) => size.isDefault) || food.sizes[0];
+        $("#sizeOptions").innerHTML = food.sizes.map((size) => `<label class="size-option"><input type="radio" name="sizeId" value="${size.sizeId}" ${size.sizeId === selected.sizeId ? "checked" : ""} required><strong>${escapeHtml(size.sizeName)}</strong><span>${money(size.sizePrice)}</span></label>`).join("");
+        $("#toppingOptions").hidden = !food.toppings.length;
+        $("#toppingChoices").innerHTML = food.toppings.map((topping) => `<label><input type="checkbox" name="toppingId" value="${topping.toppingId}"> ${escapeHtml(topping.toppingName)} · ${money(topping.toppingPrice)}</label>`).join("");
+        $("#sizeDialogMessage").textContent = "";
+        dishDialog.showModal();
+        $("#dishQuantity").focus();
+    }
+
+    async function runMutation(action) {
+        const task = action();
+        renderButtons();
+        try {
+            const result = await task;
+            if (["create", "add"].includes(result.kind)) { state.cart = []; $("#orderNoteInput").value = ""; }
+            if (dialog.open) dialog.close();
+            if (result.order?.note) $("#orderNoteInput").value = result.order.note;
+            window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(result.order));
+            message(result.moved ? "Yêu cầu đã được xác nhận, nhưng đơn đã chuyển sang bàn khác. Hãy chọn lại bàn trước khi tiếp tục."
+                : result.kind === "unchanged" ? "Số lượng không thay đổi."
+                : result.kind === "create" || result.kind === "add" ? "Đã gửi món. Trạng thái và tổng tiền được tải lại từ máy chủ." : "Đã cập nhật đơn từ máy chủ.");
+            renderCart(); render();
+        } catch (error) {
+            const originalMessage = error.message;
+            if (!session.pending && [403, 404, 409].includes(error.status)) {
+                await refresh(true);
+                const mutation = state.mutation;
+                if (dialog.open && mutation?.kind === "quantity") {
+                    const latest = pos.groups(session.order).find((group) => group.key === mutation.group.key);
+                    if (latest?.active.length) {
+                        mutation.group = latest;
+                        $("#mutationQuantity").min = session.canReduce(latest) ? "0" : String(latest.quantity);
+                        $("#mutationDescription").textContent = `${latest.items[0].foodName} · hiện còn ${latest.quantity} phần. Trạng thái vừa được tải lại.`;
+                        updateMutationHints();
+                    }
+                }
+            }
+            if (dialog.open) $("#mutationMessage").textContent = originalMessage;
+            message(session.pending ? `${originalMessage} Yêu cầu chưa được xác nhận; hãy dùng nút thử xác nhận lại.` : originalMessage, true);
+            render();
+        }
+    }
+
+    async function openMutation(kind, value) {
+        if (locked() || !session.order) return;
+        await refresh(true);
+        if (locked() || !session.isOpen()) return;
+        const group = kind === "quantity" ? pos.groups(session.order).find((entry) => entry.key === value) : null;
+        const item = kind === "cancelItem" ? session.order.items.find((entry) => entry.id === Number(value)) : null;
+        if ((kind === "quantity" && !group?.active.length) || (kind === "cancelItem" && (!item || !session.canCancel(item)))) {
+            message("Trạng thái món vừa thay đổi. Kiểm tra lại món; phần bếp đã nhận cần quản trị viên xử lý.", true);
+            return;
+        }
+        if (kind === "cancelOrder" && !session.isAdmin()) return;
+        state.mutation = { kind, group, item };
+        $("#orderMutationForm").reset();
+        $("#mutationMessage").textContent = "";
+        $("#mutationQuantityField").hidden = kind !== "quantity";
+        $("#mutationQuantity").required = kind === "quantity";
+        $("#mutationReasonCodeField").hidden = !session.isAdmin() || kind === "quantity";
+        $("#mutationTitle").textContent = kind === "quantity" ? "Đổi số lượng" : kind === "cancelItem" ? "Hủy món đã gửi" : "Hủy toàn bộ đơn";
+        $("#mutationDescription").textContent = group ? `${group.items[0].foodName} · ${group.items[0].sizeName} · hiện có ${group.quantity} phần còn phục vụ trong lượt gọi này.`
+            : item ? `${item.foodName} · ${item.sizeName} · ${item.quantity} phần · ${statusLabel(item.status)}` : `Đơn #${session.order.orderId}. Toàn bộ món còn phục vụ sẽ bị hủy.`;
+        if (group) {
+            $("#mutationQuantity").value = group.quantity;
+            $("#mutationQuantity").min = session.canReduce(group) ? "0" : String(group.quantity);
+        }
+        updateMutationHints(); renderButtons();
+        dialog.showModal();
+        (kind === "quantity" ? $("#mutationQuantity") : $("#mutationReason")).focus();
+    }
+
+    function updateMutationHints() {
+        const mutation = state.mutation;
+        if (!mutation) return;
+        const isQuantity = mutation.kind === "quantity";
+        const reducing = isQuantity && Number($("#mutationQuantity").value) < mutation.group.quantity;
+        const prepared = mutation.group?.active.filter((item) => ["Ready", "Completed"].includes(item.status)).reduce((sum, item) => sum + item.quantity, 0) || 0;
+        $("#mutationWastageField").hidden = !isQuantity || !session.isAdmin() || !reducing || Number($("#mutationQuantity").value) >= prepared;
+        $("#mutationReason").required = !isQuantity || Number($("#mutationQuantity").value) === 0;
+        $("#mutationStockHint").textContent = isQuantity && !session.canReduce(mutation.group) ? "Bếp đã nhận món. Bạn chỉ được tăng số phần; giảm/hủy cần quản trị viên."
+            : $("#mutationReasonCode").value !== "CustomerChange" ? "Phần bị hủy do hết/thiếu/hỏng nguyên liệu hoặc sự cố sẽ ghi hao hụt, không hoàn kho."
+            : "Máy chủ quyết định hoàn kho cho phần chưa nấu; phần đã bắt đầu nấu bị hủy không hoàn kho.";
+    }
+
+    $("#categoryList").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-category-id]");
+        if (button) { state.category = button.dataset.categoryId; renderCategories(); renderFoods(); }
+    });
+    $("#foodSearchInput").addEventListener("input", (event) => { state.search = event.target.value.trim().toLocaleLowerCase("vi-VN"); renderFoods(); });
+    $("#foodGrid").addEventListener("click", (event) => { const button = event.target.closest("[data-food-id]"); if (button) openDish(Number(button.dataset.foodId)); });
+    $("#dishForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (locked() || !state.dish || !event.target.reportValidity()) return;
+        const quantity = Number($("#dishQuantity").value);
+        if (!Number.isInteger(quantity) || quantity < 1) { $("#sizeDialogMessage").textContent = "Số phần phải là số nguyên dương."; return; }
+        const data = new FormData(event.target);
+        const sizeId = Number(data.get("sizeId"));
+        const toppings = data.getAll("toppingId").map((id) => ({ toppingId: Number(id), quantity: 1 })).sort((a, b) => a.toppingId - b.toppingId);
+        const existing = state.cart.find((item) => item.sizeId === sizeId && JSON.stringify(item.toppings) === JSON.stringify(toppings) && !item.note);
+        if (existing && existing.quantity + quantity > 2147483647) { $("#sizeDialogMessage").textContent = "Số phần vượt quá giới hạn."; return; }
+        if (existing) existing.quantity += quantity;
+        else state.cart.push({ sizeId, quantity, note: "", toppings });
+        dishDialog.close(); renderCart();
+    });
+    [$("#cancelSizeButton"), $("#closeSizeDialog")].forEach((button) => button.addEventListener("click", () => dishDialog.close()));
+    $("#cartList").addEventListener("click", (event) => {
+        const button = event.target.closest("[data-cart-index]");
+        if (!button || locked()) return;
+        const index = Number(button.dataset.cartIndex);
+        const item = state.cart[index];
+        const next = item.quantity + Number(button.dataset.delta);
+        if (next > 2147483647) return;
+        if (next <= 0) state.cart.splice(index, 1); else item.quantity = next;
+        renderCart();
+    });
+    $("#cartList").addEventListener("input", (event) => {
+        if (event.target.matches("[data-cart-note]") && !locked()) state.cart[Number(event.target.dataset.cartNote)].note = event.target.value;
+    });
+    $("#clearOrderButton").addEventListener("click", () => { if (session.busy || session.pending) return; state.cart = []; renderCart(); });
+    function send() {
+        if (locked() || !state.cart.length) return;
+        runMutation(() => session.send(state.cart.map((item) => ({ ...item, toppings: item.toppings.map((t) => ({ ...t })) })), $("#orderNoteInput").value.trim()));
+    }
+    [$("#sendKitchenButton"), $("#cartSendButton")].forEach((button) => button.addEventListener("click", send));
+    $("#retryOrderButton").addEventListener("click", () => runMutation(() => session.resume()));
+    $("#refreshOrderButton").addEventListener("click", async () => { await refresh(); await loadMenu(); });
+    $("#chooseTableButton").addEventListener("click", () => { window.location.href = "tables.html"; });
+    $("#cartDock").addEventListener("click", () => { $(".cart-panel").classList.add("is-open"); $("#closeCartButton").focus(); });
+    $("#closeCartButton").addEventListener("click", () => { $(".cart-panel").classList.remove("is-open"); $("#cartDock").focus(); });
+    $("#sentOrderItems").addEventListener("click", (event) => {
+        const edit = event.target.closest("[data-edit-group]");
+        const cancel = event.target.closest("[data-cancel-item]");
+        if (edit) openMutation("quantity", edit.dataset.editGroup);
+        if (cancel) openMutation("cancelItem", cancel.dataset.cancelItem);
+    });
+    $("#cancelWholeOrderButton").addEventListener("click", () => openMutation("cancelOrder"));
+    $("#mutationQuantity").addEventListener("input", updateMutationHints);
+    $("#mutationReasonCode").addEventListener("change", updateMutationHints);
+    document.querySelectorAll("[data-close-mutation]").forEach((button) => button.addEventListener("click", () => { if (!session.busy) dialog.close(); }));
+    dialog.addEventListener("cancel", (event) => { if (session.busy) event.preventDefault(); });
+    $("#orderMutationForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (locked() || !state.mutation || !event.target.reportValidity()) return;
+        const { kind, group, item } = state.mutation;
+        const reason = $("#mutationReason").value.trim();
+        const reasonCode = $("#mutationReasonCode").value;
+        runMutation(() => kind === "quantity" ? session.changeQuantity(group.key, Number($("#mutationQuantity").value), reason, $("#mutationWastage").checked)
+            : kind === "cancelItem" ? session.cancelItem(item.id, reason, reasonCode) : session.cancelOrder(reason, reasonCode));
+    });
+    $("#orderHistoryButton").addEventListener("click", async () => {
+        if (!session.order) return;
+        $("#orderHistoryContent").textContent = "Đang tải lịch sử…";
+        $("#orderHistoryDialog").showModal();
+        try {
+            const id = session.order.orderId;
+            const [orders, items] = await Promise.all([api.get(`/orders/${id}/history`), api.get(`/orders/${id}/item-history`)]);
+            const rows = [...orders.map((entry) => ({ ...entry, type: "Đơn", detail: entry.note })), ...items.map((entry) => ({ ...entry, type: `Dòng món #${entry.orderItemId ?? "—"}`, detail: entry.reason }))].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+            $("#orderHistoryContent").innerHTML = rows.map((entry) => {
+                const utc = /(?:Z|[+-]\d\d:\d\d)$/i.test(entry.createdAt) ? entry.createdAt : `${entry.createdAt}Z`;
+                return `<article class="pos-history-entry"><strong>${escapeHtml(entry.type)} · ${escapeHtml(statusLabel(entry.oldStatus))} → ${escapeHtml(statusLabel(entry.newStatus))}</strong><p>${escapeHtml(entry.changedByName || "Nhân viên")} · ${escapeHtml(new Date(utc).toLocaleString("vi-VN"))}</p><p>${escapeHtml(entry.detail || "")}${entry.reasonCode ? ` (${escapeHtml(entry.reasonCode)})` : ""}</p></article>`;
+            }).join("") || "Chưa có lịch sử.";
+        } catch (error) { $("#orderHistoryContent").textContent = error.message; }
+    });
+    $("#closeOrderHistory").addEventListener("click", () => $("#orderHistoryDialog").close());
+    window.addEventListener("restaurant:auth-changed", render);
+    if (session.pending && ["create", "add"].includes(session.pending.kind) && session.pending.tableId === session.tableId) {
+        state.cart = session.pending.body.items.map((item) => ({ ...item }));
+        $("#orderNoteInput").value = session.pending.body.note || "";
+    }
+    renderCart(); render();
+    Promise.resolve(auth.ready).then(async () => { await refresh(); await loadMenu(); });
+    // Không cắt ngang nhập liệu/hộp thoại; trước khi mở lệnh sửa cũng tải lại đơn.
+    let poll;
+    function startPolling() {
+        window.clearInterval(poll);
+        poll = window.setInterval(() => {
+            if (!document.hidden && session.isOpen() && !dialog.open && !dishDialog.open && !$("#orderHistoryDialog").open
+                && !document.activeElement?.closest("input, textarea, select")) refresh(true);
+        }, 5000);
+    }
+    startPolling();
+    window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
+    window.addEventListener("pagehide", () => window.clearInterval(poll));
 })();

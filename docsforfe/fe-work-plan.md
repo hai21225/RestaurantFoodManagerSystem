@@ -95,6 +95,11 @@
 > ⚠️ Sau khi bật enforce: các trang cũ gọi API mà chưa qua `api.js` sẽ 401 — phải rà lại toàn bộ 12 file `js/pages`.
 
 ### F1 — POS: gọi thêm / đổi số lượng / huỷ món (ưu tiên cao nhất về nghiệp vụ)
+
+**Tiến độ 2026-10-29:** đã nối F1-1/2/3/4/6/7 và giữ chặn route cũ F1-8; **F1-5 áp/gỡ khuyến mãi còn lại**.
+36/36 test frontend đạt; 9/9 kiểm tra POS với API SQL Server thật đạt. Đọc [bàn giao F1](f1-pos-progress.md)
+để xem phạm vi, quy tắc nhóm dòng món, retry và dữ liệu kiểm thử.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F1-1 | Màn hình bàn → bấm bàn đang có đơn → mở chi tiết đơn | `GET /api/orders?tableId={id}&status=...` rồi `GET /api/orders/{orderId}` |
