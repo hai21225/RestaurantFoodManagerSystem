@@ -2,7 +2,7 @@
 
 Ngày 2026-10-29, thực hiện trực tiếp trên `dong`, sau `bf1131e` (F0).
 Chỉ sửa frontend và tài liệu. Không sửa backend, migrations, cấu hình SQL hay dữ liệu nghiệp vụ hiện có.
-Chưa push lên GitHub trong lần làm này.
+Commit POS: `3827af9`. Nhánh nhận bàn giao: [origin/dong](https://github.com/hai21225/RestaurantFoodManagerSystem/tree/dong).
 
 ## Đã nối API
 

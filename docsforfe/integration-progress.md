@@ -12,7 +12,8 @@ Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không t
 - Giữ nguyên logic/CSS Nhập hàng của Đông. HTML Nhập hàng chỉ bổ sung script auth chung trong F0.
 - Hai xung đột: `Program.cs`, `appsettings.json`. Giữ service/JWT của Hải, CORS chỉ chạy ở Development,
   giữ kết nối SQL của Đông và bỏ giá trị khoá ký JWT khỏi cấu hình được commit. Nạp khoá qua môi trường/user-secrets.
-- Chưa push các thay đổi tích hợp lên GitHub trong lần làm này.
+- Nhánh nhận bàn giao của nhóm: [origin/dong](https://github.com/hai21225/RestaurantFoodManagerSystem/tree/dong).
+- Commit chức năng: `bf1131e` (F0 đăng nhập/API), `3827af9` (các luồng POS); ghi chú được lưu cùng mã nguồn.
 
 ## F0 — hạ tầng xác thực/API
 
