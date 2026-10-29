@@ -63,5 +63,5 @@ Baseline backend tại F0: 518 đạt / 179 lỗi, đã có trên Hải; không 
 
 - **F1-5 áp/gỡ khuyến mãi** chưa nối giao diện. Danh sách promotions hiện là AdminOnly; cần thống nhất cách phục vụ chọn khuyến mãi
   trước khi làm UI cho Waiter. Route áp/gỡ đã có, không cần tự tính giảm giá trên frontend.
-- Sửa ghi chú hóa đơn sau tạo, chuyển bàn thuộc F7; xác nhận/hao hụt từng món ở màn bếp thuộc F2, thu ngân thuộc F3.
+- Sửa ghi chú hóa đơn sau tạo, chuyển bàn thuộc F7; màn Bếp đã nối [F2](f2-kitchen-progress.md), thu ngân thuộc F3.
 - Không khẳng định toàn bộ F1–F8 hay bộ test backend đã hoàn tất.

@@ -41,7 +41,7 @@ Cần Node.js 20+ để chạy test frontend; việc mở/chạy giao diện kh�
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln
-node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs
+node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs
 dotnet test RestaurantFoodManagerSystem.Tests
 ```
 
@@ -49,8 +49,10 @@ F0 đã có lưu/gửi JWT, phân biệt 401/403, đăng xuất và helper tải
 POS đã nối mở đơn theo bàn, gọi thêm, đổi số lượng, hủy món, hủy đơn Admin và lịch sử:
 xem [bàn giao F1](docsforfe/f1-pos-progress.md). Áp/gỡ khuyến mãi của F1 và các màn F2–F8 còn lại
 được theo dõi trong [kế hoạch frontend](docsforfe/fe-work-plan.md).
+Bếp F2 đã có nhận từng món, báo số phần, thiếu/hỏng có lý do và mở lại: xem [bàn giao F2](docsforfe/f2-kitchen-progress.md).
 MoMo đang dùng provider `Mock`; chưa phải thanh toán thật.
 
-Kết quả ngày 2026-10-29: build tại F0 đạt; 36/36 test frontend (F0 + POS) đạt, 9/9 kiểm tra API POS thật đạt;
+Kết quả ngày 2026-10-29: build tại F0 đạt; 54/54 test frontend (F0 + POS + Bếp) đạt;
+9/9 kiểm tra API POS và 11/11 kiểm tra API Bếp/POS thật đạt;
 backend baseline 518/697 đạt, 179 lỗi đã có trên `hai` (F1 không sửa backend).
 Chi tiết và giới hạn kiểm thử nằm trong [ghi chú tích hợp](docsforfe/integration-progress.md).

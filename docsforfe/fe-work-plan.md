@@ -112,6 +112,11 @@
 | F1-8 | **Cấm dùng** `PUT /api/orders/{id}/items` | Route đã bị chặn, trả `410 Gone` — nếu FE còn code cũ thì sửa ngay |
 
 ### F2 — Bếp: prepared / shortage / reopen
+
+**Tiến độ 2026-10-29:** đã nối nhận từng món, báo số phần, thiếu/hỏng có hao hụt, hủy và mở lại đúng command.
+54/54 test frontend và 11/11 kiểm tra API Bếp/POS thật đạt. Xem [bàn giao F2](f2-kitchen-progress.md)
+để biết quy tắc retry/đối chiếu, quyền Chef và giới hạn chọn nguyên liệu.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F2-1 | Bấm "nấu được mấy phần" (ví dụ món 3 phần mới nấu được 1) | `PATCH /api/management/kitchen/items/{id}/prepared-quantity` body `{ preparedQuantity (≥1), changedBy, reason? }` — BE tách dòng thành phần `Completed` + phần còn lại, tổng tiền/kho **không đổi** |
@@ -165,6 +170,8 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 | FE-C9 | Báo cáo vận hành (theo phương thức thu, món bán chạy, hao hụt, tồn kho, mua hàng) | `/api/reports/*` mới | P1 |
 | FE-C10 | Ghi chú ở mức đơn | `Order.Note` + `PATCH /api/orders/{id}/note` | P1 |
 | FE-C11 | Thanh toán MoMo / QR / hoàn tiền | payment provider | **cuối cùng** |
+| FE-C12 | Chef chọn nguyên liệu cụ thể khi báo thiếu | Lookup nguyên liệu của dòng món cho KitchenDesk; hiện ingredients/recipes đều WarehouseDesk. F2 cơ bản đang bỏ trống ingredientId. | P2 |
+| FE-C13 | Tự gửi lại lệnh báo số phần/thiếu mà không ghi trùng | Idempotency/receipt bền vững cho các lệnh Bếp; hiện UI khóa và yêu cầu đối chiếu thay vì tự retry. | P1 |
 
 ---
 

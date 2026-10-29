@@ -127,9 +127,9 @@
 |✅| GET | `/management/kitchen/orders/{id}/items` | KitchenDesk | ✅ | Món của phiếu |
 |✅| PATCH | `/management/kitchen/orders/{id}/status` | KitchenDesk | ✅ | Trạng thái phiếu (kèm `reason`,`reasonCode`) |
 |✅| PATCH | `/management/kitchen/items/{id}/status` | KitchenDesk | ✅ | Trạng thái món — **`Accepted` không hợp lệ** (C-11) |
-|⬜| PATCH | `/management/kitchen/items/{id}/prepared-quantity` | KitchenDesk | ⬜ | Báo đã nấu được mấy phần |
-|⬜| POST | `/management/kitchen/items/{id}/shortage` | KitchenDesk | ⬜ | Báo thiếu nguyên liệu (không hard-block) |
-|⬜| POST | `/management/kitchen/items/{id}/reopen` | KitchenDesk | ⬜ | Mở lại món đã xong (C-06) |
+|✅| PATCH | `/management/kitchen/items/{id}/prepared-quantity` | KitchenDesk | ✅ | F2 2026-10-29: báo số phần, tải lại dòng tách |
+|✅| POST | `/management/kitchen/items/{id}/shortage` | KitchenDesk | ✅ | F2 2026-10-29: lý do/hao hụt, tùy chọn ngừng bán |
+|✅| POST | `/management/kitchen/items/{id}/reopen` | KitchenDesk | ✅ | F2 2026-10-29: mở lại qua command riêng (C-06) |
 
 ## 7. Kho & nhập hàng (20)
 ### 7.1 Nguyên liệu (6)
