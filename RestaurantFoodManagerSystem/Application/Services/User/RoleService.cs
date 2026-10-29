@@ -1,19 +1,41 @@
-﻿public class RoleService
-{
-    private readonly IRepository<Roles> _roleRepository;
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public RoleService(IRepository<Roles> roleRepository)
+public class RoleService
+{
+    private readonly AppDbContext _db;
+
+    public RoleService(AppDbContext db)
     {
-        _roleRepository = roleRepository;
+        _db = db;
     }
 
-    public async Task<Roles> GetRoleByRoleNameAsync(string name)
+    /// <summary>
+    /// Danh sách role cố định (P4) cho <c>GET /api/roles</c>. Chỉ đọc — không CRUD role
+    /// và không trả ma trận quyền (ma trận là policy trong code).
+    /// </summary>
+    public async Task<List<RoleResponse>> GetAllAsync(CancellationToken ct = default)
     {
-        var role = await _roleRepository.FindOneAsync(x => x.RoleName == name);
-        if (role == null)
-        {
-            throw new Exception("Role not found");
-        }
-        return role;
+        return await _db.Roles
+            .AsNoTracking()
+            .OrderBy(r => r.RoleId)
+            .Select(r => new RoleResponse
+            {
+                RoleId = r.RoleId,
+                RoleName = r.RoleName,
+                RoleDescription = r.RoleDescription
+            })
+            .ToListAsync(ct);
+    }
+
+    /// <summary>
+    /// Tìm role theo tên. Trả <c>null</c> khi không có — caller tự quyết định
+    /// 404/409 thay vì bắt một exception chung.
+    /// </summary>
+    public async Task<Roles?> GetRoleByRoleNameAsync(string name, CancellationToken ct = default)
+    {
+        return await _db.Roles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.RoleName == name, ct);
     }
 }

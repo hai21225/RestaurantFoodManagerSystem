@@ -1,20 +1,13 @@
-﻿public class FoodToppingService
-{
-    private readonly IRepository<FoodTopping> _foodToppingRepository;
-    private readonly IRepository<Food> _foodRepository;
-    private readonly IRepository<Topping> _toppingRepository;
-    private readonly IUnitOfWork _unitOfWork;
+using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-    public FoodToppingService(
-        IRepository<FoodTopping> foodToppingRepository,
-        IRepository<Food> foodRepository,
-        IRepository<Topping> toppingRepository,
-        IUnitOfWork unitOfWork)
+public class FoodToppingService
+{
+    private readonly AppDbContext _db;
+
+    public FoodToppingService(AppDbContext db)
     {
-        _foodToppingRepository = foodToppingRepository;
-        _foodRepository = foodRepository;
-        _toppingRepository = toppingRepository;
-        _unitOfWork = unitOfWork;
+        _db = db;
     }
 
 
@@ -23,19 +16,19 @@
     // ============================
 
     public async Task<List<ToppingResponseDto>>
-        GetToppingsByFoodIdAsync(int foodId)
+        GetToppingsByFoodIdAsync(int foodId, CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
-        var foodToppings =
-            await _foodToppingRepository.FindAsync(
-                x => x.FoodId == foodId
-            );
+        var foodToppings = await _db.FoodToppings
+            .AsNoTracking()
+            .Where(x => x.FoodId == foodId)
+            .ToListAsync(ct);
 
         if (!foodToppings.Any())
         {
@@ -46,11 +39,12 @@
             .Select(x => x.ToppingId)
             .ToList();
 
-        var toppings = await _toppingRepository.FindAsync(
-            x =>
+        var toppings = await _db.Toppings
+            .AsNoTracking()
+            .Where(x =>
                 toppingIds.Contains(x.ToppingId) &&
-                x.IsActive
-        );
+                x.IsActive)
+            .ToListAsync(ct);
 
         return toppings.Select(x => new ToppingResponseDto
         {
@@ -70,33 +64,31 @@
 
     public async Task<bool> AssignAsync(
         int foodId,
-        int toppingId)
+        int toppingId,
+        CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(foodId);
+        var food = await _db.Foods.FindAsync([foodId], ct);
 
         if (food == null)
         {
-            throw new Exception("Food not found");
+            throw new KeyNotFoundException("Food not found");
         }
 
-        var topping = await _toppingRepository
-            .GetByIdAsync(toppingId);
+        var topping = await _db.Toppings
+            .FindAsync([toppingId], ct);
 
         if (topping == null || !topping.IsActive)
         {
-            throw new Exception("Topping not found");
+            throw new KeyNotFoundException("Topping not found");
         }
 
-        var exists =
-            await _foodToppingRepository.ExistsAsync(
-                x =>
-                    x.FoodId == foodId &&
-                    x.ToppingId == toppingId
-            );
+        var exists = await _db.FoodToppings.AnyAsync(x =>
+            x.FoodId == foodId &&
+            x.ToppingId == toppingId, ct);
 
         if (exists)
         {
-            throw new Exception(
+            throw new InvalidOperationException(
                 "Topping already assigned to this food"
             );
         }
@@ -107,9 +99,9 @@
             ToppingId = toppingId
         };
 
-        await _foodToppingRepository.AddAsync(foodTopping);
+        await _db.FoodToppings.AddAsync(foodTopping, ct);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
@@ -119,22 +111,22 @@
 
     public async Task<bool> RemoveAsync(
         int foodId,
-        int toppingId)
+        int toppingId,
+        CancellationToken ct = default)
     {
-        var foodTopping =
-            await _foodToppingRepository.FindOneAsync(
-                x =>
-                    x.FoodId == foodId &&
-                    x.ToppingId == toppingId
-            );
+        var foodTopping = await _db.FoodToppings
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.FoodId == foodId &&
+                x.ToppingId == toppingId, ct);
 
         if (foodTopping == null)
         {
             return false;
         }
 
-        _foodToppingRepository.Delete(foodTopping);
+        _db.FoodToppings.Remove(foodTopping);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 }

@@ -494,3 +494,7 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Local-only workspace and notes (do not push)
+.opencode/
+.tests/

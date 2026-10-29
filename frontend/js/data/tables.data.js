@@ -8,10 +8,8 @@ window.tablesData = {
     statuses: [
         { value: "all", label: "Tất cả" },
         { value: "empty", label: "Trống" },
-        { value: "serving", label: "Đang phục vụ" },
-        { value: "waiting", label: "Chờ món" },
-        { value: "payment", label: "Chờ thanh toán" },
-        { value: "inactive", label: "Ngừng sử dụng" }
+        { value: "serving", label: "Đang sử dụng" },
+        { value: "inactive", label: "Bảo trì" }
     ],
     tables: []
 };

@@ -1,41 +1,31 @@
-﻿public class UserRoleService
+﻿using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
+
+public class UserRoleService
 {
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IRepository<UserRoles> _userRoleRepository;
-    
-    public UserRoleService(IUnitOfWork unitOfWork, IRepository<UserRoles> userRoleRepository)
+    private readonly AppDbContext _db;
+
+    public UserRoleService(AppDbContext db)
     {
-        _unitOfWork = unitOfWork;
-        _userRoleRepository = userRoleRepository;
+        _db = db;
     }
 
-    public async Task<UserRoleDto> GetUserRoleByIdAsync(int id)
+    /// <summary>Tên các role gán cho một user (dùng để nạp claim khi đăng nhập — GĐ6).</summary>
+    public async Task<List<string>> GetRoleNamesByUserIdAsync(int userId, CancellationToken ct = default)
     {
-        var userRole = await _userRoleRepository.GetByIdAsync(id);
-        if (userRole == null)
-        {
-            throw new Exception("User role not found");
-        }
-        var userRoleDto = new UserRoleDto
-        {
-            RoleId = userRole.RoleId,
-            UserId = userRole.UserId,
-        };
-        return userRoleDto;
+        return await _db.UserRoles
+            .AsNoTracking()
+            .Where(ur => ur.UserId == userId)
+            .Join(
+                _db.Roles.AsNoTracking(),
+                ur => ur.RoleId,
+                r => r.RoleId,
+                (ur, r) => r.RoleName)
+            .OrderBy(name => name)
+            .ToListAsync(ct);
     }
 
-    public async Task<List<UserRoleDto>> GetAllUserRolesAsync()
-    {
-        var userRoles = await _userRoleRepository.GetAllAsync();
-        var userRoleDtos = userRoles.Select(userRole => new UserRoleDto
-        {
-            RoleId = userRole.RoleId,
-            UserId = userRole.UserId,
-        }).ToList();
-        return userRoleDtos;
-    }
-
-    public async Task<bool> AddUserRoleAsync(UserRoleDto userRoleDto)
+    public async Task<bool> AddUserRoleAsync(UserRoleDto userRoleDto, CancellationToken ct = default)
     {
         if (userRoleDto == null)
         {
@@ -46,7 +36,7 @@
             RoleId = userRoleDto.RoleId,
             UserId = userRoleDto.UserId,
         };
-        await _userRoleRepository.AddAsync(userRole);
-        return await _unitOfWork.SaveChangesAsync()>0;
+        await _db.UserRoles.AddAsync(userRole, ct);
+        return await _db.SaveChangesAsync(ct)>0;
     }
 }

@@ -34,25 +34,69 @@
     const tableLifecycleConfirm = document.querySelector("#tableLifecycleConfirm");
 
     function normalizeStatus(status, isActive) {
-        if (!isActive) return { value: "inactive", label: "Ngừng sử dụng" };
+        if (!isActive) return { value: "inactive", label: "Bảo trì" };
         const value = String(status || "").toLowerCase();
-        if (value === "occupied") return { value: "serving", label: "Đang phục vụ" };
-        if (value === "maintenance") return { value: "inactive", label: "Ngừng sử dụng" };
+        if (value === "occupied") return { value: "serving", label: "Đang sử dụng" };
+        if (value === "maintenance") return { value: "inactive", label: "Bảo trì" };
         return { value: "empty", label: "Trống" };
+    }
+
+    function populateAreaOptions() {
+        const select = tableForm.elements.areaId;
+        if (!select) {
+            return;
+        }
+
+        const areas = tablesData.areas.filter((area) =>
+            area.value !== "all" && area.isActive !== false && /^\d+$/.test(area.value));
+        select.innerHTML = areas.length
+            ? areas.map((area) => `<option value="${area.value}">${area.label}</option>`).join("")
+            : '<option value="">Chưa có khu vực</option>';
     }
 
     async function loadTables() {
         refreshTablesButton.disabled = true;
         refreshTablesButton.textContent = "Đang tải...";
         try {
-            const result = await window.restaurantApi.get("/restaurant-tables");
+            const [result, areaResult] = await Promise.all([
+                window.restaurantApi.get("/restaurant-tables"),
+                window.restaurantApi.get("/table-areas?includeInactive=true").catch(() => [])
+            ]);
+
+            const areas = [{ value: "all", label: "Tất cả", isActive: true }];
+            for (const area of areaResult) {
+                areas.push({
+                    value: String(area.areaId),
+                    label: area.areaName,
+                    isActive: area.isActive
+                });
+            }
+            for (const table of result) {
+                if (!table.areaId) {
+                    if (!areas.some((area) => area.value === "unassigned")) {
+                        areas.push({ value: "unassigned", label: "Chưa phân khu", isActive: false });
+                    }
+                    continue;
+                }
+
+                const value = String(table.areaId);
+                if (!areas.some((area) => area.value === value)) {
+                    areas.push({
+                        value,
+                        label: table.areaName || `Khu vực ${value}`,
+                        isActive: true
+                    });
+                }
+            }
+            tablesData.areas = areas;
+
             tablesData.tables = result.map((table) => {
                 const status = normalizeStatus(table.status, table.isActive);
                 return {
                     id: table.tableId,
                     name: `Bàn ${table.tableNumber}`,
-                    area: "main",
-                    areaLabel: "Khu vực chung",
+                    area: table.areaId ? String(table.areaId) : "unassigned",
+                    areaLabel: table.areaName || "Chưa phân khu",
                     seats: table.capacity,
                     guestCount: 0,
                     orderCode: "",
@@ -63,12 +107,19 @@
                     statusLabel: status.label
                 };
             });
+
+            if (!tablesData.areas.some((area) => area.value === state.area)) {
+                state.area = "all";
+            }
+
             const selectionStillExists = tablesData.tables.some((table) => table.id === state.selectedTableId);
             if (!selectionStillExists) {
                 state.selectedTableId = tablesData.tables.find((table) => table.isActive)?.id
                     || tablesData.tables[0]?.id
                     || null;
             }
+
+            populateAreaOptions();
             render();
         } catch (error) {
             tablesData.tables = [];
@@ -97,8 +148,8 @@
         const summary = [
             { label: "Tổng số bàn", value: tablesData.tables.length },
             { label: "Bàn trống", value: tablesData.tables.filter((table) => table.status === "empty").length },
-            { label: "Đang phục vụ", value: tablesData.tables.filter((table) => table.status === "serving").length },
-            { label: "Ngừng sử dụng", value: tablesData.tables.filter((table) => !table.isActive).length }
+            { label: "Đang sử dụng", value: tablesData.tables.filter((table) => table.status === "serving").length },
+            { label: "Bảo trì", value: tablesData.tables.filter((table) => table.status === "inactive").length }
         ];
 
         tablesSummary.innerHTML = summary.map((item) => `
@@ -191,21 +242,33 @@
         }
 
         selectedTableStatus.textContent = table.statusLabel;
-        const canDeactivate = table.isActive && table.status === "empty";
-        const orderAction = table.isActive
+        const isActive = table.isActive;
+        const isMaintenance = table.status === "inactive";
+        const canOrder = isActive && !isMaintenance;
+        const canChangeState = isActive && table.status !== "serving";
+        const orderAction = canOrder
             ? `<button class="primary-action" type="button" data-action="order-table">
                     ${table.status === "empty" ? "Đặt món cho bàn này" : "Xem / thêm món"}
                </button>`
             : "";
-        const lifecycleAction = table.isActive
-            ? `<button class="danger-action" type="button" data-action="toggle-active"
-                    ${canDeactivate ? "" : "disabled title=\"Bàn đang có đơn chưa hoàn tất\""}>
-                    Xóa khỏi danh sách bàn
-               </button>`
-            : `<button class="secondary-action" type="button" data-action="toggle-active">Khôi phục bàn</button>`;
-        const actionHint = table.isActive && !canDeactivate
-            ? '<p class="table-action-hint">Hoàn tất hoặc hủy đơn hiện tại trước khi xóa bàn.</p>'
-            : "";
+        const maintenanceAction = isActive && table.status === "empty"
+            ? `<button class="secondary-action" type="button" data-action="maintenance-table">Bảo trì</button>`
+            : isActive && isMaintenance
+                ? `<button class="secondary-action" type="button" data-action="end-maintenance">Kết thúc bảo trì</button>`
+                : "";
+        const lifecycleAction = !isActive
+            ? `<button class="primary-action" type="button" data-action="restore-table">Khôi phục bàn</button>`
+            : `<button class="danger-action" type="button" data-action="delete-table"
+                    ${canChangeState ? "" : "disabled title=\"Bàn đang có đơn chưa thanh toán\""}>
+                    Xóa bàn
+               </button>`;
+        const actionHint = !isActive
+            ? '<p class="table-action-hint">Bàn đang ngừng sử dụng. Khôi phục để phục vụ lại.</p>'
+            : table.status === "serving"
+                ? '<p class="table-action-hint">Bàn chỉ trở về trống sau khi thanh toán hoặc hủy đơn.</p>'
+                : isMaintenance
+                    ? '<p class="table-action-hint">Bàn đang bảo trì và không nhận đơn mới.</p>'
+                    : "";
 
         selectedTable.innerHTML = `
             <div class="table-detail-body">
@@ -235,6 +298,7 @@
 
                 <div class="detail-actions">
                     ${orderAction}
+                    ${maintenanceAction}
                     ${lifecycleAction}
                 </div>
                 ${actionHint}
@@ -270,22 +334,53 @@
         tableDetail.classList.remove("is-open");
     }
 
-    function openTableLifecycleDialog() {
+    let lifecycleMode = "delete";
+
+    function openTableLifecycleDialog(mode) {
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
         if (!table) {
             return;
         }
 
-        const restoring = !table.isActive;
-        tableLifecycleTitle.textContent = restoring ? "Khôi phục bàn" : "Xóa bàn khỏi danh sách sử dụng";
+        const config = {
+            delete: {
+                title: "Xóa bàn khỏi danh sách sử dụng",
+                notice: "Bàn sẽ chuyển sang Bảo trì và vẫn hiển thị trên sơ đồ. Lịch sử đơn hàng và thông tin bàn vẫn được giữ lại.",
+                confirm: "Xóa bàn",
+                className: "danger-action"
+            },
+            restore: {
+                title: "Khôi phục bàn",
+                notice: "Bàn sẽ trở lại trạng thái trống và có thể được nhân viên chọn để đặt món.",
+                confirm: "Khôi phục bàn",
+                className: "primary-action"
+            },
+            maintenance: {
+                title: "Đưa bàn vào bảo trì",
+                notice: "Bàn sẽ tạm ngừng nhận đơn nhưng vẫn hiển thị trên sơ đồ với trạng thái Bảo trì.",
+                confirm: "Bảo trì",
+                className: "secondary-action"
+            },
+            "end-maintenance": {
+                title: "Kết thúc bảo trì",
+                notice: "Bàn sẽ trở lại trạng thái trống và có thể nhận đơn mới.",
+                confirm: "Kết thúc bảo trì",
+                className: "primary-action"
+            }
+        }[mode];
+
+        if (!config) {
+            return;
+        }
+
+        lifecycleMode = mode;
+        tableLifecycleTitle.textContent = config.title;
         tableLifecycleName.textContent = table.name;
-        tableLifecycleNotice.textContent = restoring
-            ? "Bàn sẽ trở lại trạng thái trống và có thể được nhân viên chọn để đặt món."
-            : "Bàn sẽ chuyển sang Ngừng sử dụng. Lịch sử đơn hàng và thông tin bàn vẫn được giữ lại.";
+        tableLifecycleNotice.textContent = config.notice;
         tableLifecycleMessage.textContent = "";
         tableLifecycleMessage.className = "form-message";
-        tableLifecycleConfirm.textContent = restoring ? "Khôi phục bàn" : "Xóa bàn";
-        tableLifecycleConfirm.className = restoring ? "primary-action" : "danger-action";
+        tableLifecycleConfirm.textContent = config.confirm;
+        tableLifecycleConfirm.className = config.className;
         tableLifecycleDialog.showModal();
     }
 
@@ -301,6 +396,7 @@
     addTableButton.addEventListener("click", () => {
         tableForm.reset();
         tableForm.elements.capacity.value = "4";
+        populateAreaOptions();
         tableFormMessage.textContent = "";
         tableFormMessage.className = "form-message";
         tableDialog.showModal();
@@ -333,10 +429,13 @@
         tableSubmit.disabled = true;
         tableSubmit.textContent = "Đang tạo...";
 
+        const areaValue = data.get("areaId");
+
         try {
             await window.restaurantApi.post("/restaurant-tables", {
                 tableNumber: data.get("tableNumber").trim(),
-                capacity: Number(data.get("capacity"))
+                capacity: Number(data.get("capacity")),
+                areaId: areaValue ? Number(areaValue) : null
             });
             tableDialog.close();
             await loadTables();
@@ -356,8 +455,15 @@
             saveSelectedTableForOrder();
         }
 
-        if (event.target.closest('[data-action="toggle-active"]')) {
-            openTableLifecycleDialog();
+        const action = event.target.closest("[data-action]")?.dataset.action;
+        if (action === "delete-table") {
+            openTableLifecycleDialog("delete");
+        } else if (action === "restore-table") {
+            openTableLifecycleDialog("restore");
+        } else if (action === "maintenance-table") {
+            openTableLifecycleDialog("maintenance");
+        } else if (action === "end-maintenance") {
+            openTableLifecycleDialog("end-maintenance");
         }
     });
 
@@ -367,15 +473,29 @@
             return;
         }
 
-        const restoring = !table.isActive;
+        const progressLabels = {
+            delete: "Đang xóa...",
+            restore: "Đang khôi phục...",
+            maintenance: "Đang cập nhật...",
+            "end-maintenance": "Đang cập nhật..."
+        };
+        const doneLabels = {
+            delete: "Xóa bàn",
+            restore: "Khôi phục bàn",
+            maintenance: "Bảo trì",
+            "end-maintenance": "Kết thúc bảo trì"
+        };
+
         tableLifecycleConfirm.disabled = true;
-        tableLifecycleConfirm.textContent = restoring ? "Đang khôi phục..." : "Đang xóa...";
+        tableLifecycleConfirm.textContent = progressLabels[lifecycleMode] || "Đang xử lý...";
 
         try {
-            if (restoring) {
-                await window.restaurantApi.patch(`/restaurant-tables/${table.id}/maintenance?enabled=false`);
-            } else {
+            if (lifecycleMode === "delete") {
                 await window.restaurantApi.delete(`/restaurant-tables/${table.id}`);
+            } else if (lifecycleMode === "maintenance") {
+                await window.restaurantApi.patch(`/restaurant-tables/${table.id}/maintenance?enabled=true`);
+            } else {
+                await window.restaurantApi.patch(`/restaurant-tables/${table.id}/maintenance?enabled=false`);
             }
             tableLifecycleDialog.close();
             await loadTables();
@@ -384,7 +504,7 @@
             tableLifecycleMessage.className = "form-message is-error";
         } finally {
             tableLifecycleConfirm.disabled = false;
-            tableLifecycleConfirm.textContent = restoring ? "Khôi phục bàn" : "Xóa bàn";
+            tableLifecycleConfirm.textContent = doneLabels[lifecycleMode] || "Xử lý";
         }
     });
 
