@@ -1,4 +1,29 @@
 (function () {
+    const auth = window.restaurantAuth;
+    const operator = document.querySelector(".operator");
+    if (operator && auth) {
+        const logout = document.createElement("button");
+        logout.type = "button";
+        logout.className = "secondary-action operator-logout";
+        logout.textContent = "Đăng xuất";
+        logout.addEventListener("click", auth.logout);
+        operator.appendChild(logout);
+        const sessionMessage = document.createElement("span");
+        sessionMessage.className = "operator-session-message";
+        sessionMessage.setAttribute("role", "status");
+        operator.appendChild(sessionMessage);
+        function renderOperator() {
+            const user = auth.getUser();
+            const roleNames = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho" };
+            operator.querySelector(".operator-role").textContent = (user?.roles || []).map((role) => roleNames[role] || role).join(", ") || "Chưa có vai trò";
+            operator.querySelector("strong").textContent = user?.fullName || user?.userName || "Chưa đăng nhập";
+            logout.hidden = !user;
+            sessionMessage.textContent = "";
+        }
+        window.addEventListener("restaurant:auth-changed", renderOperator);
+        window.addEventListener("restaurant:auth-error", (event) => { sessionMessage.textContent = event.detail; });
+        renderOperator();
+    }
     const navigation = document.querySelector(".main-nav");
 
     if (!navigation) {

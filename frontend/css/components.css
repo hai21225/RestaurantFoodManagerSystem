@@ -23,6 +23,19 @@
     font-size: 12px;
 }
 
+.operator-logout {
+    min-height: 30px;
+    margin: 6px 0 0 10px;
+    padding: 0 10px;
+}
+
+.operator-session-message {
+    display: block;
+    max-width: 320px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
 .primary-action {
     min-height: 42px;
     max-width: 100%;

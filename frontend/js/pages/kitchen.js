@@ -5,8 +5,7 @@
         statuses: [],
         tickets: []
     };
-    const currentRole = window.localStorage.getItem("restaurant.currentRole") || "staff";
-    const canUpdateKitchen = currentRole === "kitchen" || currentRole === "admin";
+    let canUpdateKitchen = window.restaurantAuth.hasRole("Chef", "Admin");
 
     const state = {
         station: "all",
@@ -35,7 +34,10 @@
     const kitchenAnnouncement = document.querySelector("#kitchenAnnouncement");
     const refreshKitchenButton = document.querySelector("#refreshKitchenButton");
     const kitchenAccessNote = document.querySelector("#kitchenAccessNote");
-    const kitchenRoleLabel = document.querySelector("#kitchenRoleLabel");
+    window.addEventListener("restaurant:auth-changed", () => {
+        canUpdateKitchen = window.restaurantAuth.hasRole("Chef", "Admin");
+        render();
+    });
     const navButtons = document.querySelectorAll("[data-page]");
 
     function normalizeKitchenStatus(status) {
@@ -350,10 +352,6 @@
     }
 
     function render() {
-        if (kitchenRoleLabel) {
-            kitchenRoleLabel.textContent = canUpdateKitchen ? "Quyền bếp" : "Quyền xem";
-        }
-
         if (kitchenAccessNote) {
             kitchenAccessNote.textContent = canUpdateKitchen
                 ? "Bạn có thể nhận phiếu và tích món đã hoàn thành."

@@ -47,6 +47,11 @@
 
 ---
 
+> **Tiến độ mới 2026-10-29:** đã gộp `hai` vào `dong`, hoàn tất hạ tầng F0 (JWT, 401/403,
+> đăng xuất, vai trò thật, download/header). `Auth:Enforce=true`. Hồ sơ CRUD/đổi mật khẩu vẫn thuộc F6.
+> Kết quả hiện tại: 18/18 test F0 đạt; backend còn 179/697 lỗi đã có trên Hải.
+> Đọc [integration-progress.md](integration-progress.md) trước khi dùng các số kiểm thử và trạng thái cũ bên dưới.
+
 ## A. Bảng công việc tổng
 
 | # | Màn hình / file FE | Hiện trạng FE (đã kiểm tra code) | Việc cần làm | Endpoint BE phải gọi | Phase |
