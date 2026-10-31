@@ -7,6 +7,9 @@ Màn Bếp đã nối F2; xem [bàn giao F2](f2-kitchen-progress.md) và các gi
 Thu ngân đã nối F3: thu trực tiếp, lịch sử/lọc, xem trước bill, hoàn tiền và MoMo Mock;
 80/80 test frontend + 13/13 API Thu ngân thật đạt. Xem [bàn giao F3](f3-cashier-progress.md),
 đặc biệt giới hạn in/PDF, provider thật và hoàn đơn cũ khi bàn đã có lượt khách mới.
+Kho/Nhập hàng đã nối F4: điều chỉnh có lý do, lịch sử/tồn cần xử lý, phiếu và NCC;
+106/106 test frontend + 14/14 API Kho thật đạt. Xem [bàn giao F4](f4-warehouse-progress.md)
+về đối chiếu mất ACK và các nghiệp vụ chưa có API.
 Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
 
 ## Mã nguồn đã gộp

@@ -145,29 +145,31 @@
 ### 7.2 Nhà cung cấp (6)
 | | Method | Path | Policy | FE |
 |---|---|---|---|---|
-|⬜| GET | `/management/suppliers` | WarehouseDesk | ⬜ |
-|⬜| GET | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| POST | `/management/suppliers` | WarehouseDesk | ⬜ |
-|⬜| PUT | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| DELETE | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| PATCH | `/management/suppliers/{id}/active` | WarehouseDesk | ⬜ |
+|✅| GET | `/management/suppliers` | WarehouseDesk | ✅ |
+|✅| GET | `/management/suppliers/{id}` | WarehouseDesk | ✅ |
+|✅| POST | `/management/suppliers` | WarehouseDesk | ✅ |
+|✅| PUT | `/management/suppliers/{id}` | WarehouseDesk | ✅ |
+|✅| DELETE | `/management/suppliers/{id}` | WarehouseDesk | ✅ | Ngừng hợp tác, giữ lịch sử |
+|✅| PATCH | `/management/suppliers/{id}/active` | WarehouseDesk | ✅ | Khôi phục hợp tác |
 
 ### 7.3 Tồn kho & biến động (4)
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| GET | `/management/inventory` | WarehouseDesk | ✅ | Tồn hiện tại từng nguyên liệu |
-|⬜| POST | `/management/inventory/{ingredientId}/adjust` | WarehouseDesk | ⬜ | Điều chỉnh tồn (có `note`) |
-|⬜| GET | `/management/inventory-transactions` | WarehouseDesk | ⬜ | Biến động kho; `referenceId` cần kèm `referenceType`; có thêm `unit` |
-|⬜| GET | `/management/inventory/low-stock` | WarehouseDesk | ⬜ | **Mới (Đợt 3)** — nguyên liệu sắp hết |
+|✅| POST | `/management/inventory/{ingredientId}/adjust` | WarehouseDesk | ✅ | Lý do bắt buộc; âm kho 400, xung đột ghi 409 |
+|✅| GET | `/management/inventory-transactions` | WarehouseDesk | ✅ | Biến động kho; `referenceId` cần kèm `referenceType`; có `unit` |
+|✅| GET | `/management/inventory/low-stock` | WarehouseDesk | ✅ | Gồm cả Spoiled/OutOfStock dù tồn cao |
 
 ### 7.4 Phiếu nhập (5)
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| GET | `/management/purchase-orders` | WarehouseDesk | ✅ | Chỉ danh sách |
-|⬜| POST | `/management/purchase-orders` | WarehouseDesk | ⬜ | Tạo phiếu nhập |
-|⬜| GET | `/management/purchase-orders/{id}` | WarehouseDesk | ⬜ | Chi tiết + dòng hàng |
-|⬜| POST | `/management/purchase-orders/{id}/receive` | WarehouseDesk | ⬜ | Nhập hàng (cộng kho) |
-|⬜| POST | `/management/purchase-orders/{id}/cancel` | WarehouseDesk | ⬜ | Huỷ phiếu (đã nhập → 409) |
+|✅| POST | `/management/purchase-orders` | WarehouseDesk | ✅ | Tạo phiếu nháp, chưa cộng kho |
+|✅| GET | `/management/purchase-orders/{id}` | WarehouseDesk | ✅ | Chi tiết + dòng hàng + tiền server |
+|✅| POST | `/management/purchase-orders/{id}/receive` | WarehouseDesk | ✅ | Nhận một lần; lần hai → 404 |
+|✅| POST | `/management/purchase-orders/{id}/cancel` | WarehouseDesk | ✅ | Huỷ phiếu nháp; đã nhận → 409 |
+
+F4 cập nhật 2026-10-31: xem [bàn giao Kho/Nhập hàng](f4-warehouse-progress.md). Không tự retry lệnh kho khi mất ACK.
 
 ### 7.5 Công thức (6)
 | | Method | Path | Policy | FE |

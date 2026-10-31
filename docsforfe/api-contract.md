@@ -241,24 +241,26 @@ thay vì chỉ ngày trần. MoMo thật và xuất giấy/PDF chưa được x�
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
 |✅| GET | `/api/management/inventory` | WarehouseDesk | tồn hiện tại (`quanlity`) |
-|⬜| POST | `/api/management/inventory/{ingredientId}/adjust` | WarehouseDesk | điều chỉnh tồn (âm = giảm) → **204**  · ⚠️ **`note` BẮT BUỘC** (C-21, thiếu ⇒ `400`) |
-|⬜| GET | `/api/management/inventory-transactions` | WarehouseDesk | biến động kho (có `unit`) |
-|⬜| GET | `/api/management/inventory/low-stock` | WarehouseDesk | **nguyên liệu cần kho xử lý** · có `stockStatus` (C-21) |
-|⬜| GET | `/api/management/ingredients` | WarehouseDesk | |
+|✅| POST | `/api/management/inventory/{ingredientId}/adjust` | WarehouseDesk | điều chỉnh tồn (âm = giảm) → **204** · **`note` bắt buộc**, thiếu/âm kho ⇒ `400`, xung đột ghi ⇒ `409` |
+|✅| GET | `/api/management/inventory-transactions` | WarehouseDesk | biến động kho (có `unit`), lọc/phân trang F4 |
+|✅| GET | `/api/management/inventory/low-stock` | WarehouseDesk | **nguyên liệu cần kho xử lý** · có `stockStatus` (C-21) |
+|✅| GET | `/api/management/ingredients` | WarehouseDesk | Tra tên/đơn vị và lựa chọn đang hoạt động |
 |⬜| GET | `/api/management/ingredients/{id}` | WarehouseDesk | |
 |⬜| POST | `/api/management/ingredients` | WarehouseDesk | `{ name, unit, minimumStock? }` |
 |⬜| PUT | `/api/management/ingredients/{id}` | WarehouseDesk | ⚠️ **đổi `unit` của nguyên liệu đã dùng ⇒ `409`** (mục 5.4) |
 |⬜| DELETE | `/api/management/ingredients/{id}` | WarehouseDesk | soft-delete |
 |⬜| PATCH | `/api/management/ingredients/{id}/active` | WarehouseDesk | `{ isActive }` |
 |⬜| PATCH | `/api/management/ingredients/{id}/status` | WarehouseDesk | `{ stockStatus: Available\|OutOfStock\|Spoiled, note? }` |
-|⬜| GET | `/api/management/suppliers` | WarehouseDesk | |
-|⬜| POST/PUT/DELETE | `/api/management/suppliers[/{id}]` | WarehouseDesk | |
-|⬜| PATCH | `/api/management/suppliers/{id}/active` | WarehouseDesk | `{ isActive }` |
-|⬜| GET | `/api/management/purchase-orders` | WarehouseDesk | |
-|⬜| POST | `/api/management/purchase-orders` | WarehouseDesk | tạo phiếu mua |
-|⬜| GET | `/api/management/purchase-orders/{id}` | WarehouseDesk | |
-|⬜| POST | `/api/management/purchase-orders/{id}/receive` | WarehouseDesk | nhập hàng (cộng kho) → **204** |
-|⬜| POST | `/api/management/purchase-orders/{id}/cancel` | WarehouseDesk | huỷ phiếu (đã nhận ⇒ `409`) |
+|✅| GET | `/api/management/suppliers` | WarehouseDesk | Danh sách; F4 còn đọc `/{id}` trước cập nhật |
+|✅| POST/PUT/DELETE | `/api/management/suppliers[/{id}]` | WarehouseDesk | Thêm/sửa/ngừng hợp tác; không xóa lịch sử phiếu |
+|✅| PATCH | `/api/management/suppliers/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| GET | `/api/management/purchase-orders` | WarehouseDesk | |
+|✅| POST | `/api/management/purchase-orders` | WarehouseDesk | Tạo Draft, chưa cộng kho |
+|✅| GET | `/api/management/purchase-orders/{id}` | WarehouseDesk | Chi tiết, thành tiền/tổng tiền server |
+|✅| POST | `/api/management/purchase-orders/{id}/receive` | WarehouseDesk | Nhập hàng → **204**, nhận lại ⇒ `404` |
+|✅| POST | `/api/management/purchase-orders/{id}/cancel` | WarehouseDesk | Huỷ phiếu (đã nhận ⇒ `409`) |
+
+Tiến độ F4 ngày 2026-10-31 và giới hạn đối chiếu mất ACK: [bàn giao Kho/Nhập hàng](f4-warehouse-progress.md).
 
 ### 4.8 Công thức · khuyến mãi · cấu hình (F6/F7)
 

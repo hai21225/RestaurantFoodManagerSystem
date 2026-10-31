@@ -71,6 +71,7 @@ test('401 xoá phiên, dữ liệu đơn cũ và quay về login kèm trang cầ
     b.sessionStorage.setItem('restaurant.kitchenPending', 'previous-kitchen-request');
     b.sessionStorage.setItem('restaurant.paymentPending', 'previous-payment-request');
     b.sessionStorage.setItem('restaurant.paymentMomo', 'previous-momo-intent');
+    b.sessionStorage.setItem('restaurant.warehousePending', 'previous-warehouse-request');
     b.respond(async () => new Response('invalid-json', { status: 401, headers: { 'content-type': 'application/json' } }));
     await assert.rejects(b.api.get('/menu'), (e) => e.status === 401);
     assert.equal(b.auth.getToken(), null);
@@ -81,6 +82,7 @@ test('401 xoá phiên, dữ liệu đơn cũ và quay về login kèm trang cầ
     assert.equal(b.sessionStorage.getItem('restaurant.kitchenPending'), null);
     assert.equal(b.sessionStorage.getItem('restaurant.paymentPending'), null);
     assert.equal(b.sessionStorage.getItem('restaurant.paymentMomo'), null);
+    assert.equal(b.sessionStorage.getItem('restaurant.warehousePending'), null);
     assert.equal(new URL(b.redirects[0]).searchParams.get('returnUrl'), b.window.location.href);
 });
 

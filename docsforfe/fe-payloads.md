@@ -237,7 +237,7 @@ Response `200` (`PaymentResponse`):
 ```json
 { "quantity": -2.5, "createdBy": 1, "note": "Kiểm kê hao mất" }
 ```
-- `quantity` âm = giảm, dương = tăng; không được để tồn âm (`409`); `0` → `400`.
+- `quantity` âm = giảm, dương = tăng; không được để tồn âm (**`400` theo controller đã đối chiếu ở F4**); `0` → `400`. Xung đột ghi → `409`.
 - ⚠️ **`note` BẮT BUỘC** (C-21) — là lý do điều chỉnh. Thiếu / rỗng ⇒ **`400`**
   `{ "message": "Note (reason) is required for a manual stock adjustment" }`.
   Lý do: ledger phải trả lời được "tồn giảm 3kg vì lý do gì" (báo cáo biến động kho).

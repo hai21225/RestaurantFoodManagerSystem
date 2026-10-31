@@ -139,14 +139,20 @@ về đối chiếu khi mất ACK, giới hạn in giấy/PDF và guard hoàn ti
 | F3-5 | **Không** gọi `POST /api/payments` khi đơn chưa `Ready`/`Completed` hoặc còn món chưa xong — BE sẽ trả `409` | |
 
 ### F4 — Kho & Mua hàng
+
+**Tiến độ 2026-10-31:** đã nối điều chỉnh có lý do, ledger/lọc/phân trang, low-stock gồm hỏng/hết,
+tạo/xem/nhận/hủy phiếu và CRUD/soft delete/khôi phục NCC. 106/106 test frontend và 14/14 API Kho thật đạt.
+Xem [bàn giao F4](f4-warehouse-progress.md); các lệnh kho chưa có idempotency nên mất ACK phải đối chiếu.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
-| F4-1 | Điều chỉnh tồn (thêm/bớt khi kiểm kê, hết hạn…) | `POST /api/management/inventory/{ingredientId}/adjust` body `{ quantity (+/-), createdBy (≥1), note? }` — số âm làm tồn âm sẽ bị `409` |
+| F4-1 | Điều chỉnh tồn (thêm/bớt khi kiểm kê, hết hạn…) | `POST /api/management/inventory/{ingredientId}/adjust` body `{ quantity (+/-), createdBy (≥1), note }` — **note bắt buộc**; âm kho trả `400` ở controller hiện tại; xung đột ghi trả `409` |
 | F4-2 | Xem biến động kho (có lọc theo nguyên liệu/loại/đơn hàng/thời gian) | `GET /api/management/inventory-transactions?ingredientId=&type=&referenceType=&referenceId=&from=&to=&page=&pageSize=` — lưu ý: `referenceId` **bắt buộc** kèm `referenceType` |
 | F4-3 | Tạo phiếu nhập | `POST /api/management/purchase-orders` body `{ supplierId, createdBy (≥1), items:[{ ingredientId, quantity (>0), unitPrice }] }` |
 | F4-4 | Nhập hàng (cộng kho) | `POST /api/management/purchase-orders/{id}/receive` body `{ receivedBy (≥1) }` — nhập 2 lần sẽ bị chặn |
 | F4-5 | Huỷ phiếu nhập | `POST /api/management/purchase-orders/{id}/cancel` — phiếu đã nhập thì không huỷ được (`409`) |
 | F4-6 | Quản lý nhà cung cấp | `GET/POST/PUT/DELETE /api/management/suppliers` · `PATCH /api/management/suppliers/{id}/active` |
+| F4-7 | Nguyên liệu cần kho xử lý | `GET /api/management/inventory/low-stock`; phân biệt `stockStatus` hỏng/hết với số lượng ghi sổ |
 
 ### F5 — Báo cáo & Tổng quan
 | Bước | Việc | Endpoint |
@@ -179,6 +185,7 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 | FE-C13 | Tự gửi lại lệnh báo số phần/thiếu mà không ghi trùng | Idempotency/receipt bền vững cho các lệnh Bếp; hiện UI khóa và yêu cầu đối chiếu thay vì tự retry. | P1 |
 | FE-C14 | Hoàn đơn cũ khi bàn đã có lượt khách mới | RefundAsync hiện mở lại Ready ở bàn cũ; cần BE kiểm tra/khóa cùng transaction với tạo đơn mới. F3 chặn nếu fresh GET thấy đơn khác đang mở, chưa thay được bảo đảm nguyên tử server. | P1 |
 | FE-C15 | Đổi phương thức khi MoMo còn Pending | Lệnh hủy/đóng intent có đối chiếu provider; F3 khóa thu trực tiếp đến khi có kết quả, không tự giả Failed. | P1 |
+| FE-C16 | Tự retry ghi Kho/tạo phiếu/tạo NCC khi mất ACK | Idempotency/receipt bền vững cho các route Kho; hiện F4 lưu pending, khóa lệnh và đối chiếu, không suy thành công từ tồn mới hay bản ghi giống nhau. | P1 |
 
 ---
 

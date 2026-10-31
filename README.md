@@ -41,18 +41,20 @@ Cần Node.js 20+ để chạy test frontend; việc mở/chạy giao diện kh�
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln
-node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs
+node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs
 dotnet test RestaurantFoodManagerSystem.Tests
 ```
 
 F0 đã có lưu/gửi JWT, phân biệt 401/403, đăng xuất và helper tải CSV/header tuỳ chọn.
 POS đã nối mở đơn theo bàn, gọi thêm, đổi số lượng, hủy món, hủy đơn Admin và lịch sử:
-xem [bàn giao F1](docsforfe/f1-pos-progress.md). Áp/gỡ khuyến mãi của F1 và các màn F4–F8 còn lại
+xem [bàn giao F1](docsforfe/f1-pos-progress.md). Áp/gỡ khuyến mãi của F1 và các màn F5–F8 còn lại
 được theo dõi trong [kế hoạch frontend](docsforfe/fe-work-plan.md).
 Bếp F2 đã có nhận từng món, báo số phần, thiếu/hỏng có lý do và mở lại: xem [bàn giao F2](docsforfe/f2-kitchen-progress.md).
 Thu ngân F3 đã có thu trực tiếp, lịch sử/lọc, xem trước bill, hoàn tiền, MoMo intent/poll và nút thử Mock:
 xem [bàn giao F3](docsforfe/f3-cashier-progress.md). In giấy/PDF và MoMo provider thật chưa được xác minh.
 MoMo đang dùng provider `Mock`; chưa phải thanh toán thật.
+Kho/Nhập hàng F4 đã nối điều chỉnh có lý do, lịch sử/tồn cần xử lý, phiếu nhập và nhà cung cấp:
+xem [bàn giao F4](docsforfe/f4-warehouse-progress.md). Danh mục nguyên liệu/công thức đầy đủ vẫn thuộc F6.
 
 Kết quả ngày 2026-10-29: build tại F0 đạt; 54/54 test frontend (F0 + POS + Bếp) đạt;
 9/9 kiểm tra API POS và 11/11 kiểm tra API Bếp/POS thật đạt;
@@ -61,3 +63,6 @@ Chi tiết và giới hạn kiểm thử nằm trong [ghi chú tích hợp](docs
 
 Kết quả F3 ngày 2026-10-31: 80/80 test frontend và 13/13 kiểm tra API Thu ngân thật đạt trên database Integration riêng.
 F3 không sửa/rerun bộ test backend; baseline lỗi cũ bên trên vẫn còn.
+
+Kết quả F4 ngày 2026-10-31: 106/106 test frontend và 14/14 kiểm tra API Kho/Nhập hàng thật đạt trên database Integration riêng.
+F4 không thay đổi backend hoặc chạy lại bộ test C#.
