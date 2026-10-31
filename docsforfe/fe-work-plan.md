@@ -125,12 +125,17 @@
 | F2-4 | Hiển thị lý do huỷ món trên bảng bếp | Đọc từ `GET /api/management/kitchen/orders/{ticketId}/items` + `GET /api/orders/{orderId}/item-history` |
 
 ### F3 — Thu ngân
+
+**Tiến độ 2026-10-31:** đã nối F3-1–5, hoàn toàn bộ, MoMo intent/poll và giả lập có nhãn Mock.
+80/80 test frontend và 13/13 kiểm tra API Thu ngân thật đạt. Xem [bàn giao F3](f3-cashier-progress.md)
+về đối chiếu khi mất ACK, giới hạn in giấy/PDF và guard hoàn tiền khi bàn đã có đơn mới.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F3-1 | Danh sách đơn chờ thu (nút bấm từ bàn) | `GET /api/orders?status=Ready` / `status=Completed` + `GET /api/orders/{id}` |
 | F3-2 | Chọn phương thức thanh toán | `POST /api/payments` body `{ orderId, paymentMethod: "Cash"\|"Card"\|"Bank"\|"EWallet"\|"Transfer", transactionCode?, createdBy }` |
 | F3-3 | Lịch sử thu của đơn + danh sách phiếu thu | `GET /api/payments/order/{orderId}` · `GET /api/payments?page=&pageSize=&method=&from=&to=` |
-| F3-4 | In bill | Dữ liệu đã có ở `GET /api/orders/{id}` + `GET /api/restaurant-tables/{tableId}`; **chưa có** endpoint bill hợp nhất (xem mục C) |
+| F3-4 | Xem trước / in bill | Phiếu đơn: `GET /api/orders/{id}` + `GET /api/restaurant-tables`; tạm tính bàn: `GET /api/orders/table/{tableId}/bill`. Không dùng GET bàn/{id} để đọc. In giấy/PDF chưa xác minh thực tế. |
 | F3-5 | **Không** gọi `POST /api/payments` khi đơn chưa `Ready`/`Completed` hoặc còn món chưa xong — BE sẽ trả `409` | |
 
 ### F4 — Kho & Mua hàng
@@ -172,6 +177,8 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 | FE-C11 | Thanh toán MoMo / QR / hoàn tiền | payment provider | **cuối cùng** |
 | FE-C12 | Chef chọn nguyên liệu cụ thể khi báo thiếu | Lookup nguyên liệu của dòng món cho KitchenDesk; hiện ingredients/recipes đều WarehouseDesk. F2 cơ bản đang bỏ trống ingredientId. | P2 |
 | FE-C13 | Tự gửi lại lệnh báo số phần/thiếu mà không ghi trùng | Idempotency/receipt bền vững cho các lệnh Bếp; hiện UI khóa và yêu cầu đối chiếu thay vì tự retry. | P1 |
+| FE-C14 | Hoàn đơn cũ khi bàn đã có lượt khách mới | RefundAsync hiện mở lại Ready ở bàn cũ; cần BE kiểm tra/khóa cùng transaction với tạo đơn mới. F3 chặn nếu fresh GET thấy đơn khác đang mở, chưa thay được bảo đảm nguyên tử server. | P1 |
+| FE-C15 | Đổi phương thức khi MoMo còn Pending | Lệnh hủy/đóng intent có đối chiếu provider; F3 khóa thu trực tiếp đến khi có kết quả, không tự giả Failed. | P1 |
 
 ---
 
@@ -201,7 +208,7 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 - [ ] Không còn gọi `PUT /api/orders/{id}/items` (đã `410`).
 - [ ] Gọi thêm / đổi số lượng / huỷ món đều **truyền `reason` / `reasonCode`** đúng, và hiển thị lại lý do do BE trả về.
 - [ ] Bếp có đủ 3 nút: prepared / shortage / reopen, và hiển thị được lý do huỷ món.
-- [ ] Thu ngân: chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh 409) và hiện rõ thông báo lỗi.
+- [x] Thu ngân: chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh 409) và hiện rõ thông báo lỗi. Xem giới hạn F3/FE-C14/15.
 - [ ] Tổng quan & báo cáo lấy từ API thật, không còn dữ liệu tĩnh.
 - [ ] CSV tải đúng tên file + mở bằng Excel không lỗi dấu.
 - [ ] Không tự tính tiền/tax ở FE — mọi con số hiển thị lấy từ response BE (`subtotal`, `discountAmount`, `taxAmount`, `totalAmount`).

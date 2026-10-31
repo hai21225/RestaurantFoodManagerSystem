@@ -191,7 +191,7 @@ dotnet run --project RestaurantFoodManagerSystem
 |⬜| GET | `/api/orders` | PosOrCashier | `?status=&tableId=&from=&to=&page=&pageSize=` |
 |⬜| GET | `/api/orders/{id}` | PosKitchenRead | chi tiết + món + topping |
 |✅| POST | `/api/orders` | PosOperator | tạo đơn (hỗ trợ `Idempotency-Key`) |
-|⬜| GET | `/api/orders/table/{tableId}/bill` | PosOrCashier | **hoá đơn gộp theo bàn** (mục 4.9) |
+|✅| GET | `/api/orders/table/{tableId}/bill` | PosOrCashier | F3 — **hoá đơn gộp theo bàn**, chỉ hiển thị/in |
 |⬜| POST | `/api/orders/{id}/items` | PosOperator | **gọi thêm** — luôn tạo vòng bếp mới |
 |⬜| PATCH | `/api/orders/{id}/items/{itemId}/quantity` | PosOperator | đổi SL (gửi **đúng một** trong `quantity` / `delta`) |
 |⬜| POST | `/api/orders/{id}/items/{itemId}/cancel` | OrderCancellation | huỷ 1 món + lý do |
@@ -221,10 +221,14 @@ dotnet run --project RestaurantFoodManagerSystem
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
 |✅| POST | `/api/payments` | CashierDesk | `{ orderId, paymentMethod, transactionCode?, createdBy }` |
-|⬜| GET | `/api/payments` | CashierDesk | `?status=&method=&orderId=&from=&to=&page=&pageSize=` |
-|⬜| GET | `/api/payments/order/{orderId}` | CashierDesk | lịch sử thu của 1 đơn (**dùng để poll trạng thái MoMo**) |
-|⬜| POST | `/api/payments/momo` | CashierDesk | tạo intent MoMo → `{ paymentId, status, isMock, … }` |
-|⬜| POST | `/api/payments/{id}/refund` | CashierDesk | hoàn tiền toàn bộ |
+|✅| GET | `/api/payments` | CashierDesk | `?status=&method=&orderId=&from=&to=&page=&pageSize=` |
+|✅| GET | `/api/payments/order/{orderId}` | CashierDesk | lịch sử thu của 1 đơn (**dùng để poll trạng thái MoMo**) |
+|✅| POST | `/api/payments/momo` | CashierDesk | tạo intent MoMo → `{ paymentId, status, isMock, … }` |
+|✅| POST | `/api/payments/{id}/refund` | CashierDesk | hoàn tiền toàn bộ |
+
+F3 cập nhật 2026-10-31: còn sử dụng route giả lập khi `isMock=true`; xem [bàn giao F3](f3-cashier-progress.md).
+PaymentService lọc `from/to` trực tiếp theo `PaidAt` UTC: FE gửi mốc ISO UTC tương ứng đủ ngày Việt Nam,
+thay vì chỉ ngày trần. MoMo thật và xuất giấy/PDF chưa được xác minh trong F3.
 
 > **Poll trạng thái MoMo:** `POST /api/payments/momo` → lấy `paymentId` → poll
 > `GET /api/payments/order/{orderId}` (2–3 giây/lần) → đơn chuyển `Paid` là thành công.

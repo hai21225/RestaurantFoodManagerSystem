@@ -1,9 +1,12 @@
 # Tiến độ tích hợp Hải → Đông
 
-Cập nhật 2026-10-29. Nhánh làm việc **`dong`**; không tạo nhánh làm việc khác.
+Cập nhật 2026-10-31. Nhánh làm việc **`dong`**; không tạo nhánh làm việc khác.
 
 Tiến độ sau F0: đã nối các luồng POS chính; xem [bàn giao F1](f1-pos-progress.md).
 Màn Bếp đã nối F2; xem [bàn giao F2](f2-kitchen-progress.md) và các giới hạn quyền/retry đã ghi rõ.
+Thu ngân đã nối F3: thu trực tiếp, lịch sử/lọc, xem trước bill, hoàn tiền và MoMo Mock;
+80/80 test frontend + 13/13 API Thu ngân thật đạt. Xem [bàn giao F3](f3-cashier-progress.md),
+đặc biệt giới hạn in/PDF, provider thật và hoàn đơn cũ khi bàn đã có lượt khách mới.
 Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
 
 ## Mã nguồn đã gộp

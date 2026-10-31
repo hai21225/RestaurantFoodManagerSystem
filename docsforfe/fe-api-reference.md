@@ -116,7 +116,7 @@
 |⬜| PATCH | `/orders/{id}/status` | PosOperator | ⬜ | Đổi trạng thái đơn (huỷ đơn) |
 |⬜| GET | `/orders/{id}/history` | PosOrCashier | ⬜ | Lịch sử trạng thái **đơn** |
 |⬜| GET | `/orders/{id}/item-history` | PosOrCashier | ⬜ | Lịch sử trạng thái **từng món** (C-10) |
-|⬜| GET | `/orders/table/{tableId}/bill` | PosOrCashier | ⬜ | **Mới (Đợt 3)** — hoá đơn gộp mọi đơn đang mở của bàn |
+|✅| GET | `/orders/table/{tableId}/bill` | PosOrCashier | ✅ | F3 — tạm tính bàn; thanh toán vẫn từng đơn |
 |⬜| PATCH | `/orders/{id}/note` | PosOperator | ⬜ | **Mới (Đợt 3)** — ghi chú cho cả hoá đơn |
 |⛔| PUT | `/orders/{id}/items` | PosOperator | ❌ | **410 Gone (C-09)** — không dùng |
 
@@ -190,12 +190,17 @@
 |⬜| DELETE | `/management/promotions/{id}` | AdminOnly | ⬜ | Soft-delete |
 |⬜| PUT | `/management/promotions/{id}/targets` | AdminOnly | ⬜ | **Mới (C-18)** — gắn target (món/danh mục) được giảm |
 
-## 9. Thanh toán (3) — Phase F3
+## 9. Thanh toán (6 route FE sử dụng) — Phase F3
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| POST | `/payments` | CashierDesk | ✅ | `paymentMethod`: `Cash`\|`Card`\|`Bank`\|`EWallet`\|`Transfer` |
-|⬜| GET | `/payments` | CashierDesk | ⬜ | Lọc `status/method/orderId/from/to/page/pageSize` |
-|⬜| GET | `/payments/order/{orderId}` | CashierDesk | ⬜ | Lịch sử thu của đơn |
+|✅| GET | `/payments` | CashierDesk | ✅ | Lọc `status/method/orderId/from/to/page/pageSize`, ngày VN chuyển UTC |
+|✅| GET | `/payments/order/{orderId}` | CashierDesk | ✅ | Lịch sử thu, poll và đối chiếu mất ACK |
+|✅| POST | `/payments/momo` | CashierDesk | ✅ | Tạo/lấy lại intent, chưa tự đóng đơn |
+|✅| POST | `/payments/momo/mock/{paymentId}?success=` | CashierDesk | ✅ | Chỉ hiện khi intent `isMock=true` |
+|✅| POST | `/payments/{paymentId}/refund` | CashierDesk | ✅ | Hoàn toàn bộ, có lý do và guard bàn đang mở |
+
+Tiến độ 2026-10-31: xem [bàn giao F3](f3-cashier-progress.md). Provider thật và in giấy/PDF chưa xác minh.
 
 ## 10. Báo cáo (3) — Phase F5
 | | Method | Path | Policy | FE | Ghi chú |
