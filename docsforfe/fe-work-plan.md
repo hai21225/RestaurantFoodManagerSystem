@@ -59,7 +59,7 @@
 | **FE-01** | Hạ tầng `js/common/api.js` | Chỉ có `get/post/put/patch/delete`, **không** gửi `Authorization`, không tải blob, không phân biệt 401/403 | Lưu token; gắn `Authorization: Bearer`; `401` → về login; `403` → báo không đủ quyền; thêm `download()` cho CSV; cho phép header tuỳ chọn (`Idempotency-Key`) | — (hạ tầng) | **F0** |
 | **FE-02** | `pages/login.js` | `GET /api/setup/status`, `POST /api/login` → không lưu token, không gửi Bearer | Lưu token (`localStorage`), gửi kèm mọi request, nút đăng xuất, hết hạn token → bắt nhập lại, hiện role đang đăng nhập | `POST /api/auth/login` (đã có) · `POST /api/auth/change-password` (chưa dùng) | **F0** |
 | **FE-03** | `pages/account.html` | **Không có file JS** | Tạo `js/pages/account.js`: thông tin tôi, sửa hồ sơ, đổi mật khẩu | `GET /api/users/me` · `PUT /api/users/me` · `POST /api/auth/change-password` | F0 / F6 |
-| **FE-04** | `pages/dashboard.js` | **0 lần gọi API** — dùng `js/data/dashboard.data.js` (dữ liệu tĩnh) | Bỏ dữ liệu tĩnh, nối API thật: doanh thu hôm nay, đơn mở, bàn, bếp, cảnh báo tồn thấp, 10 đơn gần nhất | `GET /api/reports/dashboard` | **F5** |
+| **FE-04** | `pages/dashboard.js` | ✅ F5 2026-11-01: API thật cho Admin; bỏ file dữ liệu tĩnh | Doanh thu/số đơn đã thu hôm nay, đơn mở, bàn, bếp, tồn dưới ngưỡng, tối đa 10 đơn mở gần nhất | `GET /api/reports/dashboard` · `GET /api/restaurant-tables` thuần đọc | **F5** |
 | **FE-05** | `pages/tables.js` | 6 call: list/create/delete/bảo trì bàn; `GET /api/table-areas?includeInactive=true` | Sửa bàn (thiếu `PUT`), CRUD khu vực đầy đủ, bật/tắt khu vực, **xem đơn đang mở của bàn** (để bấm vào bàn → mở đơn) | `PUT /api/restaurant-tables/{id}` · `POST/PUT/DELETE /api/table-areas` · `PATCH /api/table-areas/{id}/active` · `GET /api/orders?tableId={id}` | F6 (đơn của bàn: F1) |
 | **FE-06** | `pages/order.js` (POS) | **2 call**: `GET /api/menu` + `POST /api/orders` ⇒ **chỉ tạo được đơn, không sửa được đơn** | Mở đơn đang có theo bàn; **gọi thêm**; **đổi số lượng** (cả khi bếp đã nhận); **huỷ món** (có lý do + reasonCode); áp khuyến mãi; xem lịch sử đơn/món; huỷ đơn | `GET /api/orders?tableId=` · `GET /api/orders/{id}` · `POST /api/orders/{id}/items` · `PATCH /api/orders/{id}/items/{itemId}/quantity` · `POST /api/orders/{id}/items/{itemId}/cancel` · `PATCH /api/orders/{id}/promotion/{promotionId}` · `PATCH /api/orders/{id}/status` · `GET /api/orders/{id}/history` · `GET /api/orders/{id}/item-history` | **F1** |
 | **FE-07** | `pages/kitchen.js` | 6 call; bếp chỉ bấm được "Preparing" và "xong/ready" | Báo **đã nấu được mấy phần** (prepared-quantity); báo **thiếu nguyên liệu** (shortage, có lý do); **mở lại món đã xong** (reopen); hiện lý do huỷ trên UI | `PATCH /api/management/kitchen/items/{id}/prepared-quantity` · `POST /api/management/kitchen/items/{id}/shortage` · `POST /api/management/kitchen/items/{id}/reopen` | **F2** |
@@ -70,7 +70,7 @@
 | **FE-12** | `pages/purchases.js` | **1 call**: `GET /api/management/purchase-orders` ⇒ chỉ xem danh sách | Tạo phiếu nhập (NCC + dòng hàng + giá), xem chi tiết, **nhập hàng** (cộng kho), huỷ phiếu | `POST /api/management/purchase-orders` · `GET /api/management/purchase-orders/{id}` · `POST /api/management/purchase-orders/{id}/receive` · `POST /api/management/purchase-orders/{id}/cancel` | **F4** |
 | **FE-13** | `pages/employees.js` | 2 call: `GET /api/users`, `POST /api/users` | Sửa nhân viên, khoá/mở khoá, đặt lại mật khẩu, **gán/thu role**, xem danh sách role | `GET/PUT /api/users/{id}` · `PATCH /api/users/{id}/active` · `POST /api/users/{id}/reset-password` · `POST /api/users/{userId}/roles` · `DELETE /api/users/{userId}/roles/{roleName}` · `GET /api/roles` | **F6** |
 | **FE-14** | `pages/roles.html` | **Không có JS** | Tạo `js/pages/roles.js` hiển thị 5 vai trò + mô tả quyền | `GET /api/roles` | **F6** |
-| **FE-15** | `pages/reports.html` | **Không có JS** | Tạo `js/pages/reports.js`: chọn kỳ (day/week/month) + ngày, xem bảng doanh thu theo nhóm, **tải CSV** | `GET /api/reports/revenue?period=&date=` · `GET /api/reports/revenue/export.csv?period=&date=` (cần `blob` trong api.js) | **F5** |
+| **FE-15** | `pages/reports.html` | ✅ F5 2026-11-01: có JS và nối API Admin | Chọn kỳ/ngày VN, số liệu tổng/nhóm từ server, CSV đúng kỳ đã tải; khóa xuất khi bộ lọc chưa áp dụng | `GET /api/reports/revenue?period=&date=` · `GET /api/reports/revenue/export.csv?period=&date=` bằng Blob | **F5** |
 | **FE-16** | Khuyến mãi | **Chưa có màn hình nào** | Tạo `pages/promotions.html` + `js/pages/promotions.js`: CRUD khuyến mãi, bật/tắt, xem khuyến mãi đang áp cho đơn và **gỡ khuyến mãi** | `GET/POST/PUT/DELETE /api/management/promotions` · `PATCH /api/management/promotions/{id}/active` · `PATCH /api/orders/{id}/promotion/{promotionId}` · ✅ `DELETE /api/orders/{id}/promotion/{promotionId}` (**Đã có** — C-14) · ✅ `PUT /api/management/promotions/{id}/targets` (**Đã có** — C-18) | **F6** |
 | **FE-17** | Thiết lập quán / VAT | Chưa có | Chờ BE có settings + thuế | `GET/PUT /api/management/settings` | F7 |
 | **FE-18** | Chuyển bàn / gộp bàn | Chưa có | Chờ BE | `PATCH /api/orders/{id}/table` | F7 |
@@ -155,11 +155,16 @@ Xem [bàn giao F4](f4-warehouse-progress.md); các lệnh kho chưa có idempote
 | F4-7 | Nguyên liệu cần kho xử lý | `GET /api/management/inventory/low-stock`; phân biệt `stockStatus` hỏng/hết với số lượng ghi sổ |
 
 ### F5 — Báo cáo & Tổng quan
+
+**Tiến độ 2026-11-01:** đã nối F5-1–3 theo quyền Admin; số tiền/ngày nhóm lấy từ server.
+128/128 test frontend và 12/12 kiểm tra API/SQL Báo cáo thật đạt; tải CSV thật qua trình duyệt đã đối chiếu.
+Xem [bàn giao F5](f5-reporting-progress.md) để biết cách dùng, giới hạn kỳ/snapshot và các báo cáo chưa có API.
+
 | Bước | Việc | Endpoint |
 |---|---|---|
-| F5-1 | Bỏ dữ liệu tĩnh ở `dashboard.js`, nối API thật | `GET /api/reports/dashboard` |
-| F5-2 | Báo cáo doanh thu theo kỳ | `GET /api/reports/revenue?period=day\|week\|month&date=yyyy-MM-dd` |
-| F5-3 | Tải CSV | `GET /api/reports/revenue/export.csv?period=&date=` (cần `blob` — F0-3) |
+| F5-1 | ✅ Tổng quan thật; làm mới, bàn/bếp và đơn gần nhất | `GET /api/reports/dashboard` |
+| F5-2 | ✅ Báo cáo ngày/tuần/tháng và ngày theo giờ VN | `GET /api/reports/revenue?period=day\|week\|month&date=yyyy-MM-dd` |
+| F5-3 | ✅ Tải CSV UTF-8 BOM đúng kỳ đã áp dụng | `GET /api/reports/revenue/export.csv?period=&date=` qua helper Blob F0 |
 
 ### F6 — Quản trị
 Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vực bàn (F6-5), khuyến mãi (F6-6) — endpoint đã liệt kê ở bảng A.

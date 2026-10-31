@@ -41,13 +41,13 @@ Cần Node.js 20+ để chạy test frontend; việc mở/chạy giao diện kh�
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln
-node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs
+node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs frontend/tests/reporting-session.test.cjs
 dotnet test RestaurantFoodManagerSystem.Tests
 ```
 
 F0 đã có lưu/gửi JWT, phân biệt 401/403, đăng xuất và helper tải CSV/header tuỳ chọn.
 POS đã nối mở đơn theo bàn, gọi thêm, đổi số lượng, hủy món, hủy đơn Admin và lịch sử:
-xem [bàn giao F1](docsforfe/f1-pos-progress.md). Áp/gỡ khuyến mãi của F1 và các màn F5–F8 còn lại
+xem [bàn giao F1](docsforfe/f1-pos-progress.md). Áp/gỡ khuyến mãi của F1 và các màn F6–F8 còn lại
 được theo dõi trong [kế hoạch frontend](docsforfe/fe-work-plan.md).
 Bếp F2 đã có nhận từng món, báo số phần, thiếu/hỏng có lý do và mở lại: xem [bàn giao F2](docsforfe/f2-kitchen-progress.md).
 Thu ngân F3 đã có thu trực tiếp, lịch sử/lọc, xem trước bill, hoàn tiền, MoMo intent/poll và nút thử Mock:
@@ -55,6 +55,8 @@ xem [bàn giao F3](docsforfe/f3-cashier-progress.md). In giấy/PDF và MoMo pro
 MoMo đang dùng provider `Mock`; chưa phải thanh toán thật.
 Kho/Nhập hàng F4 đã nối điều chỉnh có lý do, lịch sử/tồn cần xử lý, phiếu nhập và nhà cung cấp:
 xem [bàn giao F4](docsforfe/f4-warehouse-progress.md). Danh mục nguyên liệu/công thức đầy đủ vẫn thuộc F6.
+Tổng quan/Báo cáo F5 đã nối API thật, chọn kỳ ngày/tuần/tháng và tải CSV dành cho Admin:
+xem [bàn giao F5](docsforfe/f5-reporting-progress.md). CSV đọc số liệu mới của kỳ tại lúc xuất.
 
 Kết quả ngày 2026-10-29: build tại F0 đạt; 54/54 test frontend (F0 + POS + Bếp) đạt;
 9/9 kiểm tra API POS và 11/11 kiểm tra API Bếp/POS thật đạt;
@@ -66,3 +68,6 @@ F3 không sửa/rerun bộ test backend; baseline lỗi cũ bên trên vẫn cò
 
 Kết quả F4 ngày 2026-10-31: 106/106 test frontend và 14/14 kiểm tra API Kho/Nhập hàng thật đạt trên database Integration riêng.
 F4 không thay đổi backend hoặc chạy lại bộ test C#.
+
+Kết quả F5 ngày 2026-11-01: 128/128 test frontend và 12/12 kiểm tra API Báo cáo thật đạt,
+đối chiếu SQL và file CSV tải qua trình duyệt trên database Integration riêng. F5 không sửa backend.

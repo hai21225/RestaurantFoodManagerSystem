@@ -29,9 +29,16 @@
 > **`api-contract.md` là bản tổng hợp, tự chứa đủ.** `fe-api-reference.md` + `fe-payloads.md` là
 > tài liệu chi tiết theo từng đợt — dùng để tra cứu sâu, không bắt buộc đọc hết.
 
+## Tiến độ mới nhất — 2026-11-01
+
+Đọc [tiến độ tích hợp](integration-progress.md) và các bàn giao F1–F5 để theo dõi phần đã nối thật.
+[F5 — Tổng quan/Báo cáo](f5-reporting-progress.md) đã có API thật, chọn kỳ/ngày VN và CSV cho Admin;
+128/128 test frontend, 12/12 kiểm tra API Báo cáo/SQL thật đạt. Backend baseline còn 179/697 lỗi có sẵn.
+Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
+
 ---
 
-## Trạng thái hiện tại (quét FE ngày 2026-10-21)
+## Trạng thái lịch sử (quét FE ngày 2026-10-21)
 
 | Hạng mục | Số |
 |---|---|
@@ -68,7 +75,7 @@ Chỉ còn **2 mục chưa có API**: `POST /api/orders/{id}/split` (chia bill) 
 | **F2** | **Bếp**: prepared-quantity, shortage, reopen, chi tiết món | Bếp hiện chỉ bấm 2 nút |
 | **F3** | **Thu ngân**: danh sách payment, nhiều phương thức, in bill | Sau F1/F2 |
 | **F4** | **Kho & Mua hàng**: điều chỉnh tồn, biến động kho, tạo/nhận/huỷ phiếu nhập, NCC, tồn thấp | |
-| **F5** | **Báo cáo & Tổng quan**: nối `reports.html` + `dashboard.js` vào API thật | Dashboard hiện là dữ liệu tĩnh |
+| **F5** | **Báo cáo & Tổng quan**: đã nối API thật, kỳ/ngày VN và CSV Admin | Xem bàn giao F5, cập nhật 2026-11-01 |
 | **F6** | **Quản trị**: nhân viên (đầy đủ), vai trò, tài khoản, danh mục/topping/size đầy đủ, khu vực bàn, khuyến mãi (+ **gắn phạm vi giảm**) | |
 | **F7** | **Đã có API** → làm ngay: cấu hình quán + VAT, chuyển bàn, **bill theo bàn**, **ghi chú hoá đơn**, MoMo + hoàn tiền. **Còn chờ BE:** *chia bill* (`/orders/{id}/split`) · *ca làm việc* (`/management/shifts/*`) | 2 mục cuối chưa có API |
 | **F8** | Sau khi BE làm xong payment provider (MoMo): QR, redirect, trạng thái, hoàn tiền | Làm **cuối cùng** |

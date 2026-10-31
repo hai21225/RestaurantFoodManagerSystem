@@ -207,9 +207,12 @@ Tiến độ 2026-10-31: xem [bàn giao F3](f3-cashier-progress.md). Provider th
 ## 10. Báo cáo (3) — Phase F5
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
-|⬜| GET | `/reports/dashboard` | AdminOnly | ⬜ | Doanh thu hôm nay, đơn mở, bàn, bếp, tồn thấp, 10 đơn gần nhất |
-|⬜| GET | `/reports/revenue` | AdminOnly | ⬜ | `period=day\|week\|month`, `date=yyyy-MM-dd` |
-|⬜| GET | `/reports/revenue/export.csv` | AdminOnly | ⬜ | UTF-8 BOM, cần tải bằng `blob` |
+|✅| GET | `/reports/dashboard` | AdminOnly | ✅ | F5: đã thu hôm nay, đơn mở, bàn, bếp, lượng dưới ngưỡng, 10 đơn mở gần nhất |
+|✅| GET | `/reports/revenue` | AdminOnly | ✅ | F5: `period=day\|week\|month`, `date=yyyy-MM-dd` theo VN |
+|✅| GET | `/reports/revenue/export.csv` | AdminOnly | ✅ | F5: Blob UTF-8 BOM, kỳ đã tải; dữ liệu mới lúc xuất |
+
+F5 cập nhật 2026-11-01: xem [bàn giao Tổng quan/Báo cáo](f5-reporting-progress.md).
+Chỉ tính Paid theo PaidAt, loại Refunded; chưa có báo cáo giá vốn/lợi nhuận, món bán chạy hoặc theo ca.
 
 ---
 

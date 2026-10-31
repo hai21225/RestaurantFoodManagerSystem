@@ -293,9 +293,9 @@ Tiến độ F4 ngày 2026-10-31 và giới hạn đối chiếu mất ACK: [bà
 |⬜| DELETE | `/api/restaurant-tables/{id}` | AdminOnly | soft-delete |
 |⬜| PATCH | `/api/restaurant-tables/{id}/maintenance` | AdminOnly | `{ isMaintenance }` |
 |⬜| GET/POST/PUT/DELETE | `/api/table-areas[/{id}]` | AdminOnly | `PATCH /api/table-areas/{id}/active` |
-|⬜| GET | `/api/reports/dashboard` | AdminOnly | tổng quan (doanh thu, bàn, bếp, tồn thấp) |
-|⬜| GET | `/api/reports/revenue` | AdminOnly | `?period=day\|week\|month&date=yyyy-MM-dd` |
-|⬜| GET | `/api/reports/revenue/export.csv` | AdminOnly | tải CSV (cần `blob` trong `api.js`) |
+|✅| GET | `/api/reports/dashboard` | AdminOnly | F5: tổng quan thật; lowStockCount chỉ lượng ≤ ngưỡng |
+|✅| GET | `/api/reports/revenue` | AdminOnly | F5: `?period=day\|week\|month&date=yyyy-MM-dd`, ngày VN |
+|✅| GET | `/api/reports/revenue/export.csv` | AdminOnly | F5: Blob UTF-8 BOM, đúng kỳ đã tải; số liệu mới lúc xuất |
 |⬜| GET | `/api/users` · `/api/users/{id}` | AdminOnly | |
 |⬜| POST | `/api/users` | AdminOnly | `{ userName, email, password, confirmPassword, fullName?, phone?, roleName? }` |
 |⬜| PUT | `/api/users/{id}` | AdminOnly | |
