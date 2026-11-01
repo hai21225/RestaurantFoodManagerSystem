@@ -30,7 +30,7 @@ Chỉ thay frontend và tài liệu; không sửa backend, migration, SQL/appset
 ## Cách dùng
 
 1. Đăng nhập Admin, vào **Tổng quan** để xem tình hình hiện tại; bấm **Làm mới** sau khi nghiệp vụ đổi.
-2. Bấm **Báo cáo** ngay dưới **Tổng quan** trong menu chính; chọn Ngày/Tuần/Tháng và một ngày nằm trong kỳ cần xem.
+2. Mở **Quản trị → Báo cáo**; chọn Ngày/Tuần/Tháng và một ngày nằm trong kỳ cần xem.
 3. Nhấn **Xem báo cáo**, kiểm tra khoảng kỳ hiển thị, rồi nhấn **Tải báo cáo CSV**.
 4. File CSV có UTF-8 BOM, dấu phẩy phân cột, dấu chấm thập phân và dòng cuối `TOTAL` từ server.
    Nếu Excel trên máy không tự tách cột, dùng nhập dữ liệu từ Text/CSV, chọn UTF-8 và dấu phân cách dấu phẩy.
@@ -63,7 +63,7 @@ ngày 01/11/2026 tại thời điểm kiểm tra chưa có khoản đã thu. Đ�
 
 ## Chỉnh giao diện theo góp ý — 2026-11-01
 
-- Đưa Báo cáo khỏi menu Quản trị thu gọn, đặt ngay sau Tổng quan cho Admin trên các màn dùng menu chung.
+- Theo yêu cầu chốt lại, giữ **Báo cáo bên trong nhóm Quản trị** trên các màn dùng menu chung.
   Vai trò khác không thấy mục này; backend vẫn quyết định quyền truy cập. Đã kiểm tra Admin từ Nhập hàng về Báo cáo,
   Phục vụ bị chặn ở Báo cáo và vẫn mở được trang chủ với lối vào POS.
 - Dashboard tăng cỡ chữ/số liệu, phân biệt thẻ doanh thu, số phiếu bếp rõ hơn;
@@ -74,7 +74,7 @@ ngày 01/11/2026 tại thời điểm kiểm tra chưa có khoản đã thu. Đ�
 - Bảng mặc định chỉ hiện nhóm có giao dịch để không phải dò nhiều dòng 0đ; bỏ chọn để xem toàn bộ.
   Nhóm 0đ có đơn đã thu vẫn được giữ. Tổng kỳ luôn lấy từ server và CSV luôn gồm toàn bộ nhóm của kỳ.
 - Nút CSV lớn, giữ ở đầu vùng nội dung khi cuộn; thông báo chỉ rõ mở file trong Downloads.
-  Màn điện thoại có liên kết đi thẳng đến biểu đồ/bảng số liệu, Báo cáo nằm ở phần đầu thanh điều hướng.
+  Màn điện thoại có liên kết đi thẳng đến biểu đồ/bảng số liệu; mở Quản trị để chọn Báo cáo.
 - Đổi phiên bản URL tài nguyên đã sửa và script menu trên 13 HTML có menu,
   tránh trình duyệt tiếp tục dùng JavaScript/CSS cũ. Các màn ngoài F5 chỉ đổi URL script menu.
 - Đã chạy lại **128/128 test frontend**, **12/12 API/SQL**; kiểm tra **31 JS, 15 HTML, 309 liên kết/tài nguyên** và diff đạt.

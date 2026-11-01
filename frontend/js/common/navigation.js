@@ -32,11 +32,10 @@
 
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
     const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
-    const managementItems = items.slice(6).filter((item) => item !== reportsItem);
+    const managementItems = items.slice(6);
 
-    // Báo cáo nằm ngay cạnh Tổng quan để Admin thấy được cả trên thanh điều hướng điện thoại.
+    // Báo cáo thuộc nhóm Quản trị, chỉ hiển thị cho Admin.
     if (reportsItem) {
-        navigation.insertBefore(reportsItem, items[1] || null);
         const renderReportsEntry = () => { reportsItem.hidden = !auth?.hasRole("Admin"); };
         renderReportsEntry();
         auth?.ready?.then(renderReportsEntry);
