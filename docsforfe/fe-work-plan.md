@@ -203,7 +203,7 @@ Còn tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vự
 | FE-C18 | Retry/ghi catalog đồng thời có bảo đảm | Idempotency/receipt và concurrency token cho nguyên liệu/công thức; snapshot FE chỉ phát hiện thay đổi trước lúc kiểm tra, mất ACK phải đối chiếu thủ công. | P1 |
 | FE-C19 | Khôi phục công thức chỉ dùng dữ liệu hợp lệ | Recipe active route chưa kiểm tra size/ingredient còn active; F6 preflight chặn nhưng cần validation nguyên tử ở server. | P1 |
 | FE-C20 | Chốt ý nghĩa ngừng nguyên liệu / cờ Hỏng | Tiêu hao kho hiện chưa kiểm tra Ingredient.IsActive/StockStatus; ngừng danh mục không tự ngừng công thức/món. Chốt quy tắc, bổ sung chặn/audit nếu cần; status note hiện chưa được lưu. | P1 |
-| FE-C21 | Thu hồi phiên khi khóa/thu role/reset mật khẩu | JWT cũ vẫn được chấp nhận theo claim tới hết hạn; đã xác minh API thật. Cần kiểm tra tài khoản/role hiện tại hoặc security stamp/token version/revocation tại server. UI không thể thay thế thu hồi mọi thiết bị. | **P0** |
+| [FE-C21](fe-c21-jwt-session-revocation.md) | Thu hồi phiên khi khóa/thu role/reset mật khẩu | JWT cũ vẫn được chấp nhận theo claim tới hết hạn; đã xác minh API thật. Cần kiểm tra tài khoản/role hiện tại hoặc security stamp/token version/revocation tại server. UI không thể thay thế thu hồi mọi thiết bị. | **P0** |
 | FE-C22 | Ghi nhân viên/quyền đồng thời và retry có bảo đảm | Idempotency/receipt, concurrency token và chốt Admin cuối nguyên tử; F6 hiện snapshot/preflight, khóa khi mất ACK và đối chiếu thủ công, không tự retry. | P1 |
 
 ---

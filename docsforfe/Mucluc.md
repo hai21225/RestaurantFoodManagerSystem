@@ -38,6 +38,7 @@
 155/155 test frontend, 15/15 kiểm tra API thật đạt. F6 còn nhân viên/vai trò và các mục quản trị khác.
 [F6 phần 2 — Nhân viên/Vai trò](f6-staff-progress.md) đã nối 9 route Admin, bỏ ma trận quyền giả;
 183/183 test frontend và 13/13 API thật đạt. FE-C21: backend chưa thu hồi JWT cũ khi khóa/thu quyền/reset.
+[FE-C21 — ghi chú cho Hải](fe-c21-jwt-session-revocation.md): lỗi JWT cũ, bước tái hiện A/B/C, hướng sửa và checklist nghiệm thu; đang chờ backend xử lý.
 Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
 
 ---

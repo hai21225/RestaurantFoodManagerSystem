@@ -47,7 +47,7 @@ Không sửa backend, migration, SQL/appsettings hoặc lấy source từ backup
 khóa chặn đăng nhập mới, nhưng token cũ còn đọc được API; thu Chef chặn phiên đăng nhập mới vào Bếp,
 nhưng JWT Chef đã cấp trước đó vẫn được phép. Gán thêm role cũng cần đăng nhập mới để có claim mới.
 UI hiển thị giới hạn này và tự logout khi thay quyền/mật khẩu của chính mình, không thể đăng xuất mọi thiết bị thay server.
-Đề xuất Hải xử lý ở **FE-C21**, không coi chức năng khóa/thu quyền là thu hồi phiên tức thời.
+Đề xuất Hải xử lý ở [**FE-C21 — ghi chú bàn giao chi tiết**](fe-c21-jwt-session-revocation.md), không coi chức năng khóa/thu quyền là thu hồi phiên tức thời.
 
 Snapshot và kiểm tra Admin cuối trên FE chỉ là preflight, chưa bảo đảm nguyên tử khi nhiều Admin ghi cùng lúc.
 Chưa có idempotency/receipt hoặc concurrency token cho nhóm nhân viên (FE-C22).

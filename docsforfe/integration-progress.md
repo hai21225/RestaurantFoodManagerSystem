@@ -63,6 +63,8 @@ Thông tin đăng nhập kiểm thử, khoá JWT và log nằm ngoài repository
 
 ## Hải cần xử lý trước khi coi backend đã qua kiểm thử
 
+- **P0 — [FE-C21: thu hồi JWT cũ](fe-c21-jwt-session-revocation.md):** đã tái hiện khóa/thu quyền/reset nhưng token cũ còn hiệu lực. Có bước tái hiện và checklist nghiệm thu, chờ backend sửa.
+
 - Cùng nhánh Hải `dd258d2` trước khi gộp đã có đúng 179 ca lỗi. Không được dùng số 100/100 E2E cũ để kết luận bản hiện tại đã đạt.
 - Phần lớn lỗi liên quan `CurrentUserExtensions.ResolveActor`: không có actor trong token thì ném `UnauthorizedAccessException`;
   nhiều test còn giả định được lấy actor từ body. Cần chốt chính sách actor, sửa test/host và chạy lại.
