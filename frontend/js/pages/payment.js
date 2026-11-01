@@ -139,10 +139,12 @@
         $("refundReasonLabel").hidden = kind !== "refund"; $("refundReason").required = kind === "refund"; $("refundReason").value = "";
         $("confirmDialog").showModal();
     }
-    function receipt(order, tableBill = false) {
+    async function receipt(order, tableBill = false) {
         const paid = tableBill ? null : session.payments.find((p) => p.status === "Paid");
+        const settings = auth.hasRole("Admin") ? await window.restaurantApi.get("/management/settings") : null;
         $("printReceipt").innerHTML = `<h1>${tableBill ? "TẠM TÍNH THEO BÀN" : paid ? "PHIẾU THANH TOÁN" : "PHIẾU TẠM TÍNH"}</h1>
-            <p>Restaurant Food Manager · Bàn ${esc(tableBill ? order.tableNumber : tableName(order.tableId))}</p>
+            ${settings ? `<h2>${esc(settings.restaurantName)}</h2><p>${esc(settings.address)}<br>${esc(settings.phone)}${settings.taxCode ? `<br>MST: ${esc(settings.taxCode)}` : ""}</p>` : ""}
+            <p>Bàn ${esc(tableBill ? order.tableNumber : tableName(order.tableId))}</p>
             <p>${tableBill ? order.orderIds.map((id) => `ORD-${id}`).join(", ") : `ORD-${order.orderId}`} · In lúc ${time(new Date().toISOString())}</p>
             ${tableBill ? '<p>Tổng hợp đơn đang mở. Thu tiền theo từng đơn.</p>' : `<p>${esc(labels[order.status] || order.status)}</p>`}
             ${itemsHtml(order.items, tableBill)}<div class="payment-total">${totals(order)}</div>
@@ -188,9 +190,9 @@
     for (const [id, delta] of [["ledgerPrev", -1], ["ledgerNext", 1]]) $(id).addEventListener("click", () => run(async () => {
         session.loading = true; try { await session.loadLedger(state.filters, session.ledger.page + delta); } finally { session.loading = false; }
     }));
-    $("printBillButton").addEventListener("click", () => run(async () => { await session.select(session.order.orderId); render(); receipt(session.order); }));
+    $("printBillButton").addEventListener("click", () => run(async () => { await session.select(session.order.orderId); render(); await receipt(session.order); }));
     $("tableBillButton").addEventListener("click", () => run(async () => {
-        const bill = await window.restaurantApi.get(`/orders/table/${session.order.tableId}/bill`); receipt(bill, true);
+        const bill = await window.restaurantApi.get(`/orders/table/${session.order.tableId}/bill`); await receipt(bill, true);
     }));
     $("closeReceiptButton").addEventListener("click", () => $("receiptDialog").close());
     $("receiptDialog").addEventListener("close", () => { state.printing = false; });

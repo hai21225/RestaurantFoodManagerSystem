@@ -103,7 +103,11 @@
             } catch (error) { this.loaded = false; throw error; }
             finally { this.loading = false; }
         }
-        block() { return !this.loaded ? "Tải lại dữ liệu đơn trước khi thanh toán." : payBlock(this.order, this.payments); }
+        hasExtraPending() {
+            try { const p = JSON.parse(this.storage.getItem("restaurant.orderExtrasPending")); return !!p && p.userId === this.auth.getUser()?.userId && p.realm === this.api.baseUrl; }
+            catch (_) { return false; }
+        }
+        block() { return this.hasExtraPending() ? "Đối chiếu thao tác tại Tiện ích đơn trước khi thanh toán." : !this.loaded ? "Tải lại dữ liệu đơn trước khi thanh toán." : payBlock(this.order, this.payments); }
         pendingMomo() { return this.payments.find((p) => p.provider === "MoMo" && p.status === "Pending"); }
         intent() {
             const pending = this.pendingMomo();
@@ -112,6 +116,7 @@
 
         async command(kind, data = {}, expected) {
             this.assertAccess();
+            if (this.hasExtraPending()) throw fail("Đối chiếu thao tác tại Tiện ích đơn trước khi thu/hoàn tiền.");
             if (this.busy || this.loading || this.pending) throw fail("Chờ hoặc đối chiếu yêu cầu trước trước khi tiếp tục.");
             if (!this.order) throw fail("Chọn đơn cần xử lý.", 400);
             this.busy = true;

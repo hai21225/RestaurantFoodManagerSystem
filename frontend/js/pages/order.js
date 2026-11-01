@@ -15,7 +15,7 @@
     const dishDialog = $("#sizeDialog");
     let sentVersion = "";
     const closed = () => session.order && pos.terminal(session.order.status);
-    const locked = () => !session.loaded || session.loading || session.busy || Boolean(session.pending) || !session.isOperator() || closed() || !session.table?.isActive || session.table.status === "Maintenance" || (!session.order && session.table.status !== "Available");
+    const locked = () => !session.loaded || session.loading || session.busy || Boolean(session.pending) || session.hasExtraPending() || !session.isOperator() || closed() || !session.table?.isActive || session.table.status === "Maintenance" || (!session.order && session.table.status !== "Available");
     const findFood = (sizeId) => state.foods.find((food) => food.sizes.some((size) => size.sizeId === sizeId));
 
     function message(text, error = false) {
@@ -33,6 +33,7 @@
         $("#clearOrderButton").disabled = !state.cart.length || session.busy || Boolean(session.pending);
         $("#refreshOrderButton").disabled = session.busy || session.loading;
         $("#orderHistoryButton").disabled = session.busy || !session.order;
+        $("#orderToolsButton").disabled = !session.order || session.busy || session.loading || Boolean(session.pending);
         $("#cancelWholeOrderButton").hidden = !session.isAdmin() || !session.isOpen();
         $("#cancelWholeOrderButton").disabled = isLocked;
         const ownPending = session.pending?.tableId === session.tableId;
@@ -334,6 +335,7 @@
         } catch (error) { $("#orderHistoryContent").textContent = error.message; }
     });
     $("#closeOrderHistory").addEventListener("click", () => $("#orderHistoryDialog").close());
+    $("#orderToolsButton").addEventListener("click", () => { if (session.order && !session.pending) location.href = `order-tools.html?orderId=${session.order.orderId}`; });
     window.addEventListener("restaurant:auth-changed", render);
     if (session.pending && ["create", "add"].includes(session.pending.kind) && session.pending.tableId === session.tableId) {
         state.cart = session.pending.body.items.map((item) => ({ ...item }));

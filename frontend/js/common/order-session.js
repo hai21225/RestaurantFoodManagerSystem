@@ -41,6 +41,10 @@
 
         isOperator() { return this.auth.hasRole("Admin", "Waiter"); }
         isAdmin() { return this.auth.hasRole("Admin"); }
+        hasExtraPending() {
+            try { const p = JSON.parse(this.storage.getItem("restaurant.orderExtrasPending")); return !!p && p.userId === this.auth.getUser()?.userId && p.realm === this.api.baseUrl; }
+            catch (_) { return false; }
+        }
         isOpen() { return Boolean(this.order && !terminal(this.order.status)); }
         canReduce(group) { return this.isAdmin() || group.active.every((item) => pending(item.status)); }
         canCancel(item) { return this.isOpen() && this.isOperator() && !cancelled(item) && (this.isAdmin() || pending(item.status)); }
@@ -83,6 +87,7 @@
         }
 
         assertWritable() {
+            if (this.hasExtraPending()) throw new Error("Đối chiếu thao tác tại Tiện ích đơn trước khi sửa món.");
             if (!this.isOperator()) throw new Error("Chỉ phục vụ hoặc quản trị viên được sửa đơn tại POS.");
             if (!this.loaded || this.loading || this.busy) throw new Error("Hãy chờ tải xong đơn trước khi thao tác.");
             if (this.order && terminal(this.order.status)) throw new Error("Đơn đã kết thúc. Hãy chọn bàn để mở lượt phục vụ mới.");

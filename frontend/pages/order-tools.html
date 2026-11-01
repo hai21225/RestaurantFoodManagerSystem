@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tiện ích đơn - Restaurant Food Manager</title><link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav"><link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/administration.css?v=20261101-f67"></head><body><div class="app-shell"><aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>POS nội bộ</span>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside><div class="workspace"><header class="topbar"><div><p class="eyebrow">Đặt món</p><h1>Tiện ích đơn</h1></div><div class="operator"><span class="operator-role">Nhân viên</span><strong>Chưa đăng nhập</strong></div></header><main class="content"><section class="administration-screen"><div class="section-heading"><h2 id="toolsTitle">Tiện ích đơn</h2><button id="toolsRefresh" type="button" class="secondary-action">Tải lại đơn</button></div><p id="toolsNotice" class="admin-notice" role="status"></p><p id="toolsBusyHint" class="admin-context"></p><div class="admin-actions"><a id="backToOrder" class="secondary-action" href="tables.html">Về Đặt món</a><a id="goToPayment" class="secondary-action" href="payment.html">Mở Thanh toán</a></div><section id="toolsPending" class="admin-pending" hidden><p id="toolsPendingText"></p><div class="admin-actions"><button id="toolsReview" class="secondary-action" type="button">Tải đơn để đối chiếu</button><button id="toolsAck" class="secondary-action" type="button" hidden>Tôi đã đối chiếu, tiếp tục</button></div></section><section class="panel account-identity" id="toolsSummary" aria-label="Thông tin đơn từ máy chủ"></section>
+<div class="account-layout"><section class="panel"><h3>Ghi chú hóa đơn</h3><form id="noteForm"><label class="admin-field"><span>Nội dung ghi chú</span><textarea id="billNote" maxlength="500" rows="4"></textarea></label><button type="submit" class="primary-action">Lưu ghi chú</button></form></section><section class="panel"><h3>Chuyển bàn</h3><form id="moveForm"><label class="admin-field"><span>Bàn đích</span><select id="moveTable" required><option value="">Chọn bàn trống</option></select></label><p class="admin-context">Chuyển toàn bộ đơn. Bàn đích phải đang trống và hoạt động.</p><button type="submit" class="primary-action">Chuyển đơn sang bàn này</button></form></section>
+<section class="panel"><h3>Khuyến mãi của đơn</h3><p id="promotionHint" class="admin-context"></p><form id="promotionForm"><label class="admin-field"><span>Mã khuyến mãi</span><input id="promotionId" type="number" min="1" max="2147483647" step="1" list="promotionList" required><datalist id="promotionList"></datalist></label><button type="submit" class="primary-action">Áp dụng khuyến mãi</button></form><button id="removePromotion" class="secondary-action" type="button">Gỡ khuyến mãi hiện tại</button></section>
+<section class="panel"><h3>Chức năng chưa hỗ trợ</h3><p class="admin-context">Chia/gộp hóa đơn và quản lý ca/két tiền đang chờ bổ sung chức năng. Hóa đơn theo bàn hiện dùng để xem/in; thanh toán vẫn theo từng đơn.</p><div class="admin-actions"><button class="secondary-action" type="button" disabled>Chia / Gộp hóa đơn</button><button class="secondary-action" type="button" disabled>Ca làm việc / Két tiền</button></div></section></div>
+<dialog id="toolsConfirm" class="admin-dialog" aria-labelledby="toolsConfirmTitle"><h2 id="toolsConfirmTitle">Xác nhận thay đổi đơn</h2><form id="toolsConfirmForm"><p id="toolsConfirmText" class="admin-context"></p><p id="toolsConfirmMessage" class="admin-form-error" role="alert"></p><div class="admin-actions"><button id="toolsConfirmClose" class="secondary-action" type="button">Hủy</button><button id="toolsConfirmSubmit" class="primary-action" type="submit">Xác nhận</button></div></form></dialog></section></main></div></div><script src="../js/common/auth.js?v=20261101-f67"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js?v=20261101-f67"></script><script src="../js/common/admin-session.js?v=20261101-f67"></script><script src="../js/common/order-extras-session.js?v=20261101-f67"></script><script src="../js/pages/order-tools.js?v=20261101-f67"></script></body></html>
