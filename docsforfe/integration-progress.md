@@ -2,6 +2,12 @@
 
 Cập nhật 2026-11-01. Nhánh làm việc **`dong`**; không tạo nhánh làm việc khác.
 
+**Bổ sung F6/F7:** Đông đã nối Tài khoản cá nhân, danh mục/topping/kích cỡ/liên kết món-topping,
+khu vực/sửa bàn, khuyến mãi/phạm vi, thiết lập VAT/phí, ghi chú/chuyển bàn/áp-gỡ khuyến mãi.
+Đọc [bàn giao F6/F7 theo người phụ trách](f6-f7-handoff.md): mô tả từng màn, payload, giới hạn,
+ticket Hải FE-C24–28 có nguồn, cách tái hiện và tiêu chí nghiệm thu. FE-C21/23 vẫn chưa sửa.
+Chia/gộp bill/ca-két/MoMo thật/in giấy-PDF chưa được coi là hoàn tất.
+
 **Runtime local 2026-11-01:** ứng dụng trên cổng 5225 hiện dùng database gốc `RestaurantFoodManager`;
 đã reset Admin Đông theo yêu cầu, bổ sung dữ liệu còn thiếu và sửa hiển thị sau xóa.
 Xem [bàn giao database gốc và xóa mềm](original-database-and-delete-progress.md). Không dùng DB gốc để chạy fixture kiểm thử.

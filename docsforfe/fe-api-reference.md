@@ -1,6 +1,10 @@
 # API reference cho FRONTEND (128 action backend)
 
-**Cập nhật:** 2026-10-21 · **Nguồn:** `RestaurantFoodManagerSystem/Controllers/**` (đã quét code)
+**Cập nhật tích hợp 2026-11-01:** đọc [bàn giao F6/F7](f6-f7-handoff.md) và [api-contract.md](api-contract.md).
+Các cờ sử dụng dưới đây là danh sách lịch sử; phần đã nối mới gồm hồ sơ, danh mục/topping/size, khu vực/bàn, khuyến mãi/targets, settings, note/chuyển bàn.
+Đông phụ trách frontend; từng việc Hải cần sửa được ghi tại FE-C21/23–28 trong bàn giao.
+
+**Cập nhật:** 2026-10-21 · **Nguồn:** `RestaurantFoodManagerSystem/Api/Controllers/**` (đã quét code)
 **Ký hiệu:** ✅ = FE đã gọi · ⬜ = FE **chưa** gọi (xem `fe-work-plan.md`) · 🔒 = cần `Authorization: Bearer`
 **Base URL:** `http://localhost:5225/api` (FE đọc `localStorage.restaurant.apiBaseUrl`)
 

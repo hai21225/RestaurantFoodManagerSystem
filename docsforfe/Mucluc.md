@@ -1,8 +1,13 @@
 # docsforfe — Tài liệu phía FRONTEND
 
+**Bàn giao mới F6/F7 (2026-11-01):** đọc [f6-f7-handoff.md](f6-f7-handoff.md).
+Trong đó ghi rõ Đông đã làm frontend nào, cách mở/sử dụng, API/payload, các kiểm tra đã chạy,
+và từng ticket giao Hải có file nguồn, bước tái hiện, hướng xử lý và tiêu chí nghiệm thu.
+FE-C21/23 vẫn chưa sửa; FE-C24–28 là các giới hạn backend mới được phân công cụ thể.
+
 **Mục đích:** đây là nơi **duy nhất** mô tả phần việc FRONTEND của hệ thống Quản lý Nhà hàng.
 
-> **Bắt đầu ở đâu?** Nếu bạn là AI agent: đọc **`AGENTS.md` ở gốc repo** trước — nó chỉ đường dẫn
+> **Bắt đầu ở đâu?** Nếu bạn là AI agent: đọc **`docsforfe/AGENTS.md`** trước — nó chỉ đường dẫn
 > đọc, quy tắc làm FE, và những gì **không được** đụng (backend). Nếu bạn là người: đọc
 > **`api-contract.md`** (hợp đồng API) rồi `fe-work-plan.md` (bảng công việc).
 

@@ -175,24 +175,34 @@ Xem [bàn giao F6 phần 1](f6-catalog-progress.md). Các mục dưới đây v�
 **2026-11-01 — đã nối FE-13/FE-14 (Nhân viên/Vai trò)**: 183/183 test frontend, 13/13 kiểm tra API thật đạt;
 xem [bàn giao F6 phần 2](f6-staff-progress.md). Khóa/thu role/reset chưa thu hồi JWT cũ ở backend.
 
-Còn tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vực bàn (F6-5), khuyến mãi (F6-6) — endpoint đã liệt kê ở bảng A.
+**2026-11-01 — bổ sung F6-3/4/5/6:** Tài khoản cá nhân, danh mục/topping/kích cỡ/liên kết topping,
+khu vực/sửa bàn, khuyến mãi và phạm vi đã có frontend gọi API thật. Xem
+[bàn giao F6/F7 theo người phụ trách](f6-f7-handoff.md) để biết đường dẫn màn hình, payload, kiểm tra và phần Hải cần sửa.
+Các mô tả FE cũ trong bảng A là lịch sử trước khi nối API; dùng cập nhật này và các file bàn giao để đánh giá tiến độ.
+
+### F7 — Thiết lập và tiện ích đơn
+
+Đông đã thêm thiết lập quán/VAT/phí dịch vụ; trang tiện ích đơn để ghi chú, chuyển bàn và áp/gỡ khuyến mãi.
+Bill theo bàn/hoàn tiền/MoMo Mock dùng lại F3. Phục vụ hiện nhập mã promotion do Admin cung cấp (FE-C24);
+Thu ngân chưa có merchant metadata để in (FE-C25). Chia/gộp bill và ca/két vẫn chờ Hải bổ sung API;
+MoMo provider thật và in giấy/PDF chưa nghiệm thu. Không gọi toàn bộ F7 là đã hoàn tất vận hành.
 
 ---
 
-## C. Việc FE **chưa làm được** cho tới khi BE bổ sung (mục C của audit backend)
+## C. Theo dõi backend: việc còn thiếu và các mục lịch sử đã có API
 
 | # | Tính năng | BE còn thiếu | Ưu tiên BE |
 |---|---|---|---|
-| FE-C1 | Gỡ khuyến mãi khỏi đơn | `DELETE /api/orders/{id}/promotion/{promotionId}` | **P0** |
-| FE-C2 | VAT + phí dịch vụ hiển thị trên bill | bảng `settings` + tính lại `TotalAmount` | **P0** |
-| FE-C3 | Bill theo bàn (gom mọi đơn của bàn) | `GET /api/orders/table/{tableId}/bill` | P1 |
-| FE-C4 | Chuyển bàn | `PATCH /api/orders/{id}/table` | P1 |
+| FE-C1 | Gỡ khuyến mãi khỏi đơn | Đã có DELETE và FE đã nối ở Tiện ích đơn; lookup Phục vụ còn FE-C24. | Đã có API |
+| FE-C2 | VAT + phí dịch vụ hiển thị trên bill | Đã có settings/server totals; Đông đã nối form thiết lập và hiển thị tiền server. | Đã có API |
+| FE-C3 | Bill theo bàn (gom mọi đơn của bàn) | Đã có GET và F3 đã dùng; metadata quán cho Cashier còn FE-C25. | Đã có API |
+| FE-C4 | Chuyển bàn | Đã có PATCH và Đông đã nối Tiện ích đơn; đọc lại orderId/tableId sau lệnh. | Đã có API |
 | FE-C5 | Chia / gộp bill | `POST /api/orders/{id}/split` | P1 |
-| FE-C6 | Danh sách tồn kho thấp | `GET /api/management/inventory/low-stock` | P1 |
-| FE-C7 | Cấu hình quán (tên, MST, ĐT, giờ, tiền tệ) | `GET/PUT /api/management/settings` | P1 |
+| FE-C6 | Danh sách tồn kho thấp | Đã có GET và F4 đã nối; không còn là API thiếu. | Đã có API |
+| FE-C7 | Cấu hình quán | Đã có GET/PUT settings và Đông đã nối; giờ mở cửa chưa có field trong contract, không tự thêm. | Đã có API |
 | FE-C8 | Ca làm việc / két tiền | `/api/management/shifts/*` | P1 |
 | FE-C9 | Báo cáo vận hành (theo phương thức thu, món bán chạy, hao hụt, tồn kho, mua hàng) | `/api/reports/*` mới | P1 |
-| FE-C10 | Ghi chú ở mức đơn | `Order.Note` + `PATCH /api/orders/{id}/note` | P1 |
+| FE-C10 | Ghi chú ở mức đơn | Đã có PATCH và Đông đã nối Tiện ích đơn; F3 đọc/in note theo server. | Đã có API |
 | FE-C11 | Thanh toán MoMo / QR / hoàn tiền | payment provider | **cuối cùng** |
 | FE-C12 | Chef chọn nguyên liệu cụ thể khi báo thiếu | Lookup nguyên liệu của dòng món cho KitchenDesk; hiện ingredients/recipes đều WarehouseDesk. F2 cơ bản đang bỏ trống ingredientId. | P2 |
 | FE-C13 | Tự gửi lại lệnh báo số phần/thiếu mà không ghi trùng | Idempotency/receipt bền vững cho các lệnh Bếp; hiện UI khóa và yêu cầu đối chiếu thay vì tự retry. | P1 |
@@ -206,6 +216,11 @@ Còn tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vự
 | [FE-C21](fe-c21-jwt-session-revocation.md) | Thu hồi phiên khi khóa/thu role/reset mật khẩu | JWT cũ vẫn được chấp nhận theo claim tới hết hạn; đã xác minh API thật. Cần kiểm tra tài khoản/role hiện tại hoặc security stamp/token version/revocation tại server. UI không thể thay thế thu hồi mọi thiết bị. | **P0** |
 | FE-C22 | Ghi nhân viên/quyền đồng thời và retry có bảo đảm | Idempotency/receipt, concurrency token và chốt Admin cuối nguyên tử; F6 hiện snapshot/preflight, khóa khi mất ACK và đối chiếu thủ công, không tự retry. | P1 |
 | [FE-C23](original-database-and-delete-progress.md#fe-c23--lỗi-đọc-đơn-và-phiếu-bếp-trên-database-gốc) | Đồng bộ kiểu số lượng trên database gốc | Hai cột Quanlity của order_items/kitchen_order_items còn decimal(18,3), model hiện tại là int; GET đơn 1 và chi tiết phiếu bếp 1 trả 500 InvalidCastException. Đơn đã lưu, POS giữ pending. Cần chốt kiểu và nâng cấp DB bảo toàn dữ liệu; chưa sửa. | **P0 local** |
+| FE-C24 | Phục vụ tra cứu khuyến mãi | Hải: lookup PosOperator chỉ đọc; hiện quản lý promotions AdminOnly. Đông: đã cho nhập mã, sẽ thay bằng selector khi có contract. Chi tiết/tái hiện/nghiệm thu ở [bàn giao F6/F7](f6-f7-handoff.md). | P1 |
+| FE-C25 | Metadata quán trên phiếu của Thu ngân | Hải: DTO/lookup merchant info cho PosOrCashier, không mở PUT settings. Đông: hiện Admin đọc settings khi preview, sẽ nối metadata chung sau. [Chi tiết](f6-f7-handoff.md). | P1 |
+| FE-C26 | Ghi đồng thời/receipt cho danh mục, cấu hình và tiện ích đơn | Hải: version/receipt theo từng route mới; Đông: preflight/snapshot/pending không tự retry đã có, chờ contract server. [Phạm vi và nghiệm thu](f6-f7-handoff.md). | P1 |
+| FE-C27 | Xem/gỡ liên kết topping đã ngừng | Hải: lookup quản trị includeInactive; hiện FoodToppingService lọc active. Đông: tạm hướng dẫn khôi phục topping rồi gỡ. [Chi tiết](f6-f7-handoff.md). | P2 |
+| FE-C28 | Validation tên bàn | Hải: DTO Required/MaxLength(20) khớp DB, trả 400 rõ. Đông: form tạo/sửa giới hạn 20. [Tái hiện](f6-f7-handoff.md). | P2 |
 
 ---
 
