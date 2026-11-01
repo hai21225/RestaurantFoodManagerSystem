@@ -17,6 +17,8 @@ F6 phần 1 đã nối danh mục Nguyên liệu/Công thức: 155/155 test fron
 Xem [bàn giao F6](f6-catalog-progress.md) về phiên bản, đơn vị, quyền và giới hạn catalog.
 F6 phần 2 đã nối Nhân viên/Vai trò: 183/183 test frontend, 13/13 API thật đạt.
 Xem [bàn giao Nhân viên/Vai trò](f6-staff-progress.md), đặc biệt giới hạn thu hồi JWT cũ cần Hải xử lý (FE-C21).
+Điều hướng điện thoại đã đổi thành hai menu Tổng quan/Quản trị, bỏ thanh kéo ngang;
+xem [ghi chú điều hướng mobile](mobile-navigation-progress.md) và kiểm tra kích thước/bàn phím đã chạy.
 Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
 
 ## Mã nguồn đã gộp

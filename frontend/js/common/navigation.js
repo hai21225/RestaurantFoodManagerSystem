@@ -60,65 +60,72 @@
     }
     items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
 
-    if (!managementItems.length) {
-        return;
+    const mobile = window.matchMedia("(max-width: 760px)");
+    const groups = [];
+    // Trang chủ trước đây không có data-page; vẫn phải chọn được và đóng popup.
+    if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
+
+    function setOpen(group, open) {
+        group.root.classList.toggle("is-open", open);
+        group.toggle.setAttribute("aria-expanded", String(open));
+        group.submenu.hidden = !open;
     }
 
-    const group = document.createElement("div");
-    const toggle = document.createElement("button");
-    const submenu = document.createElement("div");
-    const hasActiveItem = managementItems.some((item) => item.classList.contains("is-active"));
-    const openByDefault = hasActiveItem && !window.matchMedia("(max-width: 760px)").matches;
+    function closeMenus() {
+        groups.forEach((group) => setOpen(group, !mobile.matches && group.alwaysDesktop));
+    }
 
-    group.className = `nav-group${openByDefault ? " is-open" : ""}`;
-    toggle.className = "nav-group-toggle";
-    toggle.type = "button";
-    toggle.setAttribute("aria-expanded", String(openByDefault));
-    toggle.innerHTML = '<span>Quản trị</span><span class="nav-group-chevron" aria-hidden="true">⌄</span>';
-    submenu.className = "nav-submenu";
-
-    managementItems.forEach((item) => submenu.appendChild(item));
-    group.append(toggle, submenu);
-    navigation.appendChild(group);
-
-    function closeManagementMenu() {
-        group.classList.remove("is-open");
+    function createGroup(title, id, entries, alwaysDesktop = false) {
+        const root = document.createElement("div"), toggle = document.createElement("button"), submenu = document.createElement("div");
+        root.className = `nav-group${alwaysDesktop ? " nav-group-overview" : ""}`;
+        toggle.className = "nav-group-toggle";
+        toggle.classList.toggle("is-active", entries.some((item) => item.classList.contains("is-active")));
+        toggle.type = "button";
+        toggle.id = `${id}-toggle`;
+        toggle.setAttribute("aria-controls", `${id}-items`);
         toggle.setAttribute("aria-expanded", "false");
+        const name = document.createElement("span"), chevron = document.createElement("span");
+        name.textContent = title;
+        chevron.className = "nav-group-chevron"; chevron.textContent = "⌄"; chevron.setAttribute("aria-hidden", "true");
+        toggle.append(name, chevron);
+        submenu.id = `${id}-items`; submenu.className = "nav-submenu"; submenu.hidden = true;
+        submenu.setAttribute("role", "group"); submenu.setAttribute("aria-label", `Các mục ${title}`);
+        entries.forEach((item) => submenu.appendChild(item));
+        root.append(toggle, submenu); navigation.appendChild(root);
+        const group = { root, toggle, submenu, entries, alwaysDesktop }; groups.push(group);
+        toggle.addEventListener("click", () => {
+            if (!mobile.matches && alwaysDesktop) return;
+            const open = !root.classList.contains("is-open");
+            if (mobile.matches) closeMenus();
+            setOpen(group, open);
+        });
     }
 
-    toggle.addEventListener("click", () => {
-        const open = group.classList.toggle("is-open");
-        toggle.setAttribute("aria-expanded", String(open));
-    });
+    createGroup("Tổng quan", "nav-overview", items.slice(0, 6), true);
+    if (managementItems.length) createGroup("Quản trị", "nav-management", managementItems);
+
+    function applyLayout() {
+        // Đổi kích thước/xoay màn hình: không để hai popup chồng lên nhau hoặc giữ menu bị ẩn.
+        groups.forEach((group) => setOpen(group, !mobile.matches && (group.alwaysDesktop || group.entries.some((item) => item.classList.contains("is-active")))));
+    }
+    applyLayout();
+    mobile.addEventListener("change", applyLayout);
 
     navigation.addEventListener("click", (event) => {
         const item = event.target.closest(".nav-item[data-page]");
-        if (!item || !navigation.contains(item)) {
-            return;
-        }
-
-        const targetPage = item.dataset.page;
-        if (!targetPage) {
-            return;
-        }
-
-        closeManagementMenu();
-        const targetUrl = new URL(targetPage, window.location.href).href;
-        if (targetUrl !== window.location.href) {
-            window.location.href = targetUrl;
-        }
+        if (!item || !navigation.contains(item) || item.hidden || item.disabled) return;
+        closeMenus();
+        const targetUrl = new URL(item.dataset.page, window.location.href).href;
+        if (targetUrl !== window.location.href) window.location.href = targetUrl;
     });
 
     document.addEventListener("click", (event) => {
-        if (window.matchMedia("(max-width: 760px)").matches && !group.contains(event.target)) {
-            closeManagementMenu();
-        }
+        if (mobile.matches && !groups.some((group) => group.root.contains(event.target))) closeMenus();
     });
 
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && group.classList.contains("is-open")) {
-            closeManagementMenu();
-            toggle.focus();
-        }
+        if (event.key !== "Escape") return;
+        const open = groups.find((group) => group.root.classList.contains("is-open") && (mobile.matches || !group.alwaysDesktop));
+        if (open) { closeMenus(); open.toggle.focus(); }
     });
 })();
