@@ -78,3 +78,27 @@ Các giới hạn backend như FE-C20/FE-C21 vẫn theo kế hoạch, không đ�
 
 Script, kết quả và ảnh thực chạy nằm ngoài Git tại `_codex_runtime` và `_codex_reports/20261101` của workspace máy Đông.
 Không sửa hoặc chạy lại bộ test C#; baseline lỗi backend cũ không thay đổi.
+
+## FE-C23 — lỗi đọc đơn và phiếu bếp trên database gốc
+
+Chẩn đoán ngày 2026-11-01 sau khi người dùng gửi ảnh POS chờ xác nhận và Bếp báo lỗi máy chủ.
+Đây là vấn đề chưa xử lý; các kiểm tra catalog/đăng nhập ở trên không chứng minh luồng đặt món trên DB gốc hoạt động.
+
+- SQL xác nhận đơn **OrderId=1, TableId=3, SentToKitchen**, một dòng món số lượng 1;
+  phiếu bếp **KitchenOrderId=1, Pending** và dòng bếp tương ứng đã được lưu.
+  Số đơn bằng 0 ở phần chuẩn bị phía trên là thời điểm trước thao tác của người dùng.
+- Gọi lại có xác thực `GET /api/orders/1` và `GET /api/management/kitchen/orders/1/items`
+  đều trả **HTTP 500**. Chỉ đọc dữ liệu nghiệp vụ, không gửi lại lệnh tạo/gọi thêm/nhận món.
+- Log backend ở cả hai route: `System.InvalidCastException: Unable to cast object of type 'System.Decimal' to type 'System.Int32'`.
+- Schema SQL hiện có `order_items.Quanlity` và `kitchen_order_items.Quanlity` là **decimal(18,3)**,
+  trong khi entity `OrderItem`, `KitchenOrderItem` và model snapshot hiện tại đều yêu cầu **int**.
+  DB còn migration legacy `AddFlexibleFoodSaleUnits`; việc áp dụng đủ migration hiện tại chưa tự sửa lệch kiểu cũ này.
+- POS giữ pending khi lệnh đã được ACK nhưng GET đọc lại thất bại; không coi cảnh báo là bằng chứng tạo đơn thất bại.
+  Bếp không tải được chi tiết nên các số 0/khung trống không chứng minh không có phiếu.
+
+Hướng xử lý: thống nhất hợp đồng số lượng với Hải. Nếu dùng số phần nguyên như backend hiện tại,
+kiểm tra mọi giá trị là số nguyên trong phạm vi int, sao lưu DB hiện tại (đã có đơn mới),
+rồi đồng bộ hai cột về int theo kế hoạch nâng cấp DB có kiểm soát. Nếu vẫn cần bán lượng lẻ,
+phải sửa đồng bộ backend/DTO/nghiệp vụ và migration; không chỉ ép kiểu khi đọc.
+Sau xử lý phải kiểm tra lại hai GET và xác nhận lại đúng yêu cầu POS đang giữ.
+Trong lượt chẩn đoán này **chưa đổi schema, source backend hoặc trạng thái đơn; chưa xóa pending**.
