@@ -4,9 +4,9 @@
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css"><link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/reports.css">
+    <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/reports.css?v=20261101-f5-ui">
 </head>
-<body class="reporting-page">
+<body class="reporting-page revenue-page">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
@@ -20,34 +20,43 @@
             </nav>
         </aside>
         <div class="workspace">
-            <header class="topbar"><div><p class="eyebrow">Theo dõi hoạt động</p><h1>Báo cáo</h1></div><div class="operator"><span class="operator-role">Quản trị</span><strong>Chưa đăng nhập</strong></div></header>
+            <header class="topbar"><div><p class="eyebrow">Quản lý nhà hàng</p><h1>Báo cáo doanh thu</h1></div><div class="operator"><span class="operator-role">Quản trị</span><strong>Chưa đăng nhập</strong></div></header>
             <main class="content">
                 <section id="reportsAccess" class="panel reporting-access" hidden><h2>Báo cáo dành cho Quản trị viên</h2><p>Tài khoản hiện tại chưa có quyền xem doanh thu.</p><a href="../index.html">Về trang chọn nghiệp vụ</a></section>
                 <section id="reportsContent" aria-labelledby="pageTitle">
-                    <div class="section-heading"><div><p class="eyebrow">Theo giao dịch đã thu</p><h2 id="pageTitle">Báo cáo doanh thu</h2></div><button class="primary-action" type="button" id="exportRevenue" disabled>Tải CSV</button></div>
+                    <div class="section-heading report-heading"><div><div class="reporting-breadcrumb"><a href="../index.html">Tổng quan</a><span aria-hidden="true">/</span><span>Báo cáo</span></div><h2 id="pageTitle">Doanh thu theo kỳ</h2></div><button class="primary-action export-action" type="button" id="exportRevenue" disabled>Tải báo cáo CSV ↓</button></div>
                     <p id="reportNotice" class="reporting-notice" role="status"></p>
                     <form id="reportFilters" class="panel management-toolbar">
-                        <label class="field"><span class="field-label">Kỳ báo cáo</span><select id="reportPeriod" name="period"><option value="day">Ngày</option><option value="week">Tuần</option><option value="month">Tháng</option></select></label>
-                        <label class="field"><span class="field-label">Ngày trong kỳ (giờ Việt Nam)</span><input id="reportDate" name="date" type="date"></label>
+                        <label class="field"><span class="field-label">1. Chọn kỳ</span><select id="reportPeriod" name="period"><option value="day">Theo ngày</option><option value="week">Theo tuần</option><option value="month">Theo tháng</option></select></label>
+                        <label class="field"><span class="field-label">2. Chọn ngày trong kỳ</span><input id="reportDate" name="date" type="date"><small class="reporting-caption">Giờ Việt Nam · Tuần bắt đầu từ thứ Hai</small></label>
                         <button class="secondary-action" id="loadRevenue" type="submit">Xem báo cáo</button>
                     </form>
                     <p id="reportFilterHint" class="reporting-caption"></p>
-                    <p class="reporting-caption">Chọn một ngày bất kỳ trong kỳ; tuần từ thứ Hai đến Chủ nhật. Để trống ngày để xem kỳ hiện tại.</p>
-                    <div class="management-summary" id="revenueSummary"></div>
+                    <nav class="report-section-links" aria-label="Đi đến phần báo cáo"><a href="#chartTitle">Biểu đồ ↓</a><a href="#reportDetailTitle">Bảng số liệu ↓</a></nav>
+                    <p id="reportEmpty" class="report-empty" role="status"></p>
+                    <div class="report-overview">
+                        <section class="panel revenue-chart-panel" aria-labelledby="chartTitle">
+                            <div class="panel-header"><div><h3 id="chartTitle">Biểu đồ doanh thu</h3><p id="reportRange" class="report-range"></p></div><span class="chart-unit">VND · đã thu</span></div>
+                            <div id="reportChart" class="revenue-chart-wrap" aria-label="Doanh thu theo thời gian"></div>
+                            <p id="chartSelection" class="chart-selection" role="status"></p>
+                            <p id="chartHint" class="reporting-caption chart-hint"></p>
+                        </section>
+                        <div class="management-summary report-metrics" id="revenueSummary" aria-label="Kết quả báo cáo"></div>
+                    </div>
                     <section class="panel report-detail" aria-labelledby="reportDetailTitle">
-                        <div class="panel-header"><h3 id="reportDetailTitle">Doanh thu theo nhóm thời gian</h3><span id="reportRange"></span></div>
-                        <p id="reportEmpty" class="reporting-caption"></p>
+                        <div class="panel-header"><h3 id="reportDetailTitle">Chi tiết số liệu</h3><label class="report-activity-filter"><input id="onlyWithActivity" type="checkbox" checked> Chỉ hiện nhóm có giao dịch</label></div>
+                        <p id="reportRowsHint" class="reporting-caption"></p>
                         <div class="report-table-wrap"><table class="revenue-table"><caption class="sr-only">Số liệu doanh thu và đơn đã thu theo khung giờ hoặc ngày</caption>
-                            <thead><tr><th id="groupHeading">Khung giờ</th><th>Doanh thu (VND)</th><th>Mức doanh thu</th><th>Đơn đã thu</th></tr></thead><tbody id="revenueRows"></tbody><tfoot id="revenueFoot"></tfoot>
+                            <thead><tr><th id="groupHeading">Khung giờ</th><th>Doanh thu (VND)</th><th>Đơn đã thu</th></tr></thead><tbody id="revenueRows"></tbody><tfoot id="revenueFoot"></tfoot>
                         </table></div>
                         <p id="reportUpdated" class="reporting-caption"></p>
-                        <p class="reporting-caption">Chỉ tính giao dịch đã thu. Đơn chưa thu, giao dịch chờ/thất bại/đã hoàn không được tính. CSV lấy số liệu mới nhất của cùng kỳ tại lúc xuất.</p>
                     </section>
+                    <p class="reporting-caption report-footnote">Doanh thu chỉ gồm giao dịch đã thu, loại khoản đã hoàn tiền. CSV gồm toàn bộ nhóm thời gian và lấy số liệu mới nhất của kỳ tại lúc xuất.</p>
                 </section>
             </main>
         </div>
     </div>
-    <script src="../js/common/auth.js"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js"></script>
-    <script src="../js/common/reporting-session.js"></script><script src="../js/pages/reports.js"></script>
+    <script src="../js/common/auth.js"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js?v=20261101-f5-ui"></script>
+    <script src="../js/common/reporting-session.js"></script><script src="../js/pages/reports.js?v=20261101-f5-ui"></script>
 </body>
 </html>

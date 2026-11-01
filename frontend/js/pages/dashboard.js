@@ -25,6 +25,9 @@
         const data = session.summary;
         $("refreshDashboard").disabled = session.dashboardLoading;
         $("dashboardUpdated").textContent = data ? `Ngày kinh doanh ${data.businessDate} · Cập nhật ${time(data.generatedAt)} · Giờ Việt Nam` : "";
+        $("dashboardEmpty").hidden = !data || data.paidOrderCountToday !== 0;
+        $("dashboardEmpty").innerHTML = data && data.paidOrderCountToday === 0
+            ? 'Hôm nay chưa có giao dịch đã thu. <a href="pages/reports.html">Mở Báo cáo để xem doanh thu các ngày khác →</a>' : "";
         if (!data) {
             $("metricGrid").innerHTML = `<p class="empty-state">${session.dashboardLoading ? "Đang tải tổng quan…" : "Chưa tải được số liệu tổng quan. Bấm Làm mới để thử lại."}</p>`;
             for (const id of ["tableMap", "orderList"]) $(id).innerHTML = '<p class="empty-state">Chưa có dữ liệu được tải.</p>';

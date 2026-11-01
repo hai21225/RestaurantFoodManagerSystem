@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/layout.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/pages/dashboard.css">
-    <link rel="stylesheet" href="css/pages/reports.css">
+    <link rel="stylesheet" href="css/pages/reports.css?v=20261101-f5-ui">
 </head>
 <body class="reporting-page">
     <div class="app-shell">
@@ -41,7 +41,7 @@
             <header class="topbar">
                 <div>
                     <p class="eyebrow">Tổng quan</p>
-                    <h1>Bảng điều khiển nhà hàng</h1>
+                    <h1>Tổng quan nhà hàng</h1>
                 </div>
                 <div class="operator">
                     <span class="operator-role">Nhân viên</span>
@@ -55,13 +55,14 @@
                     <div class="section-heading">
                         <div>
                             <p class="eyebrow">Tổng quan hôm nay</p>
-                            <h2 id="dashboard-title">Tình hình phục vụ</h2>
+                            <h2 id="dashboard-title">Hoạt động hôm nay</h2>
                         </div>
-                        <div class="reporting-actions"><button class="secondary-action" type="button" id="refreshDashboard">Làm mới tổng quan</button><button class="primary-action" type="button" id="createOrderButton">Tạo đơn mới</button></div>
+                        <div class="reporting-actions"><button class="secondary-action" type="button" id="refreshDashboard">Làm mới</button><button class="secondary-action" type="button" id="createOrderButton">Tạo đơn mới</button><a class="primary-action" href="pages/reports.html">Xem báo cáo doanh thu →</a></div>
                     </div>
                     <p id="dashboardNotice" class="reporting-notice" role="status"></p>
                     <p id="dashboardUpdated" class="reporting-caption"></p>
                     <div class="metric-grid" id="metricGrid" aria-label="Chỉ số tổng quan"></div>
+                    <p id="dashboardEmpty" class="report-empty" hidden></p>
                     <section class="panel kitchen-overview" aria-labelledby="kitchen-summary-title"><div class="panel-header"><h3 id="kitchen-summary-title">Phiếu bếp đang mở</h3><a href="pages/kitchen.html">Mở màn Bếp</a></div><div id="kitchenSummary" class="dashboard-counts"></div></section>
                     <div class="dashboard-layout">
                         <section class="panel table-panel" aria-labelledby="table-status-title">
@@ -96,8 +97,8 @@
 
     <script src="js/common/auth.js"></script>
     <script src="js/common/api.js"></script>
-    <script src="js/common/navigation.js"></script>
+    <script src="js/common/navigation.js?v=20261101-f5-ui"></script>
     <script src="js/common/reporting-session.js"></script>
-    <script src="js/pages/dashboard.js"></script>
+    <script src="js/pages/dashboard.js?v=20261101-f5-ui"></script>
 </body>
 </html>

@@ -31,7 +31,18 @@
     }
 
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
-    const managementItems = items.slice(6);
+    const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
+    const managementItems = items.slice(6).filter((item) => item !== reportsItem);
+
+    // Báo cáo nằm ngay cạnh Tổng quan để Admin thấy được cả trên thanh điều hướng điện thoại.
+    if (reportsItem) {
+        navigation.insertBefore(reportsItem, items[1] || null);
+        const renderReportsEntry = () => { reportsItem.hidden = !auth?.hasRole("Admin"); };
+        renderReportsEntry();
+        auth?.ready?.then(renderReportsEntry);
+        window.addEventListener("restaurant:auth-changed", renderReportsEntry);
+    }
+    items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
 
     if (!managementItems.length) {
         return;

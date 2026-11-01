@@ -15,7 +15,7 @@ Chỉ thay frontend và tài liệu; không sửa backend, migration, SQL/appset
 - Bỏ file dữ liệu tĩnh `dashboard.data.js`. Khi tải lỗi không thay số liệu bằng 0 giả;
   lỗi sơ đồ bàn vẫn giữ phần tổng quan đã tải thành công và hiện thông báo để thử lại.
 - Báo cáo gọi `GET /reports/revenue?period=day|week|month&date=yyyy-MM-dd`.
-  Có kỳ/ngày, tổng doanh thu, số đơn, trung bình mỗi đơn, bảng nhóm và thanh biểu diễn mức doanh thu.
+  Có kỳ/ngày, tổng doanh thu, số đơn, trung bình mỗi đơn, biểu đồ cột và bảng chi tiết.
   Mọi số tiền/tổng/trung bình lấy nguyên từ server, không cộng hay chia lại trên frontend.
 - Kỳ theo giờ Việt Nam: ngày có 24 khung giờ, tuần thứ Hai–Chủ nhật, tháng theo lịch.
   Gửi nguyên ngày chọn, không chuyển ngày query sang UTC. Kỳ hiển thị lấy `from` bao gồm / `to` loại trừ của server.
@@ -29,9 +29,9 @@ Chỉ thay frontend và tài liệu; không sửa backend, migration, SQL/appset
 
 ## Cách dùng
 
-1. Đăng nhập Admin, vào **Tổng quan** để xem tình hình hiện tại; bấm **Làm mới tổng quan** sau khi nghiệp vụ đổi.
-2. Mở **Quản trị → Báo cáo**, chọn Ngày/Tuần/Tháng và một ngày nằm trong kỳ cần xem.
-3. Nhấn **Xem báo cáo**, kiểm tra khoảng kỳ hiển thị, rồi nhấn **Tải CSV**.
+1. Đăng nhập Admin, vào **Tổng quan** để xem tình hình hiện tại; bấm **Làm mới** sau khi nghiệp vụ đổi.
+2. Bấm **Báo cáo** ngay dưới **Tổng quan** trong menu chính; chọn Ngày/Tuần/Tháng và một ngày nằm trong kỳ cần xem.
+3. Nhấn **Xem báo cáo**, kiểm tra khoảng kỳ hiển thị, rồi nhấn **Tải báo cáo CSV**.
 4. File CSV có UTF-8 BOM, dấu phẩy phân cột, dấu chấm thập phân và dòng cuối `TOTAL` từ server.
    Nếu Excel trên máy không tự tách cột, dùng nhập dữ liệu từ Text/CSV, chọn UTF-8 và dấu phân cách dấu phẩy.
 
@@ -60,6 +60,27 @@ ngày 01/11/2026 tại thời điểm kiểm tra chưa có khoản đã thu. Đ�
 - Cú pháp **31 JS**, ID/đường dẫn **15 HTML / 307 tài nguyên và liên kết**, selector hai màn và `git diff --check` đạt.
 - F5 chỉ đọc dữ liệu nghiệp vụ có sẵn trong database kiểm thử, không tạo đơn/thu/hoàn tiền để kiểm tra.
   Log, CSV, ảnh và thông tin tài khoản kiểm thử nằm ngoài repository. Ghi chú local riêng được giữ nguyên.
+
+## Chỉnh giao diện theo góp ý — 2026-11-01
+
+- Đưa Báo cáo khỏi menu Quản trị thu gọn, đặt ngay sau Tổng quan cho Admin trên các màn dùng menu chung.
+  Vai trò khác không thấy mục này; backend vẫn quyết định quyền truy cập. Đã kiểm tra Admin từ Nhập hàng về Báo cáo,
+  Phục vụ bị chặn ở Báo cáo và vẫn mở được trang chủ với lối vào POS.
+- Dashboard tăng cỡ chữ/số liệu, phân biệt thẻ doanh thu, số phiếu bếp rõ hơn;
+  có nút **Xem báo cáo doanh thu** và giải thích khi hôm nay chưa có giao dịch đã thu.
+- Báo cáo có biểu đồ cột riêng cạnh ba chỉ số lớn. Chọn cột để xem đúng tiền/số đơn của nhóm đó.
+  Kỳ nhiều cột có vùng cuộn ngang riêng và đưa nhóm phát sinh vào vùng nhìn; không cuộn cả trang xuống dưới.
+  Tỷ lệ cột chỉ phục vụ vẽ biểu đồ, không thay đổi tổng/trung bình do server tính.
+- Bảng mặc định chỉ hiện nhóm có giao dịch để không phải dò nhiều dòng 0đ; bỏ chọn để xem toàn bộ.
+  Nhóm 0đ có đơn đã thu vẫn được giữ. Tổng kỳ luôn lấy từ server và CSV luôn gồm toàn bộ nhóm của kỳ.
+- Nút CSV lớn, giữ ở đầu vùng nội dung khi cuộn; thông báo chỉ rõ mở file trong Downloads.
+  Màn điện thoại có liên kết đi thẳng đến biểu đồ/bảng số liệu, Báo cáo nằm ở phần đầu thanh điều hướng.
+- Đổi phiên bản URL tài nguyên đã sửa và script menu trên 13 HTML có menu,
+  tránh trình duyệt tiếp tục dùng JavaScript/CSS cũ. Các màn ngoài F5 chỉ đổi URL script menu.
+- Đã chạy lại **128/128 test frontend**, **12/12 API/SQL**; kiểm tra **31 JS, 15 HTML, 309 liên kết/tài nguyên** và diff đạt.
+  Trình duyệt đã thử chọn cột, lọc 1/7 ↔ 7/7 dòng, tháng 31 cột, ngày không giao dịch,
+  tải CSV khi bảng đang lọc (file vẫn đủ 7 ngày, khớp byte API), quyền Admin/Phục vụ và hai lối đi giữa Tổng quan/Báo cáo.
+  Bố cục thực tế 390×844 không tràn ngang toàn trang; đã trả viewport về mặc định.
 
 ## Giới hạn
 

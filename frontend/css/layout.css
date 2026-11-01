@@ -133,6 +133,10 @@
     text-align: left;
 }
 
+.nav-item[hidden] {
+    display: none !important;
+}
+
 .nav-item:hover,
 .nav-item:focus-visible,
 .nav-item.is-active {
