@@ -68,8 +68,8 @@
 | **FE-10** | `pages/recipes.js` | ✅ F6 phần 1: CRUD nguyên liệu, tình trạng, khóa đơn vị và phiên bản công thức | Đã nối đủ route danh mục, test frontend/API thật; xem [bàn giao F6](f6-catalog-progress.md) | Ingredients 7 route + Recipes 6 route | **F6 — đã làm phần FE-10** |
 | **FE-11** | `pages/inventory.js` | **2 call**: `GET /api/management/inventory`, `GET /api/management/ingredients` ⇒ chỉ xem | **Điều chỉnh tồn** (có lý do); xem **biến động kho**; quản lý **nhà cung cấp**; xem **tồn kho thấp** | `POST /api/management/inventory/{ingredientId}/adjust` · `GET /api/management/inventory-transactions` · `GET/POST/PUT/DELETE /api/management/suppliers` · `PATCH /api/management/suppliers/{id}/active` · ✅ `GET /api/management/inventory/low-stock` (**Đã có** — Đợt 3) | **F4** |
 | **FE-12** | `pages/purchases.js` | **1 call**: `GET /api/management/purchase-orders` ⇒ chỉ xem danh sách | Tạo phiếu nhập (NCC + dòng hàng + giá), xem chi tiết, **nhập hàng** (cộng kho), huỷ phiếu | `POST /api/management/purchase-orders` · `GET /api/management/purchase-orders/{id}` · `POST /api/management/purchase-orders/{id}/receive` · `POST /api/management/purchase-orders/{id}/cancel` | **F4** |
-| **FE-13** | `pages/employees.js` | 2 call: `GET /api/users`, `POST /api/users` | Sửa nhân viên, khoá/mở khoá, đặt lại mật khẩu, **gán/thu role**, xem danh sách role | `GET/PUT /api/users/{id}` · `PATCH /api/users/{id}/active` · `POST /api/users/{id}/reset-password` · `POST /api/users/{userId}/roles` · `DELETE /api/users/{userId}/roles/{roleName}` · `GET /api/roles` | **F6** |
-| **FE-14** | `pages/roles.html` | **Không có JS** | Tạo `js/pages/roles.js` hiển thị 5 vai trò + mô tả quyền | `GET /api/roles` | **F6** |
+| **FE-13** | `pages/employees.js` | ✅ F6 phần 2: thêm/sửa hồ sơ, khóa/mở, reset và nhiều role | Đã nối API/test, có đối chiếu mất ACK; giới hạn JWT cũ xem [bàn giao](f6-staff-progress.md) | Users 8 route Admin + GET roles | **F6 — đã làm frontend** |
+| **FE-14** | `pages/roles.html` + `pages/roles.js` | ✅ Đọc 5 vai trò/mô tả từ server | Bỏ ma trận giả; liên kết lọc nhân viên. Không có API sửa quyền/CRUD role | `GET /api/roles` | **F6 — đã làm** |
 | **FE-15** | `pages/reports.html` | ✅ F5 2026-11-01: có JS và nối API Admin | Chọn kỳ/ngày VN, số liệu tổng/nhóm từ server, CSV đúng kỳ đã tải; khóa xuất khi bộ lọc chưa áp dụng | `GET /api/reports/revenue?period=&date=` · `GET /api/reports/revenue/export.csv?period=&date=` bằng Blob | **F5** |
 | **FE-16** | Khuyến mãi | **Chưa có màn hình nào** | Tạo `pages/promotions.html` + `js/pages/promotions.js`: CRUD khuyến mãi, bật/tắt, xem khuyến mãi đang áp cho đơn và **gỡ khuyến mãi** | `GET/POST/PUT/DELETE /api/management/promotions` · `PATCH /api/management/promotions/{id}/active` · `PATCH /api/orders/{id}/promotion/{promotionId}` · ✅ `DELETE /api/orders/{id}/promotion/{promotionId}` (**Đã có** — C-14) · ✅ `PUT /api/management/promotions/{id}/targets` (**Đã có** — C-18) | **F6** |
 | **FE-17** | Thiết lập quán / VAT | Chưa có | Chờ BE có settings + thuế | `GET/PUT /api/management/settings` | F7 |
@@ -172,7 +172,10 @@ Xem [bàn giao F5](f5-reporting-progress.md) để biết cách dùng, giới h�
 155/155 test frontend và 15/15 kiểm tra API thật đạt trên database Integration riêng.
 Xem [bàn giao F6 phần 1](f6-catalog-progress.md). Các mục dưới đây vẫn còn; chưa hoàn tất toàn bộ F6.
 
-Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vực bàn (F6-5), khuyến mãi (F6-6) — endpoint đã liệt kê ở bảng A.
+**2026-11-01 — đã nối FE-13/FE-14 (Nhân viên/Vai trò)**: 183/183 test frontend, 13/13 kiểm tra API thật đạt;
+xem [bàn giao F6 phần 2](f6-staff-progress.md). Khóa/thu role/reset chưa thu hồi JWT cũ ở backend.
+
+Còn tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vực bàn (F6-5), khuyến mãi (F6-6) — endpoint đã liệt kê ở bảng A.
 
 ---
 
@@ -200,6 +203,8 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 | FE-C18 | Retry/ghi catalog đồng thời có bảo đảm | Idempotency/receipt và concurrency token cho nguyên liệu/công thức; snapshot FE chỉ phát hiện thay đổi trước lúc kiểm tra, mất ACK phải đối chiếu thủ công. | P1 |
 | FE-C19 | Khôi phục công thức chỉ dùng dữ liệu hợp lệ | Recipe active route chưa kiểm tra size/ingredient còn active; F6 preflight chặn nhưng cần validation nguyên tử ở server. | P1 |
 | FE-C20 | Chốt ý nghĩa ngừng nguyên liệu / cờ Hỏng | Tiêu hao kho hiện chưa kiểm tra Ingredient.IsActive/StockStatus; ngừng danh mục không tự ngừng công thức/món. Chốt quy tắc, bổ sung chặn/audit nếu cần; status note hiện chưa được lưu. | P1 |
+| FE-C21 | Thu hồi phiên khi khóa/thu role/reset mật khẩu | JWT cũ vẫn được chấp nhận theo claim tới hết hạn; đã xác minh API thật. Cần kiểm tra tài khoản/role hiện tại hoặc security stamp/token version/revocation tại server. UI không thể thay thế thu hồi mọi thiết bị. | **P0** |
+| FE-C22 | Ghi nhân viên/quyền đồng thời và retry có bảo đảm | Idempotency/receipt, concurrency token và chốt Admin cuối nguyên tử; F6 hiện snapshot/preflight, khóa khi mất ACK và đối chiếu thủ công, không tự retry. | P1 |
 
 ---
 

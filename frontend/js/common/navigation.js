@@ -45,6 +45,12 @@
     const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
     const managementItems = items.slice(6);
 
+    // Nhân viên/vai trò theo đúng policy AdminOnly, không hiện nút quản trị cho vai trò khác.
+    const staffItems = items.filter((item) => /(?:^|\/)(?:employees|roles)\.html$/.test(item.dataset.page || ""));
+    const renderStaffEntries = () => staffItems.forEach((item) => { item.hidden = !auth?.hasRole("Admin"); });
+    renderStaffEntries(); auth?.ready?.then(renderStaffEntries);
+    window.addEventListener("restaurant:auth-changed", renderStaffEntries);
+
     // Báo cáo thuộc nhóm Quản trị, chỉ hiển thị cho Admin.
     if (reportsItem) {
         const renderReportsEntry = () => { reportsItem.hidden = !auth?.hasRole("Admin"); };

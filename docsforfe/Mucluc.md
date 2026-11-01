@@ -36,6 +36,8 @@
 128/128 test frontend, 12/12 kiểm tra API Báo cáo/SQL thật đạt. Backend baseline còn 179/697 lỗi có sẵn.
 [F6 phần 1 — Nguyên liệu/Công thức](f6-catalog-progress.md) đã nối CRUD, đơn vị và lịch sử phiên bản;
 155/155 test frontend, 15/15 kiểm tra API thật đạt. F6 còn nhân viên/vai trò và các mục quản trị khác.
+[F6 phần 2 — Nhân viên/Vai trò](f6-staff-progress.md) đã nối 9 route Admin, bỏ ma trận quyền giả;
+183/183 test frontend và 13/13 API thật đạt. FE-C21: backend chưa thu hồi JWT cũ khi khóa/thu quyền/reset.
 Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
 
 ---

@@ -15,6 +15,8 @@ Tổng quan/Báo cáo đã nối F5: số liệu thật, kỳ ngày/tuần/thán
 về cách dùng, định nghĩa doanh thu và CSV đọc số liệu mới tại thời điểm xuất.
 F6 phần 1 đã nối danh mục Nguyên liệu/Công thức: 155/155 test frontend và 15/15 kiểm tra API thật đạt.
 Xem [bàn giao F6](f6-catalog-progress.md) về phiên bản, đơn vị, quyền và giới hạn catalog.
+F6 phần 2 đã nối Nhân viên/Vai trò: 183/183 test frontend, 13/13 API thật đạt.
+Xem [bàn giao Nhân viên/Vai trò](f6-staff-progress.md), đặc biệt giới hạn thu hồi JWT cũ cần Hải xử lý (FE-C21).
 Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
 
 ## Mã nguồn đã gộp
@@ -70,7 +72,7 @@ Thông tin đăng nhập kiểm thử, khoá JWT và log nằm ngoài repository
 ## Việc tiếp theo
 
 1. Hải chốt JWT/actor và đưa bộ test backend về trạng thái đạt.
-2. Đông tiếp tục F6 trên `dong`: nhân viên/vai trò rồi tài khoản; FE-10 Nguyên liệu/Công thức đã nối API và kiểm tra.
+2. Đông tiếp tục F6 trên `dong`: Tài khoản cá nhân, rồi món/topping/size/category, khu vực và khuyến mãi; Nguyên liệu/Công thức và Nhân viên/Vai trò đã nối API và kiểm tra.
 3. Theo dõi các phần còn lại của F1 và giới hạn đã ghi trong bàn giao F2–F5; chưa coi các giới hạn đó đã được xử lý.
 
 Mỗi chức năng cập nhật tài liệu và commit riêng; chỉ đánh dấu xong khi đã kiểm thử luồng đó.

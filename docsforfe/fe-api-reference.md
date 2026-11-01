@@ -25,15 +25,18 @@
 |---|---|---|---|---|---|
 |⬜| GET | `/users/me` | Authenticated | ⬜ | Hồ sơ cá nhân |
 |⬜| PUT | `/users/me` | Authenticated | ⬜ | Chỉ `fullName/email/phone` |
-|✅| GET | `/users` | AdminOnly | ✅ | Có phân trang |
+|✅| GET | `/users` | AdminOnly | ✅ | Trả mảng, F6 lọc toàn bộ danh sách ở FE |
 |✅| POST | `/users` | AdminOnly | ✅ | Body có `roleName` để gán role ngay |
-|⬜| GET | `/users/{id}` | AdminOnly | ⬜ | |
-|⬜| PUT | `/users/{id}` | AdminOnly | ⬜ | Không sửa `userName`/roles/isActive |
-|⬜| PATCH | `/users/{id}/active` | AdminOnly | ⬜ | Khoá / mở khoá tài khoản |
-|⬜| POST | `/users/{id}/reset-password` | AdminOnly | ⬜ | Admin đặt lại mật khẩu |
-|⬜| POST | `/users/{userId}/roles` | AdminOnly | ⬜ | Gán role (trùng → 409) |
-|⬜| DELETE | `/users/{userId}/roles/{roleName}` | AdminOnly | ⬜ | Không gỡ được Admin cuối |
-|⬜| GET | `/roles` | AdminOnly | ⬜ | 5 vai trò cố định (chỉ đọc) |
+|✅| GET | `/users/{id}` | AdminOnly | ✅ | |
+|✅| PUT | `/users/{id}` | AdminOnly | ✅ | Không sửa `userName`/roles/isActive |
+|✅| PATCH | `/users/{id}/active` | AdminOnly | ✅ | Query `?active=false` không body; tự khóa/Admin cuối → 400 |
+|✅| POST | `/users/{id}/reset-password` | AdminOnly | ✅ | Admin đặt lại mật khẩu |
+|✅| POST | `/users/{userId}/roles` | AdminOnly | ✅ | Gán role (trùng → 409) |
+|✅| DELETE | `/users/{userId}/roles/{roleName}` | AdminOnly | ✅ | Không gỡ được Admin cuối |
+|✅| GET | `/roles` | AdminOnly | ✅ | 5 vai trò cố định (chỉ đọc) |
+
+F6 phần 2 2026-11-01: xem [bàn giao Nhân viên/Vai trò](f6-staff-progress.md).
+JWT cũ chưa bị thu hồi khi khóa/thu quyền/reset; thay đổi role cần đăng nhập lại.
 
 ## 3. Danh mục món (30)
 ### 3.1 Category (6)

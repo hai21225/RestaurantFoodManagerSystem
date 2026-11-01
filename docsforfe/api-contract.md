@@ -299,16 +299,19 @@ cờ tình trạng không đổi tồn/khả năng bán, note chưa được ser
 |✅| GET | `/api/reports/dashboard` | AdminOnly | F5: tổng quan thật; lowStockCount chỉ lượng ≤ ngưỡng |
 |✅| GET | `/api/reports/revenue` | AdminOnly | F5: `?period=day\|week\|month&date=yyyy-MM-dd`, ngày VN |
 |✅| GET | `/api/reports/revenue/export.csv` | AdminOnly | F5: Blob UTF-8 BOM, đúng kỳ đã tải; số liệu mới lúc xuất |
-|⬜| GET | `/api/users` · `/api/users/{id}` | AdminOnly | |
-|⬜| POST | `/api/users` | AdminOnly | `{ userName, email, password, confirmPassword, fullName?, phone?, roleName? }` |
-|⬜| PUT | `/api/users/{id}` | AdminOnly | |
-|⬜| PATCH | `/api/users/{id}/active` | AdminOnly | `{ isActive }` |
-|⬜| POST | `/api/users/{id}/reset-password` | AdminOnly | |
-|⬜| POST | `/api/users/{userId}/roles` | AdminOnly | `{ roleName }` |
-|⬜| DELETE | `/api/users/{userId}/roles/{roleName}` | AdminOnly | thu role |
-|⬜| GET | `/api/roles` | AdminOnly | 5 vai trò |
+|✅| GET | `/api/users` · `/api/users/{id}` | AdminOnly | |
+|✅| POST | `/api/users` | AdminOnly | `{ userName, email, password, confirmPassword, fullName?, phone?, roleName? }` |
+|✅| PUT | `/api/users/{id}` | AdminOnly | |
+|✅| PATCH | `/api/users/{id}/active` | AdminOnly | **Query** `?active=false` (không body), tự khóa/Admin cuối → 400 |
+|✅| POST | `/api/users/{id}/reset-password` | AdminOnly | |
+|✅| POST | `/api/users/{userId}/roles` | AdminOnly | `{ roleName }` |
+|✅| DELETE | `/api/users/{userId}/roles/{roleName}` | AdminOnly | thu role |
+|✅| GET | `/api/roles` | AdminOnly | 5 vai trò |
 
 ---
+
+F6 phần 2 2026-11-01: [bàn giao Nhân viên/Vai trò](f6-staff-progress.md).
+`GET /users` trả mảng; khóa/thu quyền/reset chưa thu hồi JWT cũ, cần backend xử lý (FE-C21).
 
 ## 5. Luật nghiệp vụ FE phải tôn trọng
 

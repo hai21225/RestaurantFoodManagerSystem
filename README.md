@@ -41,7 +41,7 @@ Cần Node.js 20+ để chạy test frontend; việc mở/chạy giao diện kh�
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln
-node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs frontend/tests/reporting-session.test.cjs frontend/tests/catalog-session.test.cjs
+node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs frontend/tests/reporting-session.test.cjs frontend/tests/catalog-session.test.cjs frontend/tests/staff-session.test.cjs
 dotnet test RestaurantFoodManagerSystem.Tests
 ```
 
@@ -78,3 +78,9 @@ Kết quả F5 ngày 2026-11-01: 128/128 test frontend và 12/12 kiểm tra API 
 
 Kết quả F6 phần 1 ngày 2026-11-01: 155/155 test frontend và 15/15 kiểm tra API thật đạt;
 đã kiểm tra giao diện Admin, liên kết Nhập hàng và màn hình 390px. Không sửa/rerun test backend.
+
+F6 phần 2 — Nhân viên/Vai trò: mở **Quản trị → Nhân viên / Phân quyền** bằng Admin.
+Đã nối sửa hồ sơ, khóa/mở, reset mật khẩu, nhiều vai trò và danh sách role thật.
+183/183 test frontend, 13/13 API thật đạt; xem [bàn giao F6 phần 2](docsforfe/f6-staff-progress.md).
+Backend chưa thu hồi JWT cũ khi khóa/thu quyền/reset; không coi đây là thu hồi phiên tức thời.
+Tài khoản cá nhân và các mục Quản trị khác còn tiếp tục.

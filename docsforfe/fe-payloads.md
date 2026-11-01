@@ -328,11 +328,14 @@ FE tải bằng `blob` (xem F0-3).
 `roleName` ∈ `Admin`, `WarehouseManager`, `Chef`, `Cashier`, `Waiter` (gán ngay khi tạo).
 
 ### `PUT /api/users/{id}` — chỉ sửa `fullName`, `email`, `phone` (mass-assignment bị chặn).
-### `PATCH /api/users/{id}/active` — body `{ "isActive": false }` (khoá tài khoản).
+### `PATCH /api/users/{id}/active?active=false` — **query, không body** (khóa); `active=true` để mở.
+Thành công 200 + profile. Tự khóa/Admin active cuối → **400**, hiện message server.
 ### `POST /api/users/{id}/reset-password` — `{ "newPassword": "••••••", "confirmPassword": "••••••" }`.
 ### `POST /api/users/{userId}/roles` — `{ "roleName": "Chef" }`.
-### `DELETE /api/users/{userId}/roles/{roleName}` — gỡ role (không gỡ được Admin cuối → `409`).
-### `GET /api/roles` — 5 vai trò (chỉ đọc).
+### `DELETE /api/users/{userId}/roles/{roleName}` — gỡ role (không gỡ được Admin active cuối → **400**).
+### `GET /api/roles` — 5 vai trò (chỉ đọc), mỗi phần tử `{ roleId, roleName, roleDescription }`.
+`GET /api/users` trả mảng, không phân trang. Tạo user trả 200 + message, không trả ID; đọc lại list.
+Mật khẩu 6–72 byte UTF-8. JWT cũ chưa bị thu hồi khi khóa/thu role/reset; xem [bàn giao F6 phần 2](f6-staff-progress.md).
 
 ---
 
