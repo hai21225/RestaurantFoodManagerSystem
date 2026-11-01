@@ -76,3 +76,25 @@ Không sửa backend, migrations, SQL/appsettings hoặc source từ backup.
 - Không chạy lại bộ backend trong F3 vì không sửa C#. Baseline cũ vẫn 518/697 đạt, 179 lỗi có sẵn trên Hải;
   không coi các số test cũ 100/100 hoặc 670/670 trong tài liệu là kết quả kiểm thử lại của phiên này.
 - Áp/gỡ khuyến mãi F1 và các màn F4–F8 còn lại tiếp tục theo work-plan.
+
+## Cập nhật 2026-11-01 — bố cục Thanh toán trên điện thoại
+
+- Người dùng báo bộ lọc phiếu thu bị dồn chữ, bảng khó đọc trên điện thoại.
+  Bản tải mới trong trình duyệt đã nhận CSS; ảnh người dùng có nhiều thành phần mang kiểu mặc định.
+  Thêm phiên bản CSS/JS trong payment.html để trình duyệt tải đồng bộ bản mới.
+- Bộ lọc thành một cột ở màn hình tối đa 480 px; ô nhập/select và nút lọc cao ít nhất 44 px trên mobile,
+  font ô nhập 16 px. Phân trang có dòng trạng thái riêng và hai nút nằm bên dưới.
+- Dưới 700 px, mỗi phiếu là một thẻ có nhãn, số tiền/mã giao dịch/thời điểm thu nằm trên dòng đủ rộng.
+  Giữ một bảng dữ liệu và ngữ nghĩa table/row/cell; desktop vẫn hiển thị bảng.
+  Khi không có dữ liệu chỉ hiện thông báo rỗng, không ép bảy tiêu đề vào màn hình hẹp.
+- Đã kiểm tra trình duyệt ở 320/390/768/1280 px: không tràn ngang toàn trang, các ô lọc nằm trong màn hình.
+  Thử lọc Đã thu + Tiền mặt trên runtime thật; không tạo khoản thu/hoàn tiền hay sửa dữ liệu nghiệp vụ.
+- Kiểm tra mã giao dịch dài và số tiền lớn ở 320 px bằng bản xem thử tĩnh ngoài Git,
+  sử dụng markup từ renderLedger hiện tại; nội dung nằm gọn trong thẻ. Đây là kiểm tra bố cục với dữ liệu mẫu,
+  không phải khoản thu trong DB gốc hay bằng chứng thanh toán thực tế.
+- Kiểm tra cú pháp payment.js và **26/26 test payment-session đạt**; console trình duyệt không có lỗi JS.
+  Ảnh kiểm chứng nằm ngoài Git tại `_codex_reports/20261101/payment-mobile-fixed-390.png`
+  và `payment-mobile-long-code-320.png`.
+- Lỗi đọc đơn trên database gốc **FE-C23 vẫn chưa xử lý**; xem
+  [ghi chú database gốc](original-database-and-delete-progress.md#fe-c23--lỗi-đọc-đơn-và-phiếu-bếp-trên-database-gốc).
+  Bản sửa này chỉ thay đổi giao diện frontend, không thay đổi backend hoặc database.

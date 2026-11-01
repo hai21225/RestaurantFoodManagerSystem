@@ -94,8 +94,8 @@
         $("mockFailButton").disabled = locked() || !session.loaded;
     }
     function renderLedger() {
-        html("paymentRows", session.ledger.items.map((p) => `<tr><td>#${p.paymentId}</td><td><button class="link-button" data-select-order="${p.orderId}" type="button"${locked() ? " disabled" : ""}>ORD-${p.orderId}</button></td>
-            <td>${esc(methods[p.paymentMethod] || p.paymentMethod)}</td><td>${esc(labels[p.status] || p.status)}</td><td>${money(p.amount)}</td><td>${esc(p.transactionCode)}</td><td>${time(p.paidAt)}</td></tr>`).join("") || '<tr><td colspan="7">Không có phiếu thu theo bộ lọc.</td></tr>');
+        html("paymentRows", session.ledger.items.map((p) => `<tr role="row"><td role="cell" data-label="Phiếu">#${p.paymentId}</td><td role="cell" data-label="Đơn"><button class="link-button" data-select-order="${p.orderId}" type="button"${locked() ? " disabled" : ""}>ORD-${p.orderId}</button></td>
+            <td role="cell" data-label="Phương thức">${esc(methods[p.paymentMethod] || p.paymentMethod)}</td><td role="cell" data-label="Trạng thái">${esc(labels[p.status] || p.status)}</td><td role="cell" data-label="Số tiền">${money(p.amount)}</td><td role="cell" data-label="Mã giao dịch">${esc(p.transactionCode)}</td><td role="cell" data-label="Thời điểm thu">${time(p.paidAt)}</td></tr>`).join("") || '<tr role="row" class="payment-empty-row"><td role="cell" colspan="7">Không có phiếu thu theo bộ lọc.</td></tr>');
         $("ledgerPage").textContent = `Trang ${session.ledger.page} · ${session.ledger.total} phiếu`;
         $("ledgerPrev").disabled = locked() || session.ledger.page <= 1;
         $("ledgerNext").disabled = locked() || session.ledger.page * session.ledger.pageSize >= session.ledger.total;

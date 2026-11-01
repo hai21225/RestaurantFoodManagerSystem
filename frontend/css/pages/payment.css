@@ -59,6 +59,7 @@
 .payment-ledger .panel-header { flex-wrap: wrap; gap: 8px; }
 .payment-ledger .panel-header span { font-size: 12px; color: var(--muted); }
 .payment-filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap: 10px; align-items: end; margin-bottom: 16px; }
+.payment-filters > * { min-width: 0; }
 .payment-table-wrap { overflow-x: auto; }
 .payment-table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
 .payment-table th, .payment-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -92,9 +93,33 @@
     .payment-summary-card strong { font-size: 17px; }
     .bill-list { max-height: 290px; }
     .payment-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .payment-pagination { justify-content: space-between; gap: 6px; }
+    .payment-screen input, .payment-screen select { min-height: 44px; font-size: 16px; }
+    .payment-filters > button { min-height: 44px; }
+    .payment-ledger .panel-header { display: grid; line-height: 1.5; }
+    /* Giữ một bảng dữ liệu, trình bày mỗi phiếu thành thẻ có nhãn trên điện thoại. */
+    .payment-table-wrap { overflow: visible; }
+    .payment-table, .payment-table tbody { display: block; width: 100%; }
+    .payment-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+    .payment-table tbody { display: grid; gap: 12px; }
+    .payment-table tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; padding: 14px; border: 1px solid var(--line); border-radius: 8px; }
+    .payment-table td { display: flex; flex-direction: column; align-items: start; gap: 5px; min-width: 0; padding: 0; border: 0; overflow-wrap: anywhere; line-height: 1.5; }
+    .payment-table td::before { content: attr(data-label); color: var(--muted); font-size: 12px; }
+    .payment-table td:nth-child(5) { grid-column: 1 / -1; font-size: 18px; font-weight: 700; white-space: normal; }
+    .payment-table td:nth-child(5)::before { font-weight: 400; }
+    .payment-table td:nth-child(6), .payment-table td:nth-child(7) { grid-column: 1 / -1; min-width: 0; max-width: none; }
+    .payment-table .link-button { min-height: 44px; margin-top: -8px; margin-bottom: -8px; text-align: left; overflow-wrap: anywhere; }
+    .payment-table .payment-empty-row { display: block; border-style: dashed; }
+    .payment-table .payment-empty-row td { color: var(--muted); }
+    .payment-table .payment-empty-row td::before { content: none; }
+    .payment-pagination { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .payment-pagination span { grid-column: 1 / -1; grid-row: 1; text-align: center; }
+    .payment-pagination button { min-height: 44px; padding: 0 8px; }
     .payment-layout > *, .payment-ledger { padding: 12px; }
     .payment-dialog { padding: 18px; }
+}
+@media (max-width: 480px) {
+    .payment-filters { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+    .payment-filters > button { width: 100%; }
 }
 @media print {
     @page { size: auto; margin: 12mm; }

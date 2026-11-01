@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css">
     <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/payment.css">
+    <link rel="stylesheet" href="../css/pages/payment.css?v=20261101-mobile-ledger">
 </head>
 <body>
     <div class="app-shell">
@@ -135,7 +135,7 @@
                             <label><span>Đến ngày</span><input name="to" type="date"></label>
                             <button type="submit" class="secondary-action">Lọc phiếu thu</button>
                         </form>
-                        <div class="payment-table-wrap"><table class="payment-table"><thead><tr><th>Phiếu</th><th>Đơn</th><th>Phương thức</th><th>Trạng thái</th><th>Số tiền</th><th>Mã giao dịch</th><th>Thời điểm thu</th></tr></thead><tbody id="paymentRows"></tbody></table></div>
+                        <div class="payment-table-wrap"><table class="payment-table" role="table" aria-labelledby="ledger-title"><thead role="rowgroup"><tr role="row"><th scope="col">Phiếu</th><th scope="col">Đơn</th><th scope="col">Phương thức</th><th scope="col">Trạng thái</th><th scope="col">Số tiền</th><th scope="col">Mã giao dịch</th><th scope="col">Thời điểm thu</th></tr></thead><tbody id="paymentRows" role="rowgroup"></tbody></table></div>
                         <div class="payment-pagination"><button id="ledgerPrev" type="button" class="secondary-action">Trang trước</button><span id="ledgerPage"></span><button id="ledgerNext" type="button" class="secondary-action">Trang sau</button></div>
                     </section>
                 </section>
@@ -159,6 +159,6 @@
     <script src="../js/common/navigation.js?v=20261101-mobile-nav"></script>
     <script src="../js/common/api.js"></script>
     <script src="../js/common/payment-session.js"></script>
-    <script src="../js/pages/payment.js"></script>
+    <script src="../js/pages/payment.js?v=20261101-mobile-ledger"></script>
 </body>
 </html>
