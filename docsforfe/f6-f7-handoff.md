@@ -4,6 +4,8 @@ Cập nhật 2026-11-01, nhánh `dong`, tiếp tục từ `123005d`.
 Tài liệu này mô tả phần frontend mới của Đông và công việc backend cần Hải xử lý.
 Các kết quả kiểm tra ở đây thuộc môi trường Integration riêng; không đồng nghĩa database gốc đã chạy được luồng đặt món.
 Các route rút gọn bên dưới đều có tiền tố `/api`.
+Riêng FE-C23 đã có lượt sửa migration được cho phép sau phần frontend: xem
+[kết quả trên database gốc và test SQL Server](legacy-order-quantity-fix.md).
 
 **Code để đọc:** [quản trị + WriteGuard](../frontend/js/common/admin-session.js),
 [hồ sơ cá nhân](../frontend/js/common/account-session.js), [tiện ích đơn](../frontend/js/common/order-extras-session.js),
@@ -18,7 +20,8 @@ Các route rút gọn bên dưới đều có tiền tố `/api`.
 | **Đông + Hải — nghiệm thu** | Luồng qua API thật | Sau khi Hải sửa, Đông nối/kiểm tra UI lại bằng tài khoản đúng vai trò; chỉ đổi trạng thái ticket khi có bằng chứng thực chạy |
 
 **Không giao Hải làm lại toàn bộ F6/F7.** Các API có sẵn đã được frontend sử dụng. Hải xử lý đúng các giới hạn server phía dưới.
-Chưa sửa source backend, migration, appsettings hoặc cấu trúc database gốc trong phần F6/F7 này.
+Lượt triển khai frontend F6/F7 không sửa source backend/migration/appsettings.
+Sau đó Đông/Codex đã được yêu cầu sửa riêng migration/schema FE-C23; các ticket backend khác giữ phân công ở mục 4.
 
 ## 2. Đông đã triển khai frontend gì, mở ở đâu
 
@@ -109,7 +112,7 @@ Chưa sửa source backend, migration, appsettings hoặc cấu trúc database g
   Số tiền giảm, thuế, phí dịch vụ và tổng đều lấy từ lần GET đơn sau lệnh; không tự ước tính tiền giảm.
 - Paid/Cancelled bị khóa sửa; thay đổi ở phiên khác phải tải lại và xác nhận trước.
 - Pending POS/Thanh toán chặn lệnh F7; pending F7 cũng chặn sửa món và thu/hoàn tiền ở frontend trong cùng phiên.
-- **Hải còn việc:** FE-C24, FE-C26. FE-C23 vẫn chặn sử dụng trên DB gốc của Đông.
+- **Hải còn việc:** FE-C24, FE-C26. FE-C23 đã được Đông/Codex sửa theo yêu cầu riêng ngày 2026-11-01; xem [ghi chú migration](legacy-order-quantity-fix.md).
 
 ### F7 đã có từ F3 và phần chưa có API
 
@@ -132,12 +135,13 @@ Chưa sửa source backend, migration, appsettings hoặc cấu trúc database g
 
 ## 4. Ticket cụ thể giao Hải
 
-### FE-C23 — DB gốc lệch kiểu số lượng — Hải, P0 local, chưa sửa
+### FE-C23 — DB gốc lệch kiểu số lượng — Đông/Codex đã sửa, Hải review
 
-Đọc [ghi chú DB gốc](original-database-and-delete-progress.md#fe-c23--lỗi-đọc-đơn-và-phiếu-bếp-trên-database-gốc).
-Hai cột `order_items.Quanlity`, `kitchen_order_items.Quanlity` còn decimal(18,3), model hiện tại là int.
-`GET /orders/1` và chi tiết phiếu bếp 1 trả 500; đơn đã lưu. Hải cung cấp migration tương thích DB cũ,
-kiểm tra số lượng lẻ/range và bảo toàn dữ liệu. Đông xác nhận lại đúng pending cũ sau khi hai GET đọc được.
+Theo yêu cầu trực tiếp của chủ dự án, Đông/Codex đã thêm migration `20261101103000_NormalizeLegacyOrderQuantities`
+và áp dụng trên database gốc: hai cột `order_items.Quanlity`, `kitchen_order_items.Quanlity` từ decimal(18,3) về int.
+Backup mới đã xác minh; 30 bảng giữ nguyên giá trị; 16/16 test SQL Server đạt; đơn/chi tiết bếp 1 và 2 trả 200.
+Đọc [file sửa, kiểm thử và phân công tiếp](legacy-order-quantity-fix.md). Hải review/đồng bộ migration này,
+không cần viết lại. Đông xác nhận lại đúng pending cũ ở POS; UI chưa kiểm chứng trực tiếp sau chuyển.
 
 ### FE-C21 — Thu hồi phiên JWT — Hải, P0, chưa sửa
 
@@ -256,7 +260,7 @@ Frontend tạo/sửa đều giới hạn 20; Hải cần validation phía server
 - Kiểm tra tĩnh cuối: **40 JS** đúng cú pháp, **17 HTML** không trùng ID, **168 đường dẫn CSS/script** tồn tại,
   `git diff --check` đạt với cấu hình line ending của repository. Màn Món ăn/Bàn ăn thêm lối quản lý vẫn vừa ở 320 px.
   Trang quản trị dùng dữ liệu gốc đã mở được bằng tài khoản Đông; chỉ đọc, không dùng DB gốc để thử thêm/sửa/xóa.
-- Không sửa hoặc chạy lại bộ test C#. Baseline cũ 518 đạt/179 lỗi cần Hải chạy lại sau bản sửa, không phải kết quả kiểm tra backend của phần F6/F7 này.
+- Các kiểm tra frontend F6/F7 bên trên không chạy lại bộ test C#. Lượt sửa FE-C23 sau đó có 16/16 test migration SQL Server đạt và nhóm Đơn/Bếp 11 đạt/21 lỗi actor khớp baseline; xem [kết quả riêng](legacy-order-quantity-fix.md). Baseline toàn bộ backend cũ 518 đạt/179 lỗi vẫn cần Hải xử lý, không phải kết quả mới của phần F6/F7.
 
 Khi Hải giao lại, mỗi ticket cần: commit, file đã sửa, thay đổi contract, migration/cách nâng cấp nếu có,
 test đã chạy và kết quả, cách Đông tái hiện UI, phần còn chưa xử lý. Không ghi chung “backend xong” khi các điều kiện trên chưa đạt.

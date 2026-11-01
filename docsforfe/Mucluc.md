@@ -3,7 +3,9 @@
 **Bàn giao mới F6/F7 (2026-11-01):** đọc [f6-f7-handoff.md](f6-f7-handoff.md).
 Trong đó ghi rõ Đông đã làm frontend nào, cách mở/sử dụng, API/payload, các kiểm tra đã chạy,
 và từng ticket giao Hải có file nguồn, bước tái hiện, hướng xử lý và tiêu chí nghiệm thu.
-FE-C21/23 vẫn chưa sửa; FE-C24–28 là các giới hạn backend mới được phân công cụ thể.
+FE-C21 vẫn chưa sửa; FE-C24–28 là các giới hạn backend mới được phân công cụ thể.
+[FE-C23 — đã sửa kiểu số lượng DB cũ](legacy-order-quantity-fix.md): Đông/Codex thêm migration,
+áp dụng DB gốc và kiểm chứng đơn/bếp HTTP 200; Hải review/đồng bộ source, Đông kiểm tra lại pending UI.
 
 **Mục đích:** đây là nơi **duy nhất** mô tả phần việc FRONTEND của hệ thống Quản lý Nhà hàng.
 

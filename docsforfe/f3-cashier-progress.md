@@ -95,6 +95,6 @@ Không sửa backend, migrations, SQL/appsettings hoặc source từ backup.
 - Kiểm tra cú pháp payment.js và **26/26 test payment-session đạt**; console trình duyệt không có lỗi JS.
   Ảnh kiểm chứng nằm ngoài Git tại `_codex_reports/20261101/payment-mobile-fixed-390.png`
   và `payment-mobile-long-code-320.png`.
-- Lỗi đọc đơn trên database gốc **FE-C23 vẫn chưa xử lý**; xem
-  [ghi chú database gốc](original-database-and-delete-progress.md#fe-c23--lỗi-đọc-đơn-và-phiếu-bếp-trên-database-gốc).
-  Bản sửa này chỉ thay đổi giao diện frontend, không thay đổi backend hoặc database.
+- Tại thời điểm sửa giao diện ở trên, FE-C23 chưa xử lý; bản sửa giao diện không đổi backend/database.
+  **Cập nhật sau đó 2026-11-01:** Đông/Codex đã sửa riêng FE-C23 bằng migration theo yêu cầu chủ dự án;
+  [đơn/bếp đọc được HTTP 200 và kiểm chứng dữ liệu](legacy-order-quantity-fix.md).

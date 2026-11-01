@@ -1,7 +1,9 @@
 # HỢP ĐỒNG API — tài liệu dành riêng cho FRONTEND
 
 **Tiến độ mới 2026-11-01:** [bàn giao F6/F7 theo người phụ trách](f6-f7-handoff.md).
-Runtime mới bật Auth:Enforce=true. Các số kiểm thử/ngày 2026-10-21 bên dưới là lịch sử; frontend hiện đã có 214 test đạt, backend chưa được chạy lại trong lượt này.
+Runtime mới bật Auth:Enforce=true. Các số kiểm thử/ngày 2026-10-21 bên dưới là lịch sử; frontend hiện đã có 214 test đạt.
+**FE-C23 đã sửa theo yêu cầu riêng:** [migration DB cũ](legacy-order-quantity-fix.md), 16/16 test SQL Server đạt.
+Nhóm Đơn/Bếp có 11 đạt/21 lỗi actor, khớp baseline; không coi toàn bộ backend là đã đạt hết.
 
 > **Đây là file FE nên mở đầu tiên.** Tự chứa đủ để code: endpoint, body, status code,
 > lỗi và các luật nghiệp vụ mà UI phải tôn trọng.
@@ -423,7 +425,8 @@ Chi tiết: `docs/architecture/kitchen-stock-rule-2026-10-21.md`.
 ---
 
 
-Các tick xác nhận phần frontend đã triển khai/kiểm tra; không đóng các giới hạn backend FE-C21/23–28.
+Các tick xác nhận phần frontend đã triển khai/kiểm tra; không đóng các giới hạn backend FE-C21 và FE-C24–28.
+FE-C23 đã có sửa migration riêng theo [ghi chú kiểm chứng](legacy-order-quantity-fix.md).
 Xem bàn giao F6/F7 cho người phụ trách và điều kiện nghiệm thu còn lại.
 
 ## 8. File liên quan

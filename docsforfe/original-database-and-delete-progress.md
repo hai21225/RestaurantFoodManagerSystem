@@ -77,12 +77,15 @@ Các giới hạn backend như FE-C20/FE-C21 vẫn theo kế hoạch, không đ�
 | Cú pháp/HTML/asset/diff | 34 JS, 15 HTML, 318 đường dẫn tài nguyên và git diff --check đạt |
 
 Script, kết quả và ảnh thực chạy nằm ngoài Git tại `_codex_runtime` và `_codex_reports/20261101` của workspace máy Đông.
-Không sửa hoặc chạy lại bộ test C#; baseline lỗi backend cũ không thay đổi.
+Ở lượt chuẩn bị database/xóa mềm phía trên không sửa hoặc chạy lại bộ test C#; baseline lỗi backend cũ không thay đổi.
+Lượt sửa migration FE-C23 sau đó có kết quả kiểm thử riêng trong [ghi chú sửa lỗi](legacy-order-quantity-fix.md).
 
 ## FE-C23 — lỗi đọc đơn và phiếu bếp trên database gốc
 
 Chẩn đoán ngày 2026-11-01 sau khi người dùng gửi ảnh POS chờ xác nhận và Bếp báo lỗi máy chủ.
-Đây là vấn đề chưa xử lý; các kiểm tra catalog/đăng nhập ở trên không chứng minh luồng đặt món trên DB gốc hoạt động.
+Đây là trạng thái tại thời điểm chẩn đoán; **đã sửa sau đó theo yêu cầu riêng ngày 2026-11-01**,
+xem [migration đã áp dụng và kiểm chứng](legacy-order-quantity-fix.md).
+Các kiểm tra catalog/đăng nhập ở trên không tự chứng minh luồng đặt món trên DB gốc hoạt động.
 
 - SQL xác nhận đơn **OrderId=1, TableId=3, SentToKitchen**, một dòng món số lượng 1;
   phiếu bếp **KitchenOrderId=1, Pending** và dòng bếp tương ứng đã được lưu.
@@ -102,3 +105,12 @@ rồi đồng bộ hai cột về int theo kế hoạch nâng cấp DB có kiể
 phải sửa đồng bộ backend/DTO/nghiệp vụ và migration; không chỉ ép kiểu khi đọc.
 Sau xử lý phải kiểm tra lại hai GET và xác nhận lại đúng yêu cầu POS đang giữ.
 Trong lượt chẩn đoán này **chưa đổi schema, source backend hoặc trạng thái đơn; chưa xóa pending**.
+
+### Cập nhật sau khi được yêu cầu tự sửa — 2026-11-01
+
+Đông/Codex đã bổ sung migration `20261101103000_NormalizeLegacyOrderQuantities` và 16 ca test SQL Server.
+Backup mới sau khi đã có đơn được VERIFYONLY; migration thử trên bản sao đầy đủ rồi áp dụng DB gốc.
+Hai cột số lượng đơn/bếp đã là int; 30 bảng nghiệp vụ giữ nguyên số dòng/hash giá trị.
+Đơn 1/bàn 3 và đơn 2/bàn 9 đọc được HTTP 200, hai chi tiết bếp tương ứng cũng 200.
+Không tạo lại đơn, không đổi trạng thái, không sửa số lẻ nguyên liệu/công thức, không xóa pending trên trình duyệt.
+Chi tiết file, hạn chế kiểm thử và trách nhiệm Hải/Đông ở [legacy-order-quantity-fix.md](legacy-order-quantity-fix.md).
