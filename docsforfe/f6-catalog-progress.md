@@ -88,3 +88,6 @@ Các kiểm tra cú pháp JS, đường dẫn tài nguyên/ID HTML và `git diff
   Chưa chạy lại bộ test C#: baseline F0 **518 đạt / 179 lỗi / 697 tổng** vẫn còn; không sửa backend trong F6.
 - F6 còn nhân viên/vai trò/tài khoản, món/topping/size/category, khu vực bàn và khuyến mãi.
   Bước tiếp theo phù hợp là **nhân viên + vai trò**, rồi tài khoản; không coi phần này là hoàn tất toàn bộ F6.
+
+Cập nhật tiếp 2026-11-01: mặc định chỉ hiện nguyên liệu Đang dùng và kích cỡ Đã có công thức.
+Xem [điều chỉnh hiển thị sau xóa và database gốc](original-database-and-delete-progress.md).

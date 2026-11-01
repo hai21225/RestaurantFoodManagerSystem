@@ -2,6 +2,10 @@
 
 Cập nhật 2026-11-01. Nhánh làm việc **`dong`**; không tạo nhánh làm việc khác.
 
+**Runtime local 2026-11-01:** ứng dụng trên cổng 5225 hiện dùng database gốc `RestaurantFoodManager`;
+đã reset Admin Đông theo yêu cầu, bổ sung dữ liệu còn thiếu và sửa hiển thị sau xóa.
+Xem [bàn giao database gốc và xóa mềm](original-database-and-delete-progress.md). Không dùng DB gốc để chạy fixture kiểm thử.
+
 Tiến độ sau F0: đã nối các luồng POS chính; xem [bàn giao F1](f1-pos-progress.md).
 Màn Bếp đã nối F2; xem [bàn giao F2](f2-kitchen-progress.md) và các giới hạn quyền/retry đã ghi rõ.
 Thu ngân đã nối F3: thu trực tiếp, lịch sử/lọc, xem trước bill, hoàn tiền và MoMo Mock;

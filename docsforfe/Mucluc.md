@@ -40,6 +40,7 @@
 183/183 test frontend và 13/13 API thật đạt. FE-C21: backend chưa thu hồi JWT cũ khi khóa/thu quyền/reset.
 [FE-C21 — ghi chú cho Hải](fe-c21-jwt-session-revocation.md): lỗi JWT cũ, bước tái hiện A/B/C, hướng sửa và checklist nghiệm thu; đang chờ backend xử lý.
 [Điều hướng điện thoại](mobile-navigation-progress.md): hai menu Tổng quan/Quản trị, mở popup thay cho thanh kéo ngang; đã kiểm tra 320px, 390px, ngang và desktop.
+[Database gốc và hiển thị sau xóa](original-database-and-delete-progress.md): ứng dụng chuyển sang RestaurantFoodManager, dữ liệu mẫu bổ sung và bộ lọc ẩn các mục đã xóa.
 Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
 
 ---

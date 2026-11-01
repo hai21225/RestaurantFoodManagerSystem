@@ -7,7 +7,7 @@
 
     const state = {
         category: "all",
-        status: "all",
+        status: "active",
         searchTerm: "",
         selectedFoodId: foodsData.foods[0]?.id || null,
         editingFoodId: null,
@@ -80,8 +80,8 @@
                 category: String(food.categoryId),
                 categoryLabel: categoryNames.get(food.categoryId) || `Danh mục ${food.categoryId}`,
                 price: Number(food.foodPrice) || 0,
-                cost: 0,
-                prepTime: 0,
+                cost: null,
+                prepTime: null,
                 unit: window.foodUnits.normalize(food.saleUnit),
                 status: !food.isActive ? "stopped" : food.isAvailable ? "available" : "out",
                 statusLabel: !food.isActive ? "Ngừng bán" : food.isAvailable ? "Đang bán" : "Tạm hết",
@@ -92,7 +92,8 @@
                     .map((size) => ({ name: window.foodSizes.normalize(size.sizeName), price: Number(size.sizePrice) || 0 })),
                 toppings: []
             }));
-            state.selectedFoodId = state.foods[0]?.id || null;
+            const visible = getFilteredFoods();
+            if (!visible.some((food) => food.id === state.selectedFoodId)) state.selectedFoodId = visible[0]?.id || null;
             updateFormOptions();
             render();
         } catch (error) {
@@ -100,7 +101,7 @@
             state.foods = [];
             updateFormOptions();
             render();
-            foodList.innerHTML = `<p class="empty-state">${error.message}</p>`;
+            foodList.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
         }
     }
 
@@ -115,8 +116,9 @@
             `).join("")}`
             : '<option value="">Chưa có danh mục</option>';
 
-        sizeFoodSelect.innerHTML = state.foods.length
-            ? `<option value="">Chọn món ăn</option>${state.foods.map((food) => `
+        const usableFoods = state.foods.filter((food) => food.status !== "stopped");
+        sizeFoodSelect.innerHTML = usableFoods.length
+            ? `<option value="">Chọn món ăn</option>${usableFoods.map((food) => `
                 <option value="${food.id}" data-sale-unit="${escapeHtml(food.unit)}">${escapeHtml(food.name)}</option>
             `).join("")}`
             : '<option value="">Chưa có món ăn</option>';
@@ -143,7 +145,7 @@
 
         return state.foods.filter((food) => {
             const matchCategory = state.category === "all" || food.category === state.category;
-            const matchStatus = state.status === "all" || food.status === state.status;
+            const matchStatus = state.status === "active" ? food.status !== "stopped" : state.status === "all" || food.status === state.status;
             const matchSearch = food.name.toLowerCase().includes(searchTerm)
                 || food.code.toLowerCase().includes(searchTerm);
 
@@ -154,13 +156,12 @@
     function renderSummary() {
         const availableCount = state.foods.filter((food) => food.status === "available").length;
         const outCount = state.foods.filter((food) => food.status === "out").length;
-        const featuredCount = state.foods.filter((food) => food.isFeatured).length;
-        const newCount = state.foods.filter((food) => food.isNew).length;
+        const stoppedCount = state.foods.filter((food) => food.status === "stopped").length;
         const summary = [
-            { label: "Tổng số món", value: state.foods.length },
+            { label: "Món đang sử dụng", value: state.foods.length - stoppedCount },
             { label: "Đang bán", value: availableCount },
             { label: "Tạm hết", value: outCount },
-            { label: "Nổi bật / Mới", value: `${featuredCount}/${newCount}` }
+            { label: "Đã xóa / Ngừng bán", value: stoppedCount }
         ];
 
         foodsSummary.innerHTML = summary.map((item) => `
@@ -228,6 +229,7 @@
 
     function renderFoodList() {
         const foods = getFilteredFoods();
+        if (!foods.some((food) => food.id === state.selectedFoodId)) state.selectedFoodId = foods[0]?.id || null;
 
         visibleFoodCount.textContent = `${foods.length} món`;
 
@@ -242,13 +244,13 @@
                 type="button"
                 data-food-id="${food.id}"
             >
-                <span class="food-thumb" aria-hidden="true">${getFoodInitials(food.name)}</span>
+                <span class="food-thumb" aria-hidden="true">${escapeHtml(getFoodInitials(food.name))}</span>
                 <span class="food-row-main">
-                    <strong>${food.name}</strong>
-                    <span>${food.code} - ${food.description}</span>
+                    <strong>${escapeHtml(food.name)}</strong>
+                    <span>${food.code} - ${escapeHtml(food.description)}</span>
                     ${renderFlags(food)}
                 </span>
-                <span class="food-category">${food.categoryLabel}</span>
+                <span class="food-category">${escapeHtml(food.categoryLabel)}</span>
                 <span class="food-price">${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
                 <span class="status status-${food.status === "available" ? "empty" : food.status === "out" ? "waiting" : "payment"}">${food.statusLabel}</span>
             </button>
@@ -276,8 +278,8 @@
         selectedFoodStatus.textContent = food.statusLabel;
         foodDetail.innerHTML = `
             <div class="detail-title">
-                <strong>${food.name}</strong>
-                <span>${food.code} - ${food.categoryLabel}</span>
+                <strong>${escapeHtml(food.name)}</strong>
+                <span>${food.code} - ${escapeHtml(food.categoryLabel)}</span>
             </div>
 
             <div class="detail-grid">
@@ -287,11 +289,11 @@
                 </div>
                 <div class="detail-item">
                     <span>Giá vốn</span>
-                    <strong>${formatCurrency(food.cost)}</strong>
+                    <strong>Chưa có dữ liệu</strong>
                 </div>
                 <div class="detail-item">
                     <span>Thời gian chế biến</span>
-                    <strong>${food.prepTime} phút</strong>
+                    <strong>Chưa có dữ liệu</strong>
                 </div>
                 <div class="detail-item">
                     <span>Đơn vị tính</span>
@@ -299,7 +301,7 @@
                 </div>
             </div>
 
-            <p>${food.description}</p>
+            <p>${escapeHtml(food.description)}</p>
 
             <p class="info-list-title">Size / giá</p>
             <div class="size-list">
@@ -445,7 +447,7 @@
         foodLifecycleDescription.textContent = food.name;
         foodLifecycleNotice.textContent = restoring
             ? "Món sẽ được khôi phục ở trạng thái Tạm hết. Admin cần bật Đang bán trước khi nhân viên có thể đặt món."
-            : "Món sẽ biến mất khỏi màn Đặt món. Đơn hàng, kích cỡ và công thức cũ vẫn được giữ lại.";
+            : "Món sẽ biến mất khỏi danh sách đang dùng và màn Đặt món. Chọn bộ lọc Đã xóa / Ngừng bán để xem hoặc khôi phục; lịch sử vẫn được giữ.";
         foodLifecycleMessage.textContent = "";
         foodLifecycleMessage.className = "form-message";
         foodLifecycleConfirm.textContent = restoring ? "Khôi phục món" : "Xóa khỏi thực đơn";
@@ -607,16 +609,14 @@
         try {
             if (restoring) {
                 await window.restaurantApi.patch(`/foods/${food.id}/active`, { isActive: true });
-                food.status = "out";
             } else {
                 await window.restaurantApi.delete(`/foods/${food.id}`);
-                food.status = "stopped";
             }
-            food.statusLabel = getStatusLabel(food.status);
+            state.status = "active";
             foodLifecycleDialog.close();
-            renderSummary();
-            renderFoodList();
-            renderFoodDetail();
+            closeFoodDetail();
+            await loadFoods();
+            document.getElementById("foodListNotice").textContent = restoring ? "Đã khôi phục món. Kiểm tra trạng thái bán trước khi đặt món." : "Đã xóa món khỏi danh sách đang dùng. Xem lại tại bộ lọc Đã xóa / Ngừng bán.";
         } catch (error) {
             foodLifecycleMessage.textContent = error.message;
             foodLifecycleMessage.className = "form-message is-error";

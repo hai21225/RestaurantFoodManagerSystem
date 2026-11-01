@@ -35,7 +35,7 @@
             const active = session.activeRecipe(s.sizeId), versions = session.recipes.filter((r) => r.sizeId === s.sizeId);
             return (s.isActive || versions.length) && ($("recipeFoodFilter").value === "all" || String(s.foodId) === $("recipeFoodFilter").value)
                 && `${s.foodName} ${s.sizeName} ${versions.map((r) => `${r.name} ${r.version}`).join(" ")}`.toLocaleLowerCase("vi").includes(search)
-                && (state === "all" || !!active === (state === "configured"));
+                && (state === "all" || (s.isActive && s.foodIsActive && (state === "configured" ? !!active : !active)));
         });
         $("recipeCount").textContent = `${sizes.length} kích cỡ`;
         $("recipeRows").innerHTML = sizes.length ? sizes.map((s) => {
@@ -198,7 +198,10 @@
             editingStatus = { item: out.result, snapshot: ingredientSnapshot(out.result) }; $("stockStatusContext").textContent = out.result.name; $("stockStatusValue").value = out.result.stockStatus; message("", false, "stockStatusMessage"); $("stockStatusDialog").showModal(); return;
         }
         const item = session.ingredients.find((i) => i.ingredientId === Number(button.dataset.ingredientActive));
-        if (item) confirm(item.isActive ? "Ngừng dùng nguyên liệu?" : "Khôi phục nguyên liệu?", `${item.name} · ${item.unit}. Ngừng dùng sẽ ẩn khỏi lựa chọn công thức/phiếu nhập mới. Công thức đang dùng không tự ngừng theo. Tồn kho và lịch sử vẫn được giữ.`, () => session.command(item.isActive ? "deleteIngredient" : "ingredientActive", item.ingredientId, { isActive: true }, ingredientSnapshot(item)));
+        if (item) confirm(item.isActive ? "Ngừng dùng nguyên liệu?" : "Khôi phục nguyên liệu?", `${item.name} · ${item.unit}. Ngừng dùng sẽ ẩn khỏi danh sách đang dùng và lựa chọn công thức/phiếu nhập mới. Chọn bộ lọc Ngừng dùng để xem hoặc khôi phục. Công thức đang dùng không tự ngừng theo; tồn kho và lịch sử vẫn được giữ.`, async () => {
+            await session.command(item.isActive ? "deleteIngredient" : "ingredientActive", item.ingredientId, { isActive: true }, ingredientSnapshot(item));
+            $("ingredientActiveFilter").value = "active";
+        });
     });
     $("recipeRows").addEventListener("click", (event) => {
         const button = event.target.closest("button"); if (!button) return;
@@ -211,7 +214,12 @@
         const detail = session.detail; if (!detail || locked()) return;
         if (button.dataset.editRecipe) return openRecipe(detail.sizeId, detail.recipeId);
         const restore = !!button.dataset.restoreRecipe, expected = recipeSnapshot(detail);
-        confirm(restore ? "Khôi phục phiên bản công thức?" : "Ngừng công thức?", `${detail.name} · Phiên bản ${detail.version}. Định lượng và các phiên bản cũ vẫn được giữ. Chỉ một công thức được hoạt động cho kích cỡ này.`, async () => { await session.command(restore ? "recipeActive" : "deleteRecipe", detail.recipeId, { isActive: true }, expected); await selectSize(detail.sizeId, detail.recipeId); });
+        confirm(restore ? "Khôi phục phiên bản công thức?" : "Ngừng công thức?", `${detail.name} · Phiên bản ${detail.version}. Bản ngừng dùng sẽ ẩn khỏi danh sách Đã có công thức. Chọn Tất cả kích cỡ rồi Xem / Phiên bản để xem lại; lịch sử định lượng vẫn được giữ.`, async () => {
+            await session.command(restore ? "recipeActive" : "deleteRecipe", detail.recipeId, { isActive: true }, expected);
+            $("recipeStateFilter").value = "configured";
+            if (restore) await selectSize(detail.sizeId, detail.recipeId);
+            else { selectedSizeId = null; session.detail = null; }
+        });
     });
     $("catalogRefresh").addEventListener("click", () => run(() => session.refresh(), "Đã tải danh mục mới nhất."));
     $("addIngredient").addEventListener("click", () => openIngredient()); $("addRecipe").addEventListener("click", () => openRecipe());

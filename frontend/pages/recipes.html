@@ -37,7 +37,7 @@
                 <section id="ingredientsPanel" role="tabpanel" aria-labelledby="ingredientsTab">
                     <form id="ingredientFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc nguyên liệu">
                         <label class="form-field"><span>Tìm nguyên liệu</span><input id="ingredientSearch" type="search" placeholder="Tên hoặc đơn vị"></label>
-                        <label class="form-field"><span>Hoạt động</span><select id="ingredientActiveFilter"><option value="all">Tất cả</option><option value="active">Đang dùng</option><option value="inactive">Ngừng dùng</option></select></label>
+                        <label class="form-field"><span>Hoạt động</span><select id="ingredientActiveFilter"><option value="all">Tất cả</option><option value="active" selected>Đang dùng</option><option value="inactive">Ngừng dùng</option></select></label>
                         <label class="form-field"><span>Tình trạng kho</span><select id="ingredientStockFilter"><option value="all">Tất cả</option><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label>
                     </form>
                     <section class="panel" aria-labelledby="ingredientListTitle"><div class="panel-header"><h2 id="ingredientListTitle">Danh mục nguyên liệu</h2><span id="ingredientCount"></span></div>
@@ -49,7 +49,7 @@
                     <form id="recipeFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc công thức">
                         <label class="form-field"><span>Tìm món / Công thức</span><input id="recipeSearch" type="search" placeholder="Tên món, công thức hoặc phiên bản"></label>
                         <label class="form-field"><span>Món ăn</span><select id="recipeFoodFilter"><option value="all">Tất cả món</option></select></label>
-                        <label class="form-field"><span>Thiết lập</span><select id="recipeStateFilter"><option value="all">Tất cả kích cỡ</option><option value="configured">Đã có công thức</option><option value="missing">Chưa có công thức</option></select></label>
+                        <label class="form-field"><span>Thiết lập</span><select id="recipeStateFilter"><option value="all">Tất cả kích cỡ</option><option value="configured" selected>Đã có công thức</option><option value="missing">Chưa có công thức</option></select></label>
                     </form>
                     <div class="catalog-recipe-layout">
                         <section class="panel" aria-labelledby="recipeListTitle"><div class="panel-header"><h2 id="recipeListTitle">Món và kích cỡ</h2><span id="recipeCount"></span></div><div id="recipeRows" class="catalog-recipe-rows"></div></section>
@@ -84,6 +84,6 @@
     <form id="stockStatusForm" class="dialog-form"><label class="form-field"><span>Tình trạng kho</span><select id="stockStatusValue"><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label><p class="catalog-caption">Đánh dấu tình trạng không đổi số lượng tồn và không tự bật bán lại món. Kiểm kê/điều chỉnh số lượng tại Kho.</p><p id="stockStatusMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="stockStatusDialog" type="button">Hủy</button><button id="stockStatusSubmit" class="primary-action" type="submit">Lưu tình trạng</button></div></form>
 </dialog>
 <dialog id="catalogConfirm" class="form-dialog" aria-labelledby="confirmTitle"><div class="form-dialog-header"><h2 id="confirmTitle">Xác nhận thao tác</h2><button class="dialog-close-button" data-close="catalogConfirm" type="button" aria-label="Đóng">×</button></div><form id="confirmForm" class="dialog-form"><p id="confirmText"></p><p id="confirmMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="catalogConfirm" type="button">Quay lại</button><button id="confirmSubmit" class="primary-action" type="submit">Xác nhận</button></div></form></dialog>
-<script src="../js/common/auth.js?v=20261101-staff"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js?v=20261101-mobile-nav"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261101-f6-2"></script>
+<script src="../js/common/auth.js?v=20261101-staff"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js?v=20261101-mobile-nav"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261101-delete-visibility"></script>
 </body>
 </html>
