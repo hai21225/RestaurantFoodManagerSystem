@@ -25,7 +25,7 @@
 
     function clearOrderContext() {
         [window.localStorage, window.sessionStorage].forEach((storage) => {
-            ["restaurant.currentRole", "restaurant.selectedTable", "restaurant.lastOrder", "restaurant.posPending", "restaurant.kitchenPending", "restaurant.paymentPending", "restaurant.paymentMomo", "restaurant.warehousePending", "restaurant.catalogPending", "restaurant.staffPending"].forEach((key) => storage.removeItem(key));
+            ["restaurant.currentRole", "restaurant.selectedTable", "restaurant.lastOrder", "restaurant.posPending", "restaurant.kitchenPending", "restaurant.paymentPending", "restaurant.paymentMomo", "restaurant.warehousePending", "restaurant.catalogPending", "restaurant.staffPending", "restaurant.adminPending", "restaurant.accountPending", "restaurant.orderExtrasPending"].forEach((key) => storage.removeItem(key));
         });
     }
 

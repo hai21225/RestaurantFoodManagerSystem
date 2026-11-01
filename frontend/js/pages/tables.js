@@ -512,6 +512,11 @@
         }
     });
 
+    const manageTablesButton = document.getElementById("manageTablesButton");
+    const updateTableManagement = () => { manageTablesButton.hidden = !window.restaurantAuth.hasRole("Admin"); };
+    manageTablesButton.addEventListener("click", () => { if (window.restaurantAuth.hasRole("Admin")) window.location.href = "administration.html?tab=tables"; });
+    window.addEventListener("restaurant:auth-changed", updateTableManagement);
+    updateTableManagement();
     render();
     loadTables();
 })();

@@ -61,10 +61,13 @@
         foodList.innerHTML = '<p class="empty-state">Đang tải thực đơn...</p>';
         try {
             const [categories, foods] = await Promise.all([
-                window.restaurantApi.get("/categories"),
+                window.restaurantApi.get("/categories?includeInactive=true"),
                 window.restaurantApi.get("/foods?includeInactive=true")
             ]);
-            const sizesByFood = await Promise.all(foods.map((food) => window.restaurantApi.get(`/foods/${food.foodId}/sizes`)));
+            const [sizesByFood, toppingsByFood] = await Promise.all([
+                Promise.all(foods.map((food) => window.restaurantApi.get(`/foods/${food.foodId}/sizes`))),
+                Promise.all(foods.map((food) => window.restaurantApi.get(`/foods/${food.foodId}/toppings`)))
+            ]);
             const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
             state.categories = categories.filter((category) => category.isActive);
             foodsData.categories = [{ value: "all", label: "Tất cả" }, ...categories.map((category) => ({
@@ -85,12 +88,9 @@
                 unit: window.foodUnits.normalize(food.saleUnit),
                 status: !food.isActive ? "stopped" : food.isAvailable ? "available" : "out",
                 statusLabel: !food.isActive ? "Ngừng bán" : food.isAvailable ? "Đang bán" : "Tạm hết",
-                isFeatured: false,
-                isNew: false,
-                sizes: window.foodSizes.sort(sizesByFood[index]
-                    .filter((size) => window.foodSizes.isSupported(size.sizeName)))
-                    .map((size) => ({ name: window.foodSizes.normalize(size.sizeName), price: Number(size.sizePrice) || 0 })),
-                toppings: []
+                sizes: window.foodSizes.sort(sizesByFood[index])
+                    .map((size) => ({ name: window.foodSizes.normalize(size.sizeName) || size.sizeName, price: Number(size.sizePrice) || 0 })),
+                toppings: toppingsByFood[index].map((t) => ({ name: t.toppingName, price: t.toppingPrice, isAvailable: t.isAvailable }))
             }));
             const visible = getFilteredFoods();
             if (!visible.some((food) => food.id === state.selectedFoodId)) state.selectedFoodId = visible[0]?.id || null;
@@ -209,24 +209,6 @@
             .toUpperCase();
     }
 
-    function renderFlags(food) {
-        const flags = [];
-
-        if (food.isFeatured) {
-            flags.push("Nổi bật");
-        }
-
-        if (food.isNew) {
-            flags.push("Món mới");
-        }
-
-        if (flags.length === 0) {
-            return "";
-        }
-
-        return `<div class="flag-list">${flags.map((flag) => `<span class="flag">${flag}</span>`).join("")}</div>`;
-    }
-
     function renderFoodList() {
         const foods = getFilteredFoods();
         if (!foods.some((food) => food.id === state.selectedFoodId)) state.selectedFoodId = foods[0]?.id || null;
@@ -248,7 +230,6 @@
                 <span class="food-row-main">
                     <strong>${escapeHtml(food.name)}</strong>
                     <span>${food.code} - ${escapeHtml(food.description)}</span>
-                    ${renderFlags(food)}
                 </span>
                 <span class="food-category">${escapeHtml(food.categoryLabel)}</span>
                 <span class="food-price">${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
@@ -307,22 +288,24 @@
             <div class="size-list">
                 ${food.sizes.map((size) => `
                     <div class="size-item">
-                        <span>${size.name}</span>
+                        <span>${escapeHtml(size.name)}</span>
                         <strong>${formatCurrency(size.price)}</strong>
                     </div>
                 `).join("")}
             </div>
 
-            <p class="info-list-title">Lựa chọn / topping</p>
+            <p class="info-list-title">Topping đang hoạt động</p>
             <div class="topping-list">
                 ${food.toppings.map((topping) => `
                     <div class="topping-item">
-                        <span>${topping}</span>
+                        <span>${escapeHtml(topping.name)} · ${topping.isAvailable ? "Đang bán" : "Tạm hết"}</span>
+                        <strong>${formatCurrency(topping.price)}</strong>
                     </div>
-                `).join("")}
+                `).join("") || '<p class="field-hint">Chưa có topping đang hoạt động được gán cho món.</p>'}
             </div>
 
-            <div class="detail-actions">
+            <div class="detail-actions"${window.restaurantAuth.hasRole("Admin", "WarehouseManager") ? "" : " hidden"}>
+                <button class="secondary-action" type="button" data-action="manage-configuration">Quản lý kích cỡ / Topping</button>
                 <button class="secondary-action" type="button" data-action="edit-food">
                     Sửa thông tin
                 </button>
@@ -331,12 +314,6 @@
                         ${food.status === "available" ? "Chuyển tạm hết" : "Bật đang bán"}
                     </button>
                 ` : ""}
-                <button class="secondary-action" type="button" data-action="toggle-featured">
-                    ${food.isFeatured ? "Bỏ nổi bật" : "Đánh dấu nổi bật"}
-                </button>
-                <button class="secondary-action" type="button" data-action="toggle-new">
-                    ${food.isNew ? "Bỏ món mới" : "Đánh dấu món mới"}
-                </button>
                 <button class="${food.status === "stopped" ? "secondary-action" : "danger-action"}" type="button" data-action="toggle-active">
                     ${food.status === "stopped" ? "Khôi phục món" : "Xóa khỏi thực đơn"}
                 </button>
@@ -354,6 +331,8 @@
         if (!food) {
             return;
         }
+        if (!window.restaurantAuth.hasRole("Admin", "WarehouseManager")) return;
+        if (action === "manage-configuration") { window.location.href = `administration.html?tab=links&foodId=${food.id}`; return; }
 
         if (action === "edit-food") {
             openFoodEditor(food);
@@ -369,19 +348,10 @@
             const available = food.status !== "available";
             try {
                 await window.restaurantApi.patch(`/foods/${food.id}/availability`, { isAvailable: available });
-                food.status = available ? "available" : "out";
-                food.statusLabel = getStatusLabel(food.status);
+                await loadFoods();
             } catch (error) {
                 window.alert(error.message);
             }
-        }
-
-        if (action === "toggle-featured") {
-            food.isFeatured = !food.isFeatured;
-        }
-
-        if (action === "toggle-new") {
-            food.isNew = !food.isNew;
         }
 
         renderSummary();
@@ -468,6 +438,8 @@
     }
 
     function render() {
+        const editable = window.restaurantAuth.hasRole("Admin", "WarehouseManager");
+        for (const id of ["addCategoryButton", "addSizeButton", "addFoodButton", "manageCatalogButton"]) document.getElementById(id).hidden = !editable;
         renderSummary();
         renderFilters();
         renderFoodList();
@@ -629,6 +601,7 @@
     sizeFoodSelect.addEventListener("change", updateSizePriceLabel);
 
     setupNavigation();
+    window.addEventListener("restaurant:auth-changed", render);
     render();
     loadFoods();
 })();

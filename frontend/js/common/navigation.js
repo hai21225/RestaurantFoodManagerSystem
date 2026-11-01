@@ -41,6 +41,29 @@
     renderCatalogEntry(); auth?.ready?.then(renderCatalogEntry);
     window.addEventListener("restaurant:auth-changed", renderCatalogEntry);
 
+    const adminModules = [
+        { tab: "categories", label: "Danh mục / Topping", modules: ["categories", "toppings", "sizes", "links"], roles: ["Admin", "WarehouseManager"] },
+        { tab: "areas", label: "Khu vực / Bàn", modules: ["areas", "tables"], roles: ["Admin"] },
+        { tab: "promotions", label: "Khuyến mãi", modules: ["promotions"], roles: ["Admin"] },
+        { tab: "settings", label: "Thiết lập quán", modules: ["settings"], roles: ["Admin"] }
+    ];
+    adminModules.forEach((entry) => {
+        const target = new URL("../../pages/administration.html", document.currentScript.src);
+        target.searchParams.set("tab", entry.tab);
+        const item = document.createElement("button"); item.type = "button"; item.className = "nav-item";
+        item.dataset.page = target.href; item.textContent = entry.label;
+        const selected = new URL(location.href).searchParams.get("tab") || "categories";
+        if (location.pathname === target.pathname && entry.modules.includes(selected)) item.classList.add("is-active");
+        window.addEventListener("restaurant:admin-module-changed", () => {
+            const active = location.pathname === target.pathname && entry.modules.includes(new URL(location.href).searchParams.get("tab") || "categories");
+            item.classList.toggle("is-active", active);
+            if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
+        });
+        const visible = () => { item.hidden = !auth?.hasRole(...entry.roles); };
+        visible(); auth?.ready?.then(visible); window.addEventListener("restaurant:auth-changed", visible);
+        navigation.appendChild(item);
+    });
+    if (/\/order-tools\.html$/.test(location.pathname)) navigation.querySelector('[data-page="order.html"]')?.classList.add("is-active");
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
     const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
     const managementItems = items.slice(6);
