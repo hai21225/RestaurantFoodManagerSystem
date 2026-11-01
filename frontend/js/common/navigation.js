@@ -30,6 +30,17 @@
         return;
     }
 
+    const catalogUrl = new URL("../../pages/recipes.html", document.currentScript.src);
+    const catalogItem = document.createElement("button");
+    catalogItem.type = "button"; catalogItem.className = "nav-item nav-catalog";
+    catalogItem.dataset.page = catalogUrl.href; catalogItem.textContent = "Nguyên liệu / Công thức";
+    if (window.location.pathname === catalogUrl.pathname) catalogItem.classList.add("is-active");
+    const inventoryItem = navigation.querySelector('[data-page$="inventory.html"]');
+    if (inventoryItem) inventoryItem.after(catalogItem); else navigation.appendChild(catalogItem);
+    const renderCatalogEntry = () => { catalogItem.hidden = !auth?.hasRole("WarehouseManager", "Admin"); };
+    renderCatalogEntry(); auth?.ready?.then(renderCatalogEntry);
+    window.addEventListener("restaurant:auth-changed", renderCatalogEntry);
+
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
     const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
     const managementItems = items.slice(6);

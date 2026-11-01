@@ -245,12 +245,12 @@ thay vì chỉ ngày trần. MoMo thật và xuất giấy/PDF chưa được x�
 |✅| GET | `/api/management/inventory-transactions` | WarehouseDesk | biến động kho (có `unit`), lọc/phân trang F4 |
 |✅| GET | `/api/management/inventory/low-stock` | WarehouseDesk | **nguyên liệu cần kho xử lý** · có `stockStatus` (C-21) |
 |✅| GET | `/api/management/ingredients` | WarehouseDesk | Tra tên/đơn vị và lựa chọn đang hoạt động |
-|⬜| GET | `/api/management/ingredients/{id}` | WarehouseDesk | |
-|⬜| POST | `/api/management/ingredients` | WarehouseDesk | `{ name, unit, minimumStock? }` |
-|⬜| PUT | `/api/management/ingredients/{id}` | WarehouseDesk | ⚠️ **đổi `unit` của nguyên liệu đã dùng ⇒ `409`** (mục 5.4) |
-|⬜| DELETE | `/api/management/ingredients/{id}` | WarehouseDesk | soft-delete |
-|⬜| PATCH | `/api/management/ingredients/{id}/active` | WarehouseDesk | `{ isActive }` |
-|⬜| PATCH | `/api/management/ingredients/{id}/status` | WarehouseDesk | `{ stockStatus: Available\|OutOfStock\|Spoiled, note? }` |
+|✅| GET | `/api/management/ingredients/{id}` | WarehouseDesk | |
+|✅| POST | `/api/management/ingredients` | WarehouseDesk | `{ name, unit, minimumStock? }` |
+|✅| PUT | `/api/management/ingredients/{id}` | WarehouseDesk | ⚠️ **đổi `unit` của nguyên liệu đã dùng ⇒ `409`** (mục 5.4) |
+|✅| DELETE | `/api/management/ingredients/{id}` | WarehouseDesk | soft-delete |
+|✅| PATCH | `/api/management/ingredients/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| PATCH | `/api/management/ingredients/{id}/status` | WarehouseDesk | `{ stockStatus: Available\|OutOfStock\|Spoiled, note? }` |
 |✅| GET | `/api/management/suppliers` | WarehouseDesk | Danh sách; F4 còn đọc `/{id}` trước cập nhật |
 |✅| POST/PUT/DELETE | `/api/management/suppliers[/{id}]` | WarehouseDesk | Thêm/sửa/ngừng hợp tác; không xóa lịch sử phiếu |
 |✅| PATCH | `/api/management/suppliers/{id}/active` | WarehouseDesk | `{ isActive }` |
@@ -262,16 +262,19 @@ thay vì chỉ ngày trần. MoMo thật và xuất giấy/PDF chưa được x�
 
 Tiến độ F4 ngày 2026-10-31 và giới hạn đối chiếu mất ACK: [bàn giao Kho/Nhập hàng](f4-warehouse-progress.md).
 
+F6 phần 1 cập nhật 2026-11-01: [Nguyên liệu/Công thức](f6-catalog-progress.md), đã kiểm tra API thật;
+cờ tình trạng không đổi tồn/khả năng bán, note chưa được service lưu.
+
 ### 4.8 Công thức · khuyến mãi · cấu hình (F6/F7)
 
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
-|⬜| GET | `/api/management/recipes` | WarehouseDesk | `?includeInactive=true` |
-|⬜| GET | `/api/management/recipes/{id}` | WarehouseDesk | chi tiết + định lượng |
-|⬜| POST | `/api/management/recipes` | WarehouseDesk | tạo công thức |
-|⬜| PUT | `/api/management/recipes/{id}` | WarehouseDesk | ⚠️ **tạo phiên bản mới**, `recipeId` **đổi** (mục 5.5) |
-|⬜| DELETE | `/api/management/recipes/{id}` | WarehouseDesk | soft-delete |
-|⬜| PATCH | `/api/management/recipes/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| GET | `/api/management/recipes` | WarehouseDesk | `?includeInactive=true` |
+|✅| GET | `/api/management/recipes/{id}` | WarehouseDesk | chi tiết + định lượng |
+|✅| POST | `/api/management/recipes` | WarehouseDesk | tạo công thức |
+|✅| PUT | `/api/management/recipes/{id}` | WarehouseDesk | ⚠️ **tạo phiên bản mới**, `recipeId` **đổi** (mục 5.5) |
+|✅| DELETE | `/api/management/recipes/{id}` | WarehouseDesk | soft-delete |
+|✅| PATCH | `/api/management/recipes/{id}/active` | WarehouseDesk | `{ isActive }` |
 |⬜| GET | `/api/management/promotions` | AdminOnly | có `sizeIds` / `categoryIds` |
 |⬜| GET | `/api/management/promotions/{id}` | AdminOnly | |
 |⬜| POST | `/api/management/promotions` | AdminOnly | `startAt`/`endAt` = **giờ VN** |
@@ -407,8 +410,8 @@ Chi tiết: `docs/architecture/kitchen-stock-rule-2026-10-21.md`.
 - [ ] Thu ngân chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh `409`)
 - [ ] POS: dùng `POST /api/orders/{id}/items` để gọi thêm (không tạo đơn mới trên bàn đang có đơn)
 - [ ] Bếp poll `GET /api/management/kitchen/orders?status=open` 3–5s; lần đầu **không** kèm `since`
-- [ ] Sửa công thức → gọi lại `GET /api/management/recipes`
-- [ ] Sửa nguyên liệu đã dùng → bắt `409` và disable ô "Đơn vị"
+- [x] Sửa công thức → gọi lại `GET /api/management/recipes`
+- [x] Sửa nguyên liệu đã dùng → bắt `409` và disable ô "Đơn vị"
 - [ ] **Không tự tính tiền** — luôn lấy `totalAmount` từ server
 
 ---

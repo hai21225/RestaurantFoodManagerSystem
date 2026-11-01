@@ -31,9 +31,11 @@
 
 ## Tiến độ mới nhất — 2026-11-01
 
-Đọc [tiến độ tích hợp](integration-progress.md) và các bàn giao F1–F5 để theo dõi phần đã nối thật.
+Đọc [tiến độ tích hợp](integration-progress.md) và các bàn giao F1–F6 phần 1 để theo dõi phần đã nối thật.
 [F5 — Tổng quan/Báo cáo](f5-reporting-progress.md) đã có API thật, chọn kỳ/ngày VN và CSV cho Admin;
 128/128 test frontend, 12/12 kiểm tra API Báo cáo/SQL thật đạt. Backend baseline còn 179/697 lỗi có sẵn.
+[F6 phần 1 — Nguyên liệu/Công thức](f6-catalog-progress.md) đã nối CRUD, đơn vị và lịch sử phiên bản;
+155/155 test frontend, 15/15 kiểm tra API thật đạt. F6 còn nhân viên/vai trò và các mục quản trị khác.
 Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
 
 ---

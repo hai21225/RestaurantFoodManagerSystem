@@ -4,10 +4,10 @@
 **Ký hiệu:** ✅ = FE đã gọi · ⬜ = FE **chưa** gọi (xem `fe-work-plan.md`) · 🔒 = cần `Authorization: Bearer`
 **Base URL:** `http://localhost:5225/api` (FE đọc `localStorage.restaurant.apiBaseUrl`)
 
-**Tổng:** 128 action — FE hiện dùng **38** (30%), **89** chưa dùng, **1** đã bị bỏ (`PUT /orders/{id}/items` → 410).
+**Baseline 2026-10-21 (số liệu lịch sử):** 128 action — FE dùng **38** (30%), **89** chưa dùng, **1** đã bị bỏ (`PUT /orders/{id}/items` → 410).
 **Policy** cần hiểu: `Authenticated` (bất kỳ đã đăng nhập) · `PosOperator` (Admin/Waiter) · `PosOrCashier` (Admin/Waiter/Cashier) · `PosKitchenRead` (Admin/Waiter/Cashier/Chef) · `KitchenDesk` (Admin/Chef) · `WarehouseDesk` (Admin/WarehouseManager) · `CashierDesk` (Admin/Cashier) · `AdminOnly` · `OrderCancellation` (Admin/Waiter/Chef).
 
-> Lưu ý: khi `Auth:Enforce=false` (hiện tại) mọi policy đều cho qua. Khi bật `true`, FE **bắt buộc** gửi Bearer (Phase F0).
+> Lưu ý: khi `Auth:Enforce=false` mọi policy đều cho qua. Khi bật `true`, FE **bắt buộc** gửi Bearer (Phase F0).
 
 ---
 
@@ -132,15 +132,19 @@
 |✅| POST | `/management/kitchen/items/{id}/reopen` | KitchenDesk | ✅ | F2 2026-10-29: mở lại qua command riêng (C-06) |
 
 ## 7. Kho & nhập hàng (20)
-### 7.1 Nguyên liệu (6)
+### 7.1 Nguyên liệu (7)
 | | Method | Path | Policy | FE |
 |---|---|---|---|---|
 |✅| GET | `/management/ingredients` | WarehouseDesk | ✅ |
-|⬜| GET | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
+|✅| GET | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
 |✅| POST | `/management/ingredients` | WarehouseDesk | ✅ |
-|⬜| PUT | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
-|⬜| DELETE | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
-|⬜| PATCH | `/management/ingredients/{id}/active` | WarehouseDesk | ⬜ |
+|✅| PUT | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
+|✅| DELETE | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
+|✅| PATCH | `/management/ingredients/{id}/active` | WarehouseDesk | ✅ |
+|✅| PATCH | `/management/ingredients/{id}/status` | WarehouseDesk | ✅ |
+
+F6 phần 1 ngày 2026-11-01: [bàn giao Nguyên liệu/Công thức](f6-catalog-progress.md).
+Đánh dấu tình trạng không thay số lượng hoặc khả năng bán của món; service chưa lưu note.
 
 ### 7.2 Nhà cung cấp (6)
 | | Method | Path | Policy | FE |
@@ -179,7 +183,7 @@ F4 cập nhật 2026-10-31: xem [bàn giao Kho/Nhập hàng](f4-warehouse-progre
 |✅| POST | `/management/recipes` | WarehouseDesk | ✅ |
 |✅| PUT | `/management/recipes/{id}` | WarehouseDesk | ✅ |
 |✅| DELETE | `/management/recipes/{id}` | WarehouseDesk | ✅ |
-|⬜| PATCH | `/management/recipes/{id}/active` | WarehouseDesk | ⬜ |
+|✅| PATCH | `/management/recipes/{id}/active` | WarehouseDesk | ✅ |
 
 ## 8. Khuyến mãi (6)
 | | Method | Path | Policy | FE | Ghi chú |

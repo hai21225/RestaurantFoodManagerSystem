@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhập hàng - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-f6">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/pages/management.css">
     <link rel="stylesheet" href="../css/pages/purchases.css">
-    <link rel="stylesheet" href="../css/pages/warehouse.css">
+    <link rel="stylesheet" href="../css/pages/warehouse.css?v=20261101-f6">
 </head>
 <body class="warehouse-page">
     <div class="app-shell">
@@ -43,7 +43,7 @@
                 <section aria-labelledby="pageTitle">
                     <div class="section-heading">
                         <div><p class="eyebrow">Phiếu nhập</p><h2 id="pageTitle">Danh sách nhập hàng</h2></div>
-                        <div class="warehouse-actions"><button class="secondary-action" id="warehouseRefresh" type="button">Làm mới</button><button class="primary-action" id="addPurchaseButton" type="button">Tạo phiếu nhập</button></div>
+                        <div class="warehouse-actions"><a class="secondary-action" href="recipes.html?tab=ingredients">Danh mục nguyên liệu</a><button class="secondary-action" id="warehouseRefresh" type="button">Làm mới</button><button class="primary-action" id="addPurchaseButton" type="button">Tạo phiếu nhập</button></div>
                     </div>
                     <p id="uiMessage" class="ui-message" role="status"></p>
                     <section class="warehouse-pending" id="warehousePending" hidden aria-label="Đối chiếu thao tác kho"><p id="warehousePendingSummary"></p><div class="warehouse-actions"><button class="secondary-action" type="button" id="warehouseReview">Tải dữ liệu để đối chiếu</button><button class="secondary-action" type="button" id="warehouseAck" hidden>Đã đối chiếu, tiếp tục</button><a id="warehousePendingLink" href="inventory.html" hidden>Mở màn hình đối chiếu</a></div></section>
@@ -121,8 +121,8 @@
         <form id="warehouseConfirmForm" class="dialog-form"><h2 id="warehouseConfirmTitle"></h2><p id="warehouseConfirmText"></p><div class="dialog-actions"><button class="secondary-action" id="closeWarehouseConfirm" type="button">Quay lại</button><button class="primary-action" type="submit">Xác nhận</button></div></form>
     </dialog>
 
-    <script src="../js/common/auth.js"></script>
-    <script src="../js/common/navigation.js?v=20261101-f5-admin"></script>
+    <script src="../js/common/auth.js?v=20261101-f6"></script>
+    <script src="../js/common/navigation.js?v=20261101-f6"></script>
     <script src="../js/common/api.js"></script>
     <script src="../js/common/warehouse-session.js"></script>
     <script src="../js/common/warehouse-ui.js"></script>

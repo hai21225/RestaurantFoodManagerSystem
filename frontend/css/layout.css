@@ -137,6 +137,13 @@
     display: none !important;
 }
 
+.nav-item.nav-catalog {
+    white-space: normal;
+    line-height: 1.4;
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+
 .nav-item:hover,
 .nav-item:focus-visible,
 .nav-item.is-active {

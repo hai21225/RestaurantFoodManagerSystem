@@ -1,424 +1,227 @@
 (function () {
-    const state = {
-        foods: [],
-        sizes: [],
-        recipes: [],
-        ingredients: [],
-        foodId: "all",
-        status: "all",
-        search: "",
-        selectedSizeId: null,
-        selectedDetails: null,
-        editingRecipeId: null
-    };
-
-    const recipeSearch = document.querySelector("#recipeSearch");
-    const foodFilter = document.querySelector("#foodFilter");
-    const statusFilter = document.querySelector("#recipeStatusFilter");
-    const recipeList = document.querySelector("#recipeList");
-    const recipeListCount = document.querySelector("#recipeListCount");
-    const recipeDetail = document.querySelector("#recipeDetail");
-    const recipeDetailPanel = document.querySelector(".recipe-detail-panel");
-    const totalSizeCount = document.querySelector("#totalSizeCount");
-    const configuredCount = document.querySelector("#configuredCount");
-    const missingCount = document.querySelector("#missingCount");
-    const recipeDialog = document.querySelector("#recipeDialog");
-    const recipeForm = document.querySelector("#recipeForm");
-    const recipeDialogTitle = document.querySelector("#recipeDialogTitle");
-    const recipeDialogContext = document.querySelector("#recipeDialogContext");
-    const recipeIngredientRows = document.querySelector("#recipeIngredientRows");
-    const recipeFormMessage = document.querySelector("#recipeFormMessage");
-    const recipeSubmit = document.querySelector("#recipeSubmit");
-    const ingredientDialog = document.querySelector("#ingredientDialog");
-    const ingredientForm = document.querySelector("#ingredientForm");
-    const ingredientFormMessage = document.querySelector("#ingredientFormMessage");
-    const ingredientSubmit = document.querySelector("#ingredientSubmit");
-    const availableIngredientCount = document.querySelector("#availableIngredientCount");
-
-    function escapeHtml(value) {
-        return String(value ?? "")
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
+    const { CatalogSession, ingredientSnapshot, recipeSnapshot, stockStatuses } = window.restaurantCatalog;
+    const auth = window.restaurantAuth, session = new CatalogSession({ api: window.restaurantApi, auth, storage: window.sessionStorage });
+    const $ = (id) => document.getElementById(id);
+    const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const quantity = (value) => Number(value).toLocaleString("vi-VN", { maximumFractionDigits: 3 });
+    let tab = new URLSearchParams(window.location.search).get("tab") === "recipes" ? "recipes" : "ingredients";
+    let selectedSizeId = null, editingIngredient = null, editingRecipe = null, editingStatus = null;
+    let editorBusy = false, editorVersion = 0, confirmAction = null;
+    const locked = () => session.busy || session.loading || session.detailLoading || editorBusy || !!session.pending || !session.loaded;
+    function message(text = "", error = false, target = "catalogNotice") { $(target).textContent = text; $(target).classList.toggle("is-error", error); }
+    function badge(label, tone = "") { return `<span class="catalog-state ${tone}">${esc(label)}</span>`; }
+    function setTab(value) {
+        tab = value; $("ingredientsPanel").hidden = tab !== "ingredients"; $("recipesPanel").hidden = tab !== "recipes";
+        $("ingredientsTab").setAttribute("aria-selected", String(tab === "ingredients")); $("recipesTab").setAttribute("aria-selected", String(tab === "recipes"));
+        $("addIngredient").hidden = tab !== "ingredients"; $("addRecipe").hidden = tab !== "recipes";
+        const url = new URL(window.location.href); url.searchParams.set("tab", tab); window.history.replaceState(null, "", url);
     }
-
-    function getRecipeForSize(sizeId) {
-        return state.recipes.find((recipe) => recipe.sizeId === sizeId && recipe.isActive);
+    function renderIngredients() {
+        const query = $("ingredientSearch").value.trim().toLocaleLowerCase("vi"), active = $("ingredientActiveFilter").value, status = $("ingredientStockFilter").value;
+        const rows = session.ingredients.filter((i) => (`${i.name} ${i.unit}`).toLocaleLowerCase("vi").includes(query)
+            && (active === "all" || i.isActive === (active === "active")) && (status === "all" || i.stockStatus === status));
+        $("ingredientCount").textContent = `${rows.length} nguyên liệu`;
+        $("ingredientRows").innerHTML = rows.length ? rows.map((i) => `<tr><td><strong>${esc(i.name)}</strong><small>#${i.ingredientId} · ${i.isActive ? "Đang dùng" : "Ngừng dùng"}</small></td>
+            <td>${esc(i.unit)}</td><td>${quantity(i.minimumStock)}</td><td>${badge(stockStatuses[i.stockStatus] || i.stockStatus, i.stockStatus === "Spoiled" ? "is-danger" : i.stockStatus === "OutOfStock" ? "is-warning" : "")}${!i.isActive ? badge("Ngừng dùng", "is-inactive") : ""}</td>
+            <td><div class="catalog-row-actions"><button class="secondary-action" data-edit-ingredient="${i.ingredientId}" ${locked() ? "disabled" : ""}>Sửa</button><button class="secondary-action" data-stock-status="${i.ingredientId}" ${locked() ? "disabled" : ""}>Tình trạng</button>
+            <button class="secondary-action" data-ingredient-active="${i.ingredientId}" ${locked() ? "disabled" : ""}>${i.isActive ? "Ngừng dùng" : "Khôi phục"}</button><a href="inventory.html?ingredientId=${i.ingredientId}">Xem kho / Lịch sử</a></div></td></tr>`).join("")
+            : '<tr><td colspan="5" class="catalog-empty">Không có nguyên liệu phù hợp. Bấm Thêm nguyên liệu để tạo danh mục mới.</td></tr>';
     }
-
-    function getSize(sizeId) {
-        return state.sizes.find((size) => size.sizeId === sizeId);
-    }
-
-    function getFilteredSizes() {
-        const term = state.search.toLocaleLowerCase("vi");
-        return state.sizes.filter((size) => {
-            const recipe = getRecipeForSize(size.sizeId);
-            const matchesFood = state.foodId === "all" || String(size.foodId) === state.foodId;
-            const matchesSearch = size.foodName.toLocaleLowerCase("vi").includes(term);
-            const matchesStatus = state.status === "all"
-                || (state.status === "configured" && recipe)
-                || (state.status === "missing" && !recipe);
-            return matchesFood && matchesSearch && matchesStatus;
+    function renderRecipes() {
+        const foodValue = $("recipeFoodFilter").value, search = $("recipeSearch").value.trim().toLocaleLowerCase("vi"), state = $("recipeStateFilter").value;
+        $("recipeFoodFilter").innerHTML = '<option value="all">Tất cả món</option>' + session.foods.map((f) => `<option value="${f.foodId}">${esc(f.foodName)}${f.isActive ? "" : " (ngừng dùng)"}</option>`).join("");
+        $("recipeFoodFilter").value = session.foods.some((f) => String(f.foodId) === foodValue) ? foodValue : "all";
+        const sizes = session.sizes.filter((s) => {
+            const active = session.activeRecipe(s.sizeId), versions = session.recipes.filter((r) => r.sizeId === s.sizeId);
+            return (s.isActive || versions.length) && ($("recipeFoodFilter").value === "all" || String(s.foodId) === $("recipeFoodFilter").value)
+                && `${s.foodName} ${s.sizeName} ${versions.map((r) => `${r.name} ${r.version}`).join(" ")}`.toLocaleLowerCase("vi").includes(search)
+                && (state === "all" || !!active === (state === "configured"));
         });
+        $("recipeCount").textContent = `${sizes.length} kích cỡ`;
+        $("recipeRows").innerHTML = sizes.length ? sizes.map((s) => {
+            const r = session.activeRecipe(s.sizeId);
+            return `<article class="catalog-recipe-row${selectedSizeId === s.sizeId ? " is-selected" : ""}"><strong>${esc(s.foodName)} · ${esc(s.sizeName)}</strong>
+                <p>${r ? `${esc(r.name)} · Phiên bản ${esc(r.version)} · ${r.ingredientCount} nguyên liệu` : "Chưa có công thức đang hoạt động"}</p>
+                <div>${badge(r ? "Đã thiết lập" : "Chưa thiết lập", r ? "" : "is-warning")}${!s.isActive ? badge("Kích cỡ ngừng dùng", "is-inactive") : ""}${!s.foodIsActive ? badge("Món ngừng dùng", "is-inactive") : ""}</div>
+                <div class="catalog-row-actions"><button class="secondary-action" data-view-size="${s.sizeId}" ${session.busy || session.loading ? "disabled" : ""}>Xem / Phiên bản</button>
+                <button class="${r ? "secondary-action" : "primary-action"}" data-edit-size="${s.sizeId}" ${locked() || !s.isActive ? "disabled" : ""}>${r ? "Sửa công thức" : "Thiết lập"}</button></div></article>`;
+        }).join("") : '<p class="catalog-empty">Chưa có kích cỡ phù hợp. Kiểm tra bộ lọc hoặc tạo kích cỡ tại <a href="foods.html">Món ăn</a>.</p>';
+        renderDetail();
     }
-
-    async function loadData(preferredSizeId = state.selectedSizeId) {
-        recipeList.innerHTML = '<div class="recipe-empty"><strong>Đang tải công thức...</strong></div>';
-
-        try {
-            const [foods, ingredients, recipes] = await Promise.all([
-                window.restaurantApi.get("/foods?includeInactive=true"),
-                window.restaurantApi.get("/management/ingredients"),
-                window.restaurantApi.get("/management/recipes")
-            ]);
-            const activeFoods = foods.filter((food) => food.isActive);
-            const sizesByFood = await Promise.all(activeFoods.map((food) =>
-                window.restaurantApi.get(`/foods/${food.foodId}/sizes`)
-            ));
-
-            state.foods = activeFoods.map((food, index) => ({
-                foodId: food.foodId,
-                foodName: food.foodName,
-                sizes: sizesByFood[index]
-            }));
-            state.sizes = state.foods.flatMap((food) => window.foodSizes.sort(
-                food.sizes.filter((size) => window.foodSizes.isSupported(size.sizeName))
-            ).map((size) => ({
-                ...size,
-                sizeName: window.foodSizes.normalize(size.sizeName),
-                foodId: food.foodId,
-                foodName: food.foodName
-            })));
-            state.ingredients = ingredients.filter((ingredient) => ingredient.isActive);
-            state.recipes = recipes;
-            state.selectedSizeId = state.sizes.some((size) => size.sizeId === preferredSizeId)
-                ? preferredSizeId
-                : null;
-            state.selectedDetails = null;
-
-            renderFoodFilter();
-            renderSummary();
-            renderList();
-            renderDetail();
-        } catch (error) {
-            state.foods = [];
-            state.sizes = [];
-            state.recipes = [];
-            recipeList.innerHTML = `<div class="recipe-empty"><strong>Không tải được công thức</strong><span>${escapeHtml(error.message)}</span></div>`;
-        }
-    }
-
-    function renderFoodFilter() {
-        const selectedValue = state.foodId;
-        foodFilter.innerHTML = '<option value="all">Tất cả món</option>' + state.foods
-            .filter((food) => food.sizes.some((size) => window.foodSizes.isSupported(size.sizeName)))
-            .map((food) => `<option value="${food.foodId}">${escapeHtml(food.foodName)}</option>`)
-            .join("");
-        foodFilter.value = selectedValue;
-        availableIngredientCount.textContent = `${state.ingredients.length} nguyên liệu khả dụng`;
-    }
-
-    function renderSummary() {
-        const configured = state.sizes.filter((size) => getRecipeForSize(size.sizeId)).length;
-        totalSizeCount.textContent = String(state.sizes.length);
-        configuredCount.textContent = String(configured);
-        missingCount.textContent = String(state.sizes.length - configured);
-    }
-
-    function renderList() {
-        const sizes = getFilteredSizes();
-        recipeListCount.textContent = `${sizes.length} kích cỡ`;
-
-        if (!sizes.length) {
-            recipeList.innerHTML = '<div class="recipe-empty"><strong>Không có kích cỡ phù hợp</strong><span>Hãy kiểm tra bộ lọc hoặc thêm size trong trang Món ăn.</span></div>';
-            return;
-        }
-
-        recipeList.innerHTML = sizes.map((size) => {
-            const recipe = getRecipeForSize(size.sizeId);
-            return `
-                <article class="recipe-row${state.selectedSizeId === size.sizeId ? " is-selected" : ""}" data-size-row="${size.sizeId}">
-                    <div class="recipe-row-main">
-                        <strong>${escapeHtml(size.foodName)}</strong>
-                        <span class="recipe-row-meta">${escapeHtml(recipe?.name || "Chưa có công thức")} ${recipe ? `- Phiên bản ${escapeHtml(recipe.version)}` : ""}</span>
-                    </div>
-                    <span class="recipe-size">${escapeHtml(size.sizeName)}</span>
-                    <span class="recipe-state ${recipe ? "is-ready" : "is-missing"}">${recipe ? "Đã thiết lập" : "Chưa có"}</span>
-                    <div class="recipe-row-actions">
-                        ${recipe ? `<button class="secondary-action" type="button" data-view-recipe="${recipe.recipeId}" data-size-id="${size.sizeId}">Xem</button>` : ""}
-                        <button class="${recipe ? "secondary-action" : "primary-action"}" type="button" data-edit-size="${size.sizeId}" ${recipe ? `data-recipe-id="${recipe.recipeId}"` : ""}>${recipe ? "Sửa" : "Thiết lập"}</button>
-                    </div>
-                </article>
-            `;
-        }).join("");
-
-        recipeList.querySelectorAll("[data-view-recipe]").forEach((button) => {
-            button.addEventListener("click", () => selectRecipe(Number(button.dataset.sizeId), Number(button.dataset.viewRecipe)));
-        });
-        recipeList.querySelectorAll("[data-edit-size]").forEach((button) => {
-            button.addEventListener("click", () => openRecipeDialog(
-                Number(button.dataset.editSize),
-                button.dataset.recipeId ? Number(button.dataset.recipeId) : null
-            ));
-        });
-    }
-
-    async function selectRecipe(sizeId, recipeId) {
-        state.selectedSizeId = sizeId;
-        state.selectedDetails = null;
-        renderList();
-        recipeDetail.innerHTML = '<div class="recipe-empty"><strong>Đang tải chi tiết...</strong></div>';
-        recipeDetailPanel.classList.add("is-open");
-
-        try {
-            state.selectedDetails = await window.restaurantApi.get(`/management/recipes/${recipeId}`);
-            renderDetail();
-        } catch (error) {
-            recipeDetail.innerHTML = `<div class="recipe-empty"><strong>Không tải được chi tiết</strong><span>${escapeHtml(error.message)}</span></div>`;
-        }
-    }
-
     function renderDetail() {
-        const size = getSize(state.selectedSizeId);
-        const recipe = size ? getRecipeForSize(size.sizeId) : null;
-
-        if (!size) {
-            recipeDetail.innerHTML = '<div class="recipe-empty"><strong>Chưa chọn công thức</strong><span>Chọn một kích cỡ trong danh sách.</span></div>';
-            return;
-        }
-
-        if (!recipe) {
-            recipeDetail.innerHTML = `
-                <div class="recipe-empty">
-                    <strong>${escapeHtml(size.foodName)} - ${escapeHtml(size.sizeName)}</strong>
-                    <span>Chưa có công thức đang sử dụng.</span>
-                    <button class="primary-action" type="button" data-create-selected>Thiết lập công thức</button>
-                </div>`;
-            recipeDetail.querySelector("[data-create-selected]").addEventListener("click", () => openRecipeDialog(size.sizeId));
-            return;
-        }
-
-        if (!state.selectedDetails || state.selectedDetails.recipeId !== recipe.recipeId) {
-            recipeDetail.innerHTML = `
-                <div class="recipe-detail-title"><strong>${escapeHtml(size.foodName)}</strong><span>${escapeHtml(size.sizeName)} - ${escapeHtml(recipe.name)}</span></div>
-                <div class="recipe-empty"><strong>${recipe.ingredientCount} nguyên liệu</strong><span>Chọn Xem để tải định lượng chi tiết.</span></div>`;
-            return;
-        }
-
-        const details = state.selectedDetails;
-        recipeDetail.innerHTML = `
-            <div class="recipe-detail-title"><strong>${escapeHtml(details.foodName)}</strong><span>${escapeHtml(details.sizeName)} - ${escapeHtml(details.name)} - Phiên bản ${escapeHtml(details.version)}</span></div>
-            <div class="recipe-detail-list">
-                ${details.ingredients.map((ingredient) => `
-                    <div class="recipe-detail-item"><span>${escapeHtml(ingredient.ingredientName)}</span><strong>${Number(ingredient.quantity).toLocaleString("vi-VN", { maximumFractionDigits: 3 })} ${escapeHtml(ingredient.unit)}</strong></div>
-                `).join("")}
-            </div>
-            <div class="recipe-detail-actions">
-                <button class="secondary-action" type="button" data-stop-recipe>Ngừng sử dụng</button>
-                <button class="primary-action" type="button" data-edit-recipe>Sửa công thức</button>
-            </div>`;
-        recipeDetail.querySelector("[data-edit-recipe]").addEventListener("click", () => openRecipeDialog(size.sizeId, recipe.recipeId));
-        recipeDetail.querySelector("[data-stop-recipe]").addEventListener("click", () => deactivateRecipe(recipe.recipeId, size.sizeId));
+        const size = session.sizes.find((s) => s.sizeId === selectedSizeId), detail = session.detail;
+        if (!size) { $("recipeDetail").innerHTML = '<p class="catalog-empty">Chọn Xem / Phiên bản bên cạnh một kích cỡ để xem định lượng và lịch sử.</p>'; return; }
+        const versions = session.recipes.filter((r) => r.sizeId === size.sizeId).sort((a, b) => b.recipeId - a.recipeId);
+        const current = session.activeRecipe(size.sizeId);
+        let content = `<strong>${esc(size.foodName)} · ${esc(size.sizeName)}</strong>`;
+        if (session.detailLoading) content += '<p class="catalog-caption">Đang tải định lượng…</p>';
+        else if (detail && detail.sizeId === size.sizeId) {
+            content += `<p>${esc(detail.name)} · Phiên bản ${esc(detail.version)} · #${detail.recipeId}</p>${badge(detail.isActive ? "Đang hoạt động" : "Phiên bản ngừng dùng", detail.isActive ? "" : "is-inactive")}
+                <dl>${detail.ingredients.map((i) => `<dt>${esc(i.ingredientName)}${session.ingredients.find((x) => x.ingredientId === i.ingredientId)?.isActive === false ? " (ngừng dùng)" : ""}</dt><dd>${quantity(i.quantity)} ${esc(i.unit)}</dd>`).join("")}</dl>
+                <div class="catalog-actions">${detail.isActive ? `<button class="secondary-action" data-stop-recipe="${detail.recipeId}" ${locked() ? "disabled" : ""}>Ngừng công thức</button><button class="primary-action" data-edit-recipe="${detail.recipeId}" ${locked() || !size.isActive ? "disabled" : ""}>Sửa bản đang dùng</button>`
+                    : `<button class="secondary-action" data-restore-recipe="${detail.recipeId}" ${locked() || current || !size.isActive ? "disabled" : ""}>Khôi phục phiên bản</button>`}</div>
+                ${!detail.isActive && current ? '<p class="catalog-caption">Kích cỡ này đã có bản đang dùng. Ngừng bản hiện tại trước khi khôi phục bản cũ.</p>' : ""}`;
+        } else content += '<p class="catalog-caption">Chưa có công thức đang dùng. Thiết lập mới hoặc chọn một phiên bản bên dưới.</p>';
+        content += `<div class="catalog-history"><h3>Các phiên bản</h3><div class="catalog-history-list">${versions.map((r) => `<button class="secondary-action" data-view-recipe="${r.recipeId}" ${session.busy || session.loading ? "disabled" : ""}>#${r.recipeId} · ${esc(r.version)} · ${r.isActive ? "Đang dùng" : "Ngừng dùng"} · ${esc(r.name)}</button>`).join("") || '<p class="catalog-caption">Chưa có lịch sử phiên bản.</p>'}</div></div>`;
+        $("recipeDetail").innerHTML = content;
     }
-
-    function ingredientOptions(selectedId) {
-        return '<option value="">Chọn nguyên liệu</option>' + state.ingredients.map((ingredient) => `
-            <option value="${ingredient.ingredientId}" ${ingredient.ingredientId === selectedId ? "selected" : ""}>${escapeHtml(ingredient.name)}</option>
-        `).join("");
-    }
-
-    function addIngredientRow(item = {}) {
-        const row = document.createElement("div");
-        row.className = "recipe-ingredient-row";
-        row.innerHTML = `
-            <label class="form-field">
-                <span>Nguyên liệu</span>
-                <select data-ingredient-id required>${ingredientOptions(Number(item.ingredientId) || null)}</select>
-            </label>
-            <label class="form-field recipe-quantity-field">
-                <span>Định lượng</span>
-                <input data-ingredient-quantity type="number" inputmode="decimal" min="0.001" step="0.001" value="${item.quantity ?? ""}" required>
-                <span class="recipe-unit" data-ingredient-unit></span>
-            </label>
-            <button class="remove-ingredient-button" type="button" aria-label="Xóa nguyên liệu" title="Xóa nguyên liệu">×</button>`;
-
-        const select = row.querySelector("[data-ingredient-id]");
-        const updateUnit = () => {
-            const ingredient = state.ingredients.find((entry) => entry.ingredientId === Number(select.value));
-            row.querySelector("[data-ingredient-unit]").textContent = ingredient?.unit || "";
-        };
-        select.addEventListener("change", updateUnit);
-        row.querySelector(".remove-ingredient-button").addEventListener("click", () => {
-            row.remove();
-            ensureIngredientRow();
+    function render() {
+        const allowed = session.hasAccess(); $("catalogContent").hidden = !allowed; $("catalogAccess").hidden = allowed; if (!allowed) return;
+        setTab(tab);
+        $("catalogRefresh").disabled = session.busy || session.loading || editorBusy;
+        $("addIngredient").disabled = locked(); $("addRecipe").disabled = locked() || !session.sizes.some((s) => s.isActive && !session.activeRecipe(s.sizeId));
+        $("catalogPending").hidden = !session.pending;
+        if (session.pending) $("pendingSummary").textContent = `${session.pending.kind.includes("Recipe") ? "Công thức" : "Nguyên liệu"} #${session.pending.id || "chưa rõ mã"} · ${session.pending.body?.name || session.pending.body?.stockStatus || "Thay đổi trạng thái"} · ${session.pending.accepted ? "Đã nhận phản hồi thành công, cần tải lại danh mục." : "Chưa rõ kết quả ghi."}`;
+        $("reviewPending").disabled = session.busy || session.loading;
+        $("acknowledgePending").hidden = !session.pending?.reviewed;
+        $("acknowledgePending").disabled = session.busy || session.loading || !session.loaded;
+        for (const id of ["ingredientSubmit", "recipeSubmit", "stockStatusSubmit"]) $(id).disabled = locked();
+        for (const id of ["ingredientForm", "recipeForm", "stockStatusForm"]) $(id).querySelectorAll("input,select").forEach((field) => {
+            field.disabled = session.busy || session.loading || editorBusy || !!session.pending || (field.id === "recipeSize" && !!editingRecipe);
         });
-        recipeIngredientRows.appendChild(row);
-        updateUnit();
-    }
-
-    function ensureIngredientRow() {
-        if (!recipeIngredientRows.children.length) addIngredientRow();
-    }
-
-    async function openRecipeDialog(sizeId, recipeId = null) {
-        const size = getSize(sizeId);
-        if (!size) return;
-
-        if (!state.ingredients.length) {
-            openIngredientDialog("Hãy tạo nguyên liệu trước khi thiết lập công thức.");
-            return;
+        $("addRecipeLine").disabled = session.busy || session.loading || !!session.pending;
+        $("confirmSubmit").disabled = session.busy || session.loading || editorBusy;
+        if (!session.loaded) {
+            $("catalogSummary").innerHTML = "";
+            $("ingredientCount").textContent = "—"; $("recipeCount").textContent = "—";
+            $("ingredientRows").innerHTML = `<tr><td colspan="5" class="catalog-empty">${session.busy || session.loading ? "Đang tải danh mục…" : "Chưa tải được danh mục. Bấm Làm mới để thử lại."}</td></tr>`;
+            $("recipeRows").innerHTML = '<p class="catalog-empty">Chưa tải được danh mục.</p>';
+            $("recipeDetail").innerHTML = '<p class="catalog-empty">Tải lại danh mục trước khi xem phiên bản.</p>'; return;
         }
-
-        state.editingRecipeId = recipeId;
-        recipeForm.reset();
-        recipeIngredientRows.innerHTML = "";
-        recipeFormMessage.textContent = "";
-        recipeFormMessage.className = "form-message";
-        document.querySelector("#recipeSizeId").value = String(sizeId);
-        recipeDialogTitle.textContent = recipeId ? "Sửa công thức" : "Tạo công thức";
-        recipeDialogContext.textContent = `${size.foodName} - ${size.sizeName}`;
-        recipeSubmit.textContent = "Lưu công thức";
-
-        try {
-            if (recipeId) {
-                const details = await window.restaurantApi.get(`/management/recipes/${recipeId}`);
-                recipeForm.elements.name.value = details.name;
-                recipeForm.elements.version.value = details.version;
-                details.ingredients.forEach(addIngredientRow);
-            } else {
-                recipeForm.elements.name.value = `${size.foodName} ${size.sizeName}`;
-                recipeForm.elements.version.value = "1";
-                addIngredientRow();
+        $("catalogSummary").innerHTML = [["Nguyên liệu đang dùng", session.ingredients.filter((i) => i.isActive).length], ["Nguyên liệu ngừng dùng", session.ingredients.filter((i) => !i.isActive).length], ["Công thức đang dùng", session.recipes.filter((r) => r.isActive).length]]
+            .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+        renderIngredients(); renderRecipes();
+    }
+    async function run(action, success = "", target = "catalogNotice") {
+        try { const promise = action(); render(); const result = await promise; if (success) message(success); return { ok: true, result }; }
+        catch (error) {
+            message(error.message, true, target);
+            if (target !== "catalogNotice") message(error.message, true);
+            if (target === "ingredientFormMessage" && error.status === 409 && /unit|đơn vị/i.test(error.message) && editingIngredient) {
+                $("ingredientUnit").value = editingIngredient.item.unit; $("ingredientUnit").readOnly = true;
+                $("unitHelp").textContent = "Nguyên liệu đã được sử dụng nên đơn vị được khóa. Hãy tạo nguyên liệu mới nếu cần đổi đơn vị.";
             }
-            recipeDialog.showModal();
-            recipeForm.elements.name.focus();
-        } catch (error) {
-            window.alert(error.message);
-        }
-    }
-
-    function openIngredientDialog(messageText = "") {
-        ingredientForm.reset();
-        ingredientFormMessage.textContent = messageText;
-        ingredientFormMessage.className = messageText ? "form-message is-error" : "form-message";
-        ingredientDialog.showModal();
-        ingredientForm.elements.name.focus();
-    }
-
-    async function deactivateRecipe(recipeId, sizeId) {
-        try {
-            await window.restaurantApi.delete(`/management/recipes/${recipeId}`);
-            state.selectedDetails = null;
-            await loadData(sizeId);
-            renderDetail();
-        } catch (error) {
-            window.alert(error.message);
-        }
-    }
-
-    function setSubmitting(button, loading, idleText) {
-        button.disabled = loading;
-        button.textContent = loading ? "Đang lưu..." : idleText;
-    }
-
-    recipeForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        if (!recipeForm.checkValidity()) {
-            recipeForm.reportValidity();
-            return;
-        }
-
-        const ingredients = Array.from(recipeIngredientRows.querySelectorAll(".recipe-ingredient-row")).map((row) => ({
-            ingredientId: Number(row.querySelector("[data-ingredient-id]").value),
-            quantity: Number(row.querySelector("[data-ingredient-quantity]").value)
-        }));
-        const uniqueIds = new Set(ingredients.map((item) => item.ingredientId));
-        if (uniqueIds.size !== ingredients.length) {
-            recipeFormMessage.textContent = "Một nguyên liệu không được lặp lại trong cùng công thức.";
-            recipeFormMessage.className = "form-message is-error";
-            return;
-        }
-
-        const sizeId = Number(document.querySelector("#recipeSizeId").value);
-        const payload = {
-            sizeId,
-            name: recipeForm.elements.name.value.trim(),
-            version: recipeForm.elements.version.value.trim() || "1",
-            ingredients
-        };
-
-        setSubmitting(recipeSubmit, true, "Lưu công thức");
-        try {
-            if (state.editingRecipeId) {
-                await window.restaurantApi.put(`/management/recipes/${state.editingRecipeId}`, payload);
-            } else {
-                await window.restaurantApi.post("/management/recipes", payload);
+            if ([400, 404, 409].includes(error.status) && !session.pending && session.hasAccess()) {
+                try { await session.refresh(); } catch (_) { /* Giữ nguyên lỗi thao tác chính. */ }
             }
-            recipeDialog.close();
-            await loadData(sizeId);
-            const recipe = getRecipeForSize(sizeId);
-            if (recipe) await selectRecipe(sizeId, recipe.recipeId);
-        } catch (error) {
-            recipeFormMessage.textContent = error.message;
-            recipeFormMessage.className = "form-message is-error";
-        } finally {
-            setSubmitting(recipeSubmit, false, "Lưu công thức");
-        }
-    });
-
-    ingredientForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-        if (!ingredientForm.checkValidity()) {
-            ingredientForm.reportValidity();
-            return;
-        }
-
-        const data = new FormData(ingredientForm);
-        setSubmitting(ingredientSubmit, true, "Tạo nguyên liệu");
+            return { ok: false, error };
+        } finally { render(); }
+    }
+    async function openIngredient(id = null) {
+        if (locked()) return;
+        const version = ++editorVersion; editorBusy = true; render();
         try {
-            await window.restaurantApi.post("/management/ingredients", {
-                name: data.get("name").trim(),
-                unit: data.get("unit"),
-                minimumStock: Number(data.get("minimumStock"))
-            });
-            ingredientDialog.close();
-            await loadData();
-        } catch (error) {
-            ingredientFormMessage.textContent = error.message;
-            ingredientFormMessage.className = "form-message is-error";
-        } finally {
-            setSubmitting(ingredientSubmit, false, "Tạo nguyên liệu");
+            const item = id ? await session.ingredientDetails(id) : null;
+            if (version !== editorVersion) return;
+            editingIngredient = item ? { item, snapshot: ingredientSnapshot(item) } : null;
+            $("ingredientForm").reset(); $("ingredientName").value = item?.name || ""; $("ingredientUnit").value = item?.unit || ""; $("ingredientMinimum").value = item?.minimumStock ?? 0;
+            $("ingredientDialogTitle").textContent = item ? "Sửa nguyên liệu" : "Thêm nguyên liệu"; message("", false, "ingredientFormMessage");
+            $("ingredientUnit").readOnly = !!item; $("unitHelp").textContent = item ? "Đang kiểm tra lịch sử sử dụng đơn vị…" : "Nhập đơn vị kho dùng thống nhất cho phiếu nhập và định lượng.";
+            $("ingredientDialog").showModal();
+            if (item) {
+                try {
+                    const usage = await session.ingredientUsage(item.ingredientId);
+                    if (version !== editorVersion) return;
+                    $("ingredientUnit").readOnly = usage.locked;
+                    $("unitHelp").textContent = usage.locked ? `${usage.reason} Đơn vị đã khóa; tạo nguyên liệu mới nếu cần đơn vị khác.` : `${usage.reason} Có thể sửa đơn vị.`;
+                } catch (error) { if (version === editorVersion) $("unitHelp").textContent = `${error.message} Đơn vị tạm khóa; vẫn có thể sửa tên và mức tồn tối thiểu.`; }
+            }
+            if (version === editorVersion) $("ingredientName").focus();
+        } catch (error) { message(error.message, true); }
+        finally { if (version === editorVersion) editorBusy = false; render(); if (version === editorVersion && $("ingredientDialog").open) $("ingredientName").focus(); }
+    }
+    function addLine(item = {}) {
+        const row = document.createElement("div"); row.className = "catalog-line";
+        const chosen = Number(item.ingredientId), entries = session.ingredients.filter((i) => i.isActive || i.ingredientId === chosen);
+        row.innerHTML = `<label class="form-field"><span>Nguyên liệu</span><select data-line-ingredient required><option value="">Chọn nguyên liệu</option>${entries.map((i) => `<option value="${i.ingredientId}" ${i.ingredientId === chosen ? "selected" : ""}>${esc(i.name)} · ${esc(i.unit)}${i.isActive ? "" : " (ngừng dùng)"}</option>`).join("")}</select><span class="line-unit"></span></label>
+            <label class="form-field"><span>Định lượng</span><input data-line-quantity type="number" min="0.001" step="0.001" value="${esc(item.quantity ?? "")}" required><span class="line-unit">Theo đơn vị kho</span></label><button class="secondary-action remove-line" type="button" aria-label="Bỏ dòng nguyên liệu">×</button>`;
+        const unit = () => { const i = session.ingredients.find((i) => i.ingredientId === Number(row.querySelector("[data-line-ingredient]").value)); row.querySelector(".line-unit").textContent = i ? `Đơn vị: ${i.unit}${i.isActive ? "" : " · Cần thay hoặc khôi phục trước khi lưu"}` : "Chưa chọn nguyên liệu"; };
+        row.querySelector("select").addEventListener("change", unit); row.querySelector("button").addEventListener("click", () => { if (session.busy) return; row.remove(); if (!$("recipeLines").children.length) addLine(); });
+        $("recipeLines").appendChild(row); unit();
+    }
+    async function openRecipe(sizeId = null, recipeId = null) {
+        if (locked()) return;
+        const version = ++editorVersion; editorBusy = true; render();
+        try {
+            await session.refresh(); if (version !== editorVersion) return;
+            if (!session.ingredients.some((i) => i.isActive)) { setTab("ingredients"); message("Thêm nguyên liệu đang hoạt động trước khi tạo công thức.", true); return; }
+            const detail = recipeId ? await session.recipeDetails(recipeId) : null;
+            if (version !== editorVersion) return;
+            if (detail && !detail.isActive) throw Object.assign(new Error("Phiên bản này đã ngừng dùng. Chọn sửa bản đang hoạt động."), { status: 409 });
+            editingRecipe = detail ? { item: detail, snapshot: recipeSnapshot(detail) } : null;
+            const eligible = session.sizes.filter((s) => s.isActive && (!session.activeRecipe(s.sizeId) || s.sizeId === detail?.sizeId));
+            const selected = detail?.sizeId || sizeId || eligible[0]?.sizeId;
+            if (!eligible.some((s) => s.sizeId === selected)) throw new Error("Kích cỡ không hoạt động hoặc đã có công thức. Tải lại danh sách để kiểm tra.");
+            $("recipeForm").reset(); $("recipeLines").innerHTML = "";
+            $("recipeSize").innerHTML = eligible.map((s) => `<option value="${s.sizeId}">${esc(s.foodName)} · ${esc(s.sizeName)}${s.foodIsActive ? "" : " (món ngừng dùng)"}</option>`).join(""); $("recipeSize").value = selected;
+            $("recipeSize").disabled = !!detail; $("recipeName").value = detail?.name || ""; $("recipeVersion").value = "";
+            $("recipeDialogTitle").textContent = detail ? "Sửa công thức · Tạo phiên bản mới" : "Tạo công thức";
+            $("recipeDialogContext").textContent = detail ? `Bản ${detail.version} (#${detail.recipeId}) được giữ trong lịch sử sau khi lưu.` : "Mỗi kích cỡ có một công thức đang hoạt động.";
+            message("", false, "recipeFormMessage"); (detail?.ingredients || [{}]).forEach(addLine); $("recipeDialog").showModal(); $("recipeName").focus();
+        } catch (error) { message(error.message, true); }
+        finally { if (version === editorVersion) editorBusy = false; render(); if (version === editorVersion && $("recipeDialog").open) $("recipeName").focus(); }
+    }
+    async function selectSize(id, recipeId = null) {
+        selectedSizeId = id; session.detail = null;
+        const target = recipeId || session.activeRecipe(id)?.recipeId;
+        if (target) await run(() => session.selectRecipe(target)); else render();
+    }
+    function confirm(title, text, action) {
+        $("confirmTitle").textContent = title; $("confirmText").textContent = text; message("", false, "confirmMessage"); confirmAction = action; $("catalogConfirm").showModal();
+    }
+    $("ingredientForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); if (locked() || !$("ingredientForm").reportValidity()) return;
+        message("", false, "ingredientFormMessage");
+        const data = { name: $("ingredientName").value, unit: $("ingredientUnit").value, minimumStock: $("ingredientMinimum").value };
+        const out = await run(() => session.command(editingIngredient ? "updateIngredient" : "createIngredient", editingIngredient?.item.ingredientId || null, data, editingIngredient?.snapshot), "Đã lưu nguyên liệu. Nguyên liệu đang hoạt động có thể chọn tại Công thức và Nhập hàng.", "ingredientFormMessage");
+        if (out.ok) $("ingredientDialog").close();
+    });
+    $("recipeForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); if (locked() || !$("recipeForm").reportValidity()) return;
+        const sizeId = Number($("recipeSize").value), ingredients = Array.from($("recipeLines").children).map((row) => ({ ingredientId: Number(row.querySelector("[data-line-ingredient]").value), quantity: row.querySelector("[data-line-quantity]").value }));
+        const out = await run(() => session.command(editingRecipe ? "updateRecipe" : "createRecipe", editingRecipe?.item.recipeId || null, { sizeId, name: $("recipeName").value, version: $("recipeVersion").value, ingredients }, editingRecipe?.snapshot), "Đã lưu và tải lại phiên bản công thức hiện tại.", "recipeFormMessage");
+        if (out.ok) { $("recipeDialog").close(); await selectSize(sizeId); }
+    });
+    $("stockStatusForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); if (locked() || !editingStatus) return;
+        const out = await run(() => session.command("ingredientStatus", editingStatus.item.ingredientId, { stockStatus: $("stockStatusValue").value }, editingStatus.snapshot), "Đã cập nhật tình trạng nguyên liệu; số lượng tồn giữ nguyên.", "stockStatusMessage"); if (out.ok) $("stockStatusDialog").close();
+    });
+    $("confirmForm").addEventListener("submit", async (event) => {
+        event.preventDefault(); if (session.busy || session.loading || !confirmAction) return;
+        const out = await run(confirmAction, "Đã thực hiện và tải lại danh mục.", "confirmMessage"); if (out.ok) $("catalogConfirm").close();
+    });
+    $("ingredientRows").addEventListener("click", async (event) => {
+        const button = event.target.closest("button"); if (!button || locked()) return;
+        if (button.dataset.editIngredient) return openIngredient(Number(button.dataset.editIngredient));
+        if (button.dataset.stockStatus) {
+            const out = await run(() => session.ingredientDetails(Number(button.dataset.stockStatus))); if (!out.ok) return;
+            editingStatus = { item: out.result, snapshot: ingredientSnapshot(out.result) }; $("stockStatusContext").textContent = out.result.name; $("stockStatusValue").value = out.result.stockStatus; message("", false, "stockStatusMessage"); $("stockStatusDialog").showModal(); return;
         }
+        const item = session.ingredients.find((i) => i.ingredientId === Number(button.dataset.ingredientActive));
+        if (item) confirm(item.isActive ? "Ngừng dùng nguyên liệu?" : "Khôi phục nguyên liệu?", `${item.name} · ${item.unit}. Ngừng dùng sẽ ẩn khỏi lựa chọn công thức/phiếu nhập mới. Công thức đang dùng không tự ngừng theo. Tồn kho và lịch sử vẫn được giữ.`, () => session.command(item.isActive ? "deleteIngredient" : "ingredientActive", item.ingredientId, { isActive: true }, ingredientSnapshot(item)));
     });
-
-    recipeSearch.addEventListener("input", () => {
-        state.search = recipeSearch.value.trim();
-        renderList();
+    $("recipeRows").addEventListener("click", (event) => {
+        const button = event.target.closest("button"); if (!button) return;
+        const id = Number(button.dataset.viewSize || button.dataset.editSize);
+        if (button.dataset.viewSize) selectSize(id); else if (button.dataset.editSize) openRecipe(id, session.activeRecipe(id)?.recipeId || null);
     });
-    foodFilter.addEventListener("change", () => {
-        state.foodId = foodFilter.value;
-        renderList();
+    $("recipeDetail").addEventListener("click", (event) => {
+        const button = event.target.closest("button"); if (!button) return;
+        if (button.dataset.viewRecipe) { const id = Number(button.dataset.viewRecipe), r = session.recipes.find((r) => r.recipeId === id); if (r) selectSize(r.sizeId, id); return; }
+        const detail = session.detail; if (!detail || locked()) return;
+        if (button.dataset.editRecipe) return openRecipe(detail.sizeId, detail.recipeId);
+        const restore = !!button.dataset.restoreRecipe, expected = recipeSnapshot(detail);
+        confirm(restore ? "Khôi phục phiên bản công thức?" : "Ngừng công thức?", `${detail.name} · Phiên bản ${detail.version}. Định lượng và các phiên bản cũ vẫn được giữ. Chỉ một công thức được hoạt động cho kích cỡ này.`, async () => { await session.command(restore ? "recipeActive" : "deleteRecipe", detail.recipeId, { isActive: true }, expected); await selectSize(detail.sizeId, detail.recipeId); });
     });
-    statusFilter.querySelectorAll("[data-status]").forEach((button) => {
-        button.addEventListener("click", () => {
-            state.status = button.dataset.status;
-            statusFilter.querySelectorAll("[data-status]").forEach((item) => item.classList.toggle("is-active", item === button));
-            renderList();
-        });
-    });
-
-    document.querySelector("#addIngredientButton").addEventListener("click", () => openIngredientDialog());
-    document.querySelector("#addIngredientRowButton").addEventListener("click", () => addIngredientRow());
-    document.querySelector("#closeRecipeDetail").addEventListener("click", () => recipeDetailPanel.classList.remove("is-open"));
-    document.querySelectorAll("[data-close-recipe-dialog]").forEach((button) => {
-        button.addEventListener("click", () => document.getElementById(button.dataset.closeRecipeDialog).close());
-    });
-    document.querySelectorAll("[data-page]").forEach((button) => {
-        button.addEventListener("click", () => { window.location.href = button.dataset.page; });
-    });
-
-    loadData();
+    $("catalogRefresh").addEventListener("click", () => run(() => session.refresh(), "Đã tải danh mục mới nhất."));
+    $("addIngredient").addEventListener("click", () => openIngredient()); $("addRecipe").addEventListener("click", () => openRecipe());
+    $("addRecipeLine").addEventListener("click", () => { if (!session.busy) addLine(); });
+    $("reviewPending").addEventListener("click", () => run(async () => { const done = await session.reviewPending(); message(done ? "Đã đối chiếu thao tác có phản hồi thành công." : "Đã tải danh mục mới. Đối chiếu nguyên liệu và phiên bản công thức, rồi xác nhận thủ công."); }));
+    $("acknowledgePending").addEventListener("click", () => confirm("Đã đối chiếu xong?", "Chỉ xác nhận sau khi kiểm tra danh mục và lịch sử phiên bản. Thao tác này mở khóa, không gửi lại yêu cầu ghi trước đó.", () => session.acknowledgeReview()));
+    for (const [id, value] of [["ingredientsTab", "ingredients"], ["recipesTab", "recipes"]]) $(id).addEventListener("click", () => { setTab(value); render(); });
+    for (const id of ["ingredientSearch", "ingredientActiveFilter", "ingredientStockFilter", "recipeSearch", "recipeFoodFilter", "recipeStateFilter"]) $(id).addEventListener("input", render);
+    for (const id of ["ingredientFilters", "recipeFilters"]) $(id).addEventListener("submit", (event) => event.preventDefault());
+    document.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => { if (session.busy) return; ++editorVersion; editorBusy = false; $(button.dataset.close).close(); render(); }));
+    document.querySelectorAll("dialog").forEach((dialog) => dialog.addEventListener("cancel", (event) => { if (session.busy) event.preventDefault(); else { ++editorVersion; editorBusy = false; render(); } }));
+    auth.ready.then(() => { render(); if (session.hasAccess()) run(() => session.refresh()); });
 })();

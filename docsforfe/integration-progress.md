@@ -13,6 +13,8 @@ về đối chiếu mất ACK và các nghiệp vụ chưa có API.
 Tổng quan/Báo cáo đã nối F5: số liệu thật, kỳ ngày/tuần/tháng theo giờ Việt Nam và CSV cho Admin;
 128/128 test frontend + 12/12 kiểm tra API Báo cáo/SQL thật đạt. Xem [bàn giao F5](f5-reporting-progress.md)
 về cách dùng, định nghĩa doanh thu và CSV đọc số liệu mới tại thời điểm xuất.
+F6 phần 1 đã nối danh mục Nguyên liệu/Công thức: 155/155 test frontend và 15/15 kiểm tra API thật đạt.
+Xem [bàn giao F6](f6-catalog-progress.md) về phiên bản, đơn vị, quyền và giới hạn catalog.
 Các kết quả F0 bên dưới là mốc kiểm tra lúc tích hợp, không thay thế tiến độ F1 mới.
 
 ## Mã nguồn đã gộp
@@ -68,7 +70,7 @@ Thông tin đăng nhập kiểm thử, khoá JWT và log nằm ngoài repository
 ## Việc tiếp theo
 
 1. Hải chốt JWT/actor và đưa bộ test backend về trạng thái đạt.
-2. Đông tiếp tục F6 trên `dong`; ưu tiên danh mục nguyên liệu/công thức để Kho/Nhập hàng có đủ dữ liệu chọn.
+2. Đông tiếp tục F6 trên `dong`: nhân viên/vai trò rồi tài khoản; FE-10 Nguyên liệu/Công thức đã nối API và kiểm tra.
 3. Theo dõi các phần còn lại của F1 và giới hạn đã ghi trong bàn giao F2–F5; chưa coi các giới hạn đó đã được xử lý.
 
 Mỗi chức năng cập nhật tài liệu và commit riêng; chỉ đánh dấu xong khi đã kiểm thử luồng đó.

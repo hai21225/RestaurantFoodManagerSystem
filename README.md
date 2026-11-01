@@ -41,7 +41,7 @@ Cần Node.js 20+ để chạy test frontend; việc mở/chạy giao diện kh�
 
 ```powershell
 dotnet build RestaurantFoodManagerSystem.sln
-node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs frontend/tests/reporting-session.test.cjs
+node --test frontend/tests/api-auth.test.cjs frontend/tests/order-session.test.cjs frontend/tests/kitchen-session.test.cjs frontend/tests/payment-session.test.cjs frontend/tests/warehouse-session.test.cjs frontend/tests/reporting-session.test.cjs frontend/tests/catalog-session.test.cjs
 dotnet test RestaurantFoodManagerSystem.Tests
 ```
 
@@ -54,9 +54,13 @@ Thu ngân F3 đã có thu trực tiếp, lịch sử/lọc, xem trước bill, h
 xem [bàn giao F3](docsforfe/f3-cashier-progress.md). In giấy/PDF và MoMo provider thật chưa được xác minh.
 MoMo đang dùng provider `Mock`; chưa phải thanh toán thật.
 Kho/Nhập hàng F4 đã nối điều chỉnh có lý do, lịch sử/tồn cần xử lý, phiếu nhập và nhà cung cấp:
-xem [bàn giao F4](docsforfe/f4-warehouse-progress.md). Danh mục nguyên liệu/công thức đầy đủ vẫn thuộc F6.
+xem [bàn giao F4](docsforfe/f4-warehouse-progress.md). Danh mục nguyên liệu/công thức đã nối ở F6 phần 1 bên dưới.
 Tổng quan/Báo cáo F5 đã nối API thật, chọn kỳ ngày/tuần/tháng và tải CSV dành cho Admin:
 xem [bàn giao F5](docsforfe/f5-reporting-progress.md). CSV đọc số liệu mới của kỳ tại lúc xuất.
+
+F6 phần 1 đã nối Nguyên liệu/Công thức: mở **Quản trị → Nguyên liệu / Công thức** bằng Admin/Nhân viên kho.
+Có thêm/sửa/ngừng/khôi phục, khóa đơn vị đã dùng và phiên bản công thức;
+xem [bàn giao F6](docsforfe/f6-catalog-progress.md). Các mục Quản trị khác vẫn còn.
 
 Kết quả ngày 2026-10-29: build tại F0 đạt; 54/54 test frontend (F0 + POS + Bếp) đạt;
 9/9 kiểm tra API POS và 11/11 kiểm tra API Bếp/POS thật đạt;
@@ -71,3 +75,6 @@ F4 không thay đổi backend hoặc chạy lại bộ test C#.
 
 Kết quả F5 ngày 2026-11-01: 128/128 test frontend và 12/12 kiểm tra API Báo cáo thật đạt,
 đối chiếu SQL và file CSV tải qua trình duyệt trên database Integration riêng. F5 không sửa backend.
+
+Kết quả F6 phần 1 ngày 2026-11-01: 155/155 test frontend và 15/15 kiểm tra API thật đạt;
+đã kiểm tra giao diện Admin, liên kết Nhập hàng và màn hình 390px. Không sửa/rerun test backend.
