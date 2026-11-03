@@ -23,9 +23,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Api\Filters\" />
-    <Folder Include="Api\Extentions\" />
-    <Folder Include="Application\Features\" />
     <Folder Include="wwwroot\" />
   </ItemGroup>
 
