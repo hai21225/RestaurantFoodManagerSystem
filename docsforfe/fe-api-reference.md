@@ -1,13 +1,18 @@
 # API reference cho FRONTEND (128 action backend)
 
-**Cập nhật:** 2026-10-21 · **Nguồn:** `RestaurantFoodManagerSystem/Controllers/**` (đã quét code)
+**Cập nhật tích hợp 2026-11-01:** đọc [bàn giao F6/F7](f6-f7-handoff.md) và [api-contract.md](api-contract.md).
+Các cờ sử dụng dưới đây là danh sách lịch sử; phần đã nối mới gồm hồ sơ, danh mục/topping/size, khu vực/bàn, khuyến mãi/targets, settings, note/chuyển bàn.
+Đông phụ trách frontend; từng việc Hải cần sửa được ghi tại FE-C21 và FE-C24–28 trong bàn giao.
+FE-C23 đã được Đông/Codex sửa theo yêu cầu riêng: [migration và kết quả](legacy-order-quantity-fix.md).
+
+**Cập nhật:** 2026-10-21 · **Nguồn:** `RestaurantFoodManagerSystem/Api/Controllers/**` (đã quét code)
 **Ký hiệu:** ✅ = FE đã gọi · ⬜ = FE **chưa** gọi (xem `fe-work-plan.md`) · 🔒 = cần `Authorization: Bearer`
 **Base URL:** `http://localhost:5225/api` (FE đọc `localStorage.restaurant.apiBaseUrl`)
 
-**Tổng:** 128 action — FE hiện dùng **38** (30%), **89** chưa dùng, **1** đã bị bỏ (`PUT /orders/{id}/items` → 410).
+**Baseline 2026-10-21 (số liệu lịch sử):** 128 action — FE dùng **38** (30%), **89** chưa dùng, **1** đã bị bỏ (`PUT /orders/{id}/items` → 410).
 **Policy** cần hiểu: `Authenticated` (bất kỳ đã đăng nhập) · `PosOperator` (Admin/Waiter) · `PosOrCashier` (Admin/Waiter/Cashier) · `PosKitchenRead` (Admin/Waiter/Cashier/Chef) · `KitchenDesk` (Admin/Chef) · `WarehouseDesk` (Admin/WarehouseManager) · `CashierDesk` (Admin/Cashier) · `AdminOnly` · `OrderCancellation` (Admin/Waiter/Chef).
 
-> Lưu ý: khi `Auth:Enforce=false` (hiện tại) mọi policy đều cho qua. Khi bật `true`, FE **bắt buộc** gửi Bearer (Phase F0).
+> Lưu ý: khi `Auth:Enforce=false` mọi policy đều cho qua. Khi bật `true`, FE **bắt buộc** gửi Bearer (Phase F0).
 
 ---
 
@@ -25,15 +30,18 @@
 |---|---|---|---|---|---|
 |⬜| GET | `/users/me` | Authenticated | ⬜ | Hồ sơ cá nhân |
 |⬜| PUT | `/users/me` | Authenticated | ⬜ | Chỉ `fullName/email/phone` |
-|✅| GET | `/users` | AdminOnly | ✅ | Có phân trang |
+|✅| GET | `/users` | AdminOnly | ✅ | Trả mảng, F6 lọc toàn bộ danh sách ở FE |
 |✅| POST | `/users` | AdminOnly | ✅ | Body có `roleName` để gán role ngay |
-|⬜| GET | `/users/{id}` | AdminOnly | ⬜ | |
-|⬜| PUT | `/users/{id}` | AdminOnly | ⬜ | Không sửa `userName`/roles/isActive |
-|⬜| PATCH | `/users/{id}/active` | AdminOnly | ⬜ | Khoá / mở khoá tài khoản |
-|⬜| POST | `/users/{id}/reset-password` | AdminOnly | ⬜ | Admin đặt lại mật khẩu |
-|⬜| POST | `/users/{userId}/roles` | AdminOnly | ⬜ | Gán role (trùng → 409) |
-|⬜| DELETE | `/users/{userId}/roles/{roleName}` | AdminOnly | ⬜ | Không gỡ được Admin cuối |
-|⬜| GET | `/roles` | AdminOnly | ⬜ | 5 vai trò cố định (chỉ đọc) |
+|✅| GET | `/users/{id}` | AdminOnly | ✅ | |
+|✅| PUT | `/users/{id}` | AdminOnly | ✅ | Không sửa `userName`/roles/isActive |
+|✅| PATCH | `/users/{id}/active` | AdminOnly | ✅ | Query `?active=false` không body; tự khóa/Admin cuối → 400 |
+|✅| POST | `/users/{id}/reset-password` | AdminOnly | ✅ | Admin đặt lại mật khẩu |
+|✅| POST | `/users/{userId}/roles` | AdminOnly | ✅ | Gán role (trùng → 409) |
+|✅| DELETE | `/users/{userId}/roles/{roleName}` | AdminOnly | ✅ | Không gỡ được Admin cuối |
+|✅| GET | `/roles` | AdminOnly | ✅ | 5 vai trò cố định (chỉ đọc) |
+
+F6 phần 2 2026-11-01: xem [bàn giao Nhân viên/Vai trò](f6-staff-progress.md).
+JWT cũ chưa bị thu hồi khi khóa/thu quyền/reset; thay đổi role cần đăng nhập lại.
 
 ## 3. Danh mục món (30)
 ### 3.1 Category (6)
@@ -116,7 +124,7 @@
 |⬜| PATCH | `/orders/{id}/status` | PosOperator | ⬜ | Đổi trạng thái đơn (huỷ đơn) |
 |⬜| GET | `/orders/{id}/history` | PosOrCashier | ⬜ | Lịch sử trạng thái **đơn** |
 |⬜| GET | `/orders/{id}/item-history` | PosOrCashier | ⬜ | Lịch sử trạng thái **từng món** (C-10) |
-|⬜| GET | `/orders/table/{tableId}/bill` | PosOrCashier | ⬜ | **Mới (Đợt 3)** — hoá đơn gộp mọi đơn đang mở của bàn |
+|✅| GET | `/orders/table/{tableId}/bill` | PosOrCashier | ✅ | F3 — tạm tính bàn; thanh toán vẫn từng đơn |
 |⬜| PATCH | `/orders/{id}/note` | PosOperator | ⬜ | **Mới (Đợt 3)** — ghi chú cho cả hoá đơn |
 |⛔| PUT | `/orders/{id}/items` | PosOperator | ❌ | **410 Gone (C-09)** — không dùng |
 
@@ -127,47 +135,53 @@
 |✅| GET | `/management/kitchen/orders/{id}/items` | KitchenDesk | ✅ | Món của phiếu |
 |✅| PATCH | `/management/kitchen/orders/{id}/status` | KitchenDesk | ✅ | Trạng thái phiếu (kèm `reason`,`reasonCode`) |
 |✅| PATCH | `/management/kitchen/items/{id}/status` | KitchenDesk | ✅ | Trạng thái món — **`Accepted` không hợp lệ** (C-11) |
-|⬜| PATCH | `/management/kitchen/items/{id}/prepared-quantity` | KitchenDesk | ⬜ | Báo đã nấu được mấy phần |
-|⬜| POST | `/management/kitchen/items/{id}/shortage` | KitchenDesk | ⬜ | Báo thiếu nguyên liệu (không hard-block) |
-|⬜| POST | `/management/kitchen/items/{id}/reopen` | KitchenDesk | ⬜ | Mở lại món đã xong (C-06) |
+|✅| PATCH | `/management/kitchen/items/{id}/prepared-quantity` | KitchenDesk | ✅ | F2 2026-10-29: báo số phần, tải lại dòng tách |
+|✅| POST | `/management/kitchen/items/{id}/shortage` | KitchenDesk | ✅ | F2 2026-10-29: lý do/hao hụt, tùy chọn ngừng bán |
+|✅| POST | `/management/kitchen/items/{id}/reopen` | KitchenDesk | ✅ | F2 2026-10-29: mở lại qua command riêng (C-06) |
 
 ## 7. Kho & nhập hàng (20)
-### 7.1 Nguyên liệu (6)
+### 7.1 Nguyên liệu (7)
 | | Method | Path | Policy | FE |
 |---|---|---|---|---|
 |✅| GET | `/management/ingredients` | WarehouseDesk | ✅ |
-|⬜| GET | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
+|✅| GET | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
 |✅| POST | `/management/ingredients` | WarehouseDesk | ✅ |
-|⬜| PUT | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
-|⬜| DELETE | `/management/ingredients/{id}` | WarehouseDesk | ⬜ |
-|⬜| PATCH | `/management/ingredients/{id}/active` | WarehouseDesk | ⬜ |
+|✅| PUT | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
+|✅| DELETE | `/management/ingredients/{id}` | WarehouseDesk | ✅ |
+|✅| PATCH | `/management/ingredients/{id}/active` | WarehouseDesk | ✅ |
+|✅| PATCH | `/management/ingredients/{id}/status` | WarehouseDesk | ✅ |
+
+F6 phần 1 ngày 2026-11-01: [bàn giao Nguyên liệu/Công thức](f6-catalog-progress.md).
+Đánh dấu tình trạng không thay số lượng hoặc khả năng bán của món; service chưa lưu note.
 
 ### 7.2 Nhà cung cấp (6)
 | | Method | Path | Policy | FE |
 |---|---|---|---|---|
-|⬜| GET | `/management/suppliers` | WarehouseDesk | ⬜ |
-|⬜| GET | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| POST | `/management/suppliers` | WarehouseDesk | ⬜ |
-|⬜| PUT | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| DELETE | `/management/suppliers/{id}` | WarehouseDesk | ⬜ |
-|⬜| PATCH | `/management/suppliers/{id}/active` | WarehouseDesk | ⬜ |
+|✅| GET | `/management/suppliers` | WarehouseDesk | ✅ |
+|✅| GET | `/management/suppliers/{id}` | WarehouseDesk | ✅ |
+|✅| POST | `/management/suppliers` | WarehouseDesk | ✅ |
+|✅| PUT | `/management/suppliers/{id}` | WarehouseDesk | ✅ |
+|✅| DELETE | `/management/suppliers/{id}` | WarehouseDesk | ✅ | Ngừng hợp tác, giữ lịch sử |
+|✅| PATCH | `/management/suppliers/{id}/active` | WarehouseDesk | ✅ | Khôi phục hợp tác |
 
 ### 7.3 Tồn kho & biến động (4)
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| GET | `/management/inventory` | WarehouseDesk | ✅ | Tồn hiện tại từng nguyên liệu |
-|⬜| POST | `/management/inventory/{ingredientId}/adjust` | WarehouseDesk | ⬜ | Điều chỉnh tồn (có `note`) |
-|⬜| GET | `/management/inventory-transactions` | WarehouseDesk | ⬜ | Biến động kho; `referenceId` cần kèm `referenceType`; có thêm `unit` |
-|⬜| GET | `/management/inventory/low-stock` | WarehouseDesk | ⬜ | **Mới (Đợt 3)** — nguyên liệu sắp hết |
+|✅| POST | `/management/inventory/{ingredientId}/adjust` | WarehouseDesk | ✅ | Lý do bắt buộc; âm kho 400, xung đột ghi 409 |
+|✅| GET | `/management/inventory-transactions` | WarehouseDesk | ✅ | Biến động kho; `referenceId` cần kèm `referenceType`; có `unit` |
+|✅| GET | `/management/inventory/low-stock` | WarehouseDesk | ✅ | Gồm cả Spoiled/OutOfStock dù tồn cao |
 
 ### 7.4 Phiếu nhập (5)
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| GET | `/management/purchase-orders` | WarehouseDesk | ✅ | Chỉ danh sách |
-|⬜| POST | `/management/purchase-orders` | WarehouseDesk | ⬜ | Tạo phiếu nhập |
-|⬜| GET | `/management/purchase-orders/{id}` | WarehouseDesk | ⬜ | Chi tiết + dòng hàng |
-|⬜| POST | `/management/purchase-orders/{id}/receive` | WarehouseDesk | ⬜ | Nhập hàng (cộng kho) |
-|⬜| POST | `/management/purchase-orders/{id}/cancel` | WarehouseDesk | ⬜ | Huỷ phiếu (đã nhập → 409) |
+|✅| POST | `/management/purchase-orders` | WarehouseDesk | ✅ | Tạo phiếu nháp, chưa cộng kho |
+|✅| GET | `/management/purchase-orders/{id}` | WarehouseDesk | ✅ | Chi tiết + dòng hàng + tiền server |
+|✅| POST | `/management/purchase-orders/{id}/receive` | WarehouseDesk | ✅ | Nhận một lần; lần hai → 404 |
+|✅| POST | `/management/purchase-orders/{id}/cancel` | WarehouseDesk | ✅ | Huỷ phiếu nháp; đã nhận → 409 |
+
+F4 cập nhật 2026-10-31: xem [bàn giao Kho/Nhập hàng](f4-warehouse-progress.md). Không tự retry lệnh kho khi mất ACK.
 
 ### 7.5 Công thức (6)
 | | Method | Path | Policy | FE |
@@ -177,7 +191,7 @@
 |✅| POST | `/management/recipes` | WarehouseDesk | ✅ |
 |✅| PUT | `/management/recipes/{id}` | WarehouseDesk | ✅ |
 |✅| DELETE | `/management/recipes/{id}` | WarehouseDesk | ✅ |
-|⬜| PATCH | `/management/recipes/{id}/active` | WarehouseDesk | ⬜ |
+|✅| PATCH | `/management/recipes/{id}/active` | WarehouseDesk | ✅ |
 
 ## 8. Khuyến mãi (6)
 | | Method | Path | Policy | FE | Ghi chú |
@@ -190,19 +204,27 @@
 |⬜| DELETE | `/management/promotions/{id}` | AdminOnly | ⬜ | Soft-delete |
 |⬜| PUT | `/management/promotions/{id}/targets` | AdminOnly | ⬜ | **Mới (C-18)** — gắn target (món/danh mục) được giảm |
 
-## 9. Thanh toán (3) — Phase F3
+## 9. Thanh toán (6 route FE sử dụng) — Phase F3
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
 |✅| POST | `/payments` | CashierDesk | ✅ | `paymentMethod`: `Cash`\|`Card`\|`Bank`\|`EWallet`\|`Transfer` |
-|⬜| GET | `/payments` | CashierDesk | ⬜ | Lọc `status/method/orderId/from/to/page/pageSize` |
-|⬜| GET | `/payments/order/{orderId}` | CashierDesk | ⬜ | Lịch sử thu của đơn |
+|✅| GET | `/payments` | CashierDesk | ✅ | Lọc `status/method/orderId/from/to/page/pageSize`, ngày VN chuyển UTC |
+|✅| GET | `/payments/order/{orderId}` | CashierDesk | ✅ | Lịch sử thu, poll và đối chiếu mất ACK |
+|✅| POST | `/payments/momo` | CashierDesk | ✅ | Tạo/lấy lại intent, chưa tự đóng đơn |
+|✅| POST | `/payments/momo/mock/{paymentId}?success=` | CashierDesk | ✅ | Chỉ hiện khi intent `isMock=true` |
+|✅| POST | `/payments/{paymentId}/refund` | CashierDesk | ✅ | Hoàn toàn bộ, có lý do và guard bàn đang mở |
+
+Tiến độ 2026-10-31: xem [bàn giao F3](f3-cashier-progress.md). Provider thật và in giấy/PDF chưa xác minh.
 
 ## 10. Báo cáo (3) — Phase F5
 | | Method | Path | Policy | FE | Ghi chú |
 |---|---|---|---|---|---|
-|⬜| GET | `/reports/dashboard` | AdminOnly | ⬜ | Doanh thu hôm nay, đơn mở, bàn, bếp, tồn thấp, 10 đơn gần nhất |
-|⬜| GET | `/reports/revenue` | AdminOnly | ⬜ | `period=day\|week\|month`, `date=yyyy-MM-dd` |
-|⬜| GET | `/reports/revenue/export.csv` | AdminOnly | ⬜ | UTF-8 BOM, cần tải bằng `blob` |
+|✅| GET | `/reports/dashboard` | AdminOnly | ✅ | F5: đã thu hôm nay, đơn mở, bàn, bếp, lượng dưới ngưỡng, 10 đơn mở gần nhất |
+|✅| GET | `/reports/revenue` | AdminOnly | ✅ | F5: `period=day\|week\|month`, `date=yyyy-MM-dd` theo VN |
+|✅| GET | `/reports/revenue/export.csv` | AdminOnly | ✅ | F5: Blob UTF-8 BOM, kỳ đã tải; dữ liệu mới lúc xuất |
+
+F5 cập nhật 2026-11-01: xem [bàn giao Tổng quan/Báo cáo](f5-reporting-progress.md).
+Chỉ tính Paid theo PaidAt, loại Refunded; chưa có báo cáo giá vốn/lợi nhuận, món bán chạy hoặc theo ca.
 
 ---
 

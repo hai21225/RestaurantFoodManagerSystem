@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý món ăn - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/foods.css">
+    <link rel="stylesheet" href="../css/pages/foods.css?v=20261101-f67">
 </head>
 <body>
     <div class="app-shell">
@@ -57,6 +57,7 @@
                         </div>
                         <div class="heading-actions">
                             <button class="secondary-action" type="button" data-page="recipes.html">Công thức</button>
+                            <button class="secondary-action" type="button" id="manageCatalogButton" data-page="administration.html?tab=categories">Danh mục / Topping</button>
                             <button class="secondary-action" type="button" id="addCategoryButton">Thêm danh mục</button>
                             <button class="secondary-action" type="button" id="addSizeButton">Thêm kích cỡ</button>
                             <button class="primary-action" type="button" id="addFoodButton">Thêm món</button>
@@ -89,6 +90,7 @@
                                 <span id="visibleFoodCount">0 món</span>
                             </div>
 
+                            <p id="foodListNotice" class="ui-message" role="status"></p>
                             <div class="food-list" id="foodList"></div>
                         </section>
 
@@ -237,12 +239,13 @@
         </div>
     </dialog>
 
-    <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/auth.js?v=20261101-f67"></script>
+    <script src="../js/common/navigation.js?v=20261101-f67"></script>
     <script src="../js/common/api.js"></script>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/common/food-units.js"></script>
     <script src="../js/common/food-sizes.js"></script>
-    <script src="../js/data/foods.data.js"></script>
-    <script src="../js/pages/foods.js"></script>
+    <script src="../js/data/foods.data.js?v=20261101-delete-visibility"></script>
+    <script src="../js/pages/foods.js?v=20261101-f67"></script>
 </body>
 </html>

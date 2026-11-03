@@ -5,11 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Restaurant Food Manager</title>
     <link rel="stylesheet" href="css/base.css">
-    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/pages/dashboard.css">
+    <link rel="stylesheet" href="css/pages/reports.css?v=20261101-f5-ui">
 </head>
-<body>
+<body class="reporting-page">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -39,8 +40,8 @@
         <div class="workspace">
             <header class="topbar">
                 <div>
-                    <p class="eyebrow">Ca làm việc</p>
-                    <h1>Bảng điều khiển nhà hàng</h1>
+                    <p class="eyebrow">Tổng quan</p>
+                    <h1>Tổng quan nhà hàng</h1>
                 </div>
                 <div class="operator">
                     <span class="operator-role">Nhân viên</span>
@@ -49,38 +50,43 @@
             </header>
 
             <main class="content">
+                <section id="dashboardAccess" class="panel reporting-access" hidden aria-label="Chọn nghiệp vụ theo vai trò"></section>
                 <section class="screen is-visible" id="dashboard-screen" aria-labelledby="dashboard-title">
                     <div class="section-heading">
                         <div>
                             <p class="eyebrow">Tổng quan hôm nay</p>
-                            <h2 id="dashboard-title">Tình hình phục vụ</h2>
+                            <h2 id="dashboard-title">Hoạt động hôm nay</h2>
                         </div>
-                        <button class="primary-action" type="button">Tạo đơn mới</button>
+                        <div class="reporting-actions"><button class="secondary-action" type="button" id="refreshDashboard">Làm mới</button><button class="secondary-action" type="button" id="createOrderButton">Tạo đơn mới</button><a class="primary-action" href="pages/reports.html">Xem báo cáo doanh thu →</a></div>
                     </div>
-
-                    <div class="metric-grid" id="metricGrid" aria-label="Chỉ số trong ca"></div>
-
+                    <p id="dashboardNotice" class="reporting-notice" role="status"></p>
+                    <p id="dashboardUpdated" class="reporting-caption"></p>
+                    <div class="metric-grid" id="metricGrid" aria-label="Chỉ số tổng quan"></div>
+                    <p id="dashboardEmpty" class="report-empty" hidden></p>
+                    <section class="panel kitchen-overview" aria-labelledby="kitchen-summary-title"><div class="panel-header"><h3 id="kitchen-summary-title">Phiếu bếp đang mở</h3><a href="pages/kitchen.html">Mở màn Bếp</a></div><div id="kitchenSummary" class="dashboard-counts"></div></section>
                     <div class="dashboard-layout">
                         <section class="panel table-panel" aria-labelledby="table-status-title">
                             <div class="panel-header">
                                 <h3 id="table-status-title">Trạng thái bàn</h3>
-                                <span id="dashboardTableCount">0 bàn</span>
+                                <span id="dashboardTableCount">—</span>
                             </div>
+                            <div id="tableSummary" class="dashboard-counts"></div>
                             <div class="table-map" id="tableMap"></div>
                         </section>
 
                         <section class="panel order-panel" aria-labelledby="order-queue-title">
                             <div class="panel-header">
-                                <h3 id="order-queue-title">Đơn đang xử lý</h3>
-                                <span id="queueCount">0 đơn</span>
+                                <h3 id="order-queue-title">Đơn đang mở gần nhất</h3>
+                                <span id="queueCount">—</span>
                             </div>
 
                             <div class="filter-bar" aria-label="Lọc đơn hàng">
                                 <button class="filter-button is-active" type="button" data-filter="all">Tất cả</button>
+                                <button class="filter-button" type="button" data-filter="waiting">Chờ bếp</button>
                                 <button class="filter-button" type="button" data-filter="preparing">Đang làm</button>
                                 <button class="filter-button" type="button" data-filter="ready">Đã xong</button>
                             </div>
-
+                            <p class="reporting-caption">Hiển thị tối đa 10 đơn đang mở mới nhất.</p>
                             <div class="order-list" id="orderList"></div>
                         </section>
                     </div>
@@ -89,8 +95,10 @@
         </div>
     </div>
 
-    <script src="js/common/navigation.js"></script>
-    <script src="js/data/dashboard.data.js"></script>
-    <script src="js/pages/dashboard.js"></script>
+    <script src="js/common/auth.js?v=20261101-f67"></script>
+    <script src="js/common/api.js"></script>
+    <script src="js/common/navigation.js?v=20261101-f67"></script>
+    <script src="js/common/reporting-session.js"></script>
+    <script src="js/pages/dashboard.js?v=20261101-f5-ui"></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chọn bàn - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css?v=20261001">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/pages/tables.css">
 </head>
@@ -57,6 +57,7 @@
                         </div>
                         <div class="heading-actions">
                             <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                            <button class="secondary-action" type="button" id="manageTablesButton">Sửa bàn / Khu vực</button>
                             <button class="primary-action" type="button" id="addTableButton">Thêm bàn</button>
                         </div>
                     </div>
@@ -81,6 +82,7 @@
                                 <h3 id="table-board-title">Danh sách bàn</h3>
                                 <span id="visibleTableCount">0 bàn</span>
                             </div>
+                            <p id="tableListNotice" class="ui-message" role="status"></p>
                             <div class="restaurant-map" id="restaurantMap"></div>
                         </section>
 
@@ -150,10 +152,11 @@
         </div>
     </dialog>
 
-    <script src="../js/common/navigation.js?v=20261001"></script>
+    <script src="../js/common/auth.js?v=20261101-f67"></script>
+    <script src="../js/common/navigation.js?v=20261101-f67"></script>
     <script src="../js/common/api.js"></script>
     <script src="../js/common/dialogs.js"></script>
-    <script src="../js/data/tables.data.js"></script>
-    <script src="../js/pages/tables.js"></script>
+    <script src="../js/data/tables.data.js?v=20261101-delete-visibility"></script>
+    <script src="../js/pages/tables.js?v=20261101-f67"></script>
 </body>
 </html>

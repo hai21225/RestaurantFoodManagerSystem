@@ -129,7 +129,7 @@
                 userName: username.value.trim(),
                 password: password.value
             });
-            window.sessionStorage.setItem("restaurant.currentUser", JSON.stringify(result.data));
+            window.restaurantAuth.setSession(result.data);
             setState("success");
             password.value = "";
             formView.hidden = true;
@@ -146,7 +146,7 @@
 
     restart.addEventListener("click", () => {
         if (form.dataset.state === "success") {
-            window.location.href = "../index.html";
+            window.location.href = window.restaurantAuth.getReturnUrl();
             return;
         }
         form.reset();

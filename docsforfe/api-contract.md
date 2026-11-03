@@ -1,5 +1,10 @@
 # HỢP ĐỒNG API — tài liệu dành riêng cho FRONTEND
 
+**Tiến độ mới 2026-11-01:** [bàn giao F6/F7 theo người phụ trách](f6-f7-handoff.md).
+Runtime mới bật Auth:Enforce=true. Các số kiểm thử/ngày 2026-10-21 bên dưới là lịch sử; frontend hiện đã có 214 test đạt.
+**FE-C23 đã sửa theo yêu cầu riêng:** [migration DB cũ](legacy-order-quantity-fix.md), 16/16 test SQL Server đạt.
+Nhóm Đơn/Bếp có 11 đạt/21 lỗi actor, khớp baseline; không coi toàn bộ backend là đã đạt hết.
+
 > **Đây là file FE nên mở đầu tiên.** Tự chứa đủ để code: endpoint, body, status code,
 > lỗi và các luật nghiệp vụ mà UI phải tôn trọng.
 >
@@ -54,7 +59,7 @@ dotnet run --project RestaurantFoodManagerSystem
 
 | Header | Bắt buộc |
 |---|---|
-| `Authorization: Bearer <token>` | Sau khi bật `Auth:Enforce=true` (**đang là `false` ⇒ hiện vẫn chạy được không token**) |
+| `Authorization: Bearer <token>` | Sau khi bật `Auth:Enforce=true` (runtime mới **đang bật true**) |
 | `Content-Type: application/json` | mọi `POST`/`PUT`/`PATCH` có body |
 | `Idempotency-Key: <chuỗi tùy ý ≤128 ký tự>` | tuỳ chọn, cho `POST /api/orders`, `POST /api/orders/{id}/items`, `PATCH /api/orders/{id}/items/{itemId}/quantity`, `POST /api/payments` |
 
@@ -138,12 +143,12 @@ dotnet run --project RestaurantFoodManagerSystem
 
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
-|⬜| GET | `/api/setup/status` | — | `{ requiresSetup }` |
-|⬜| POST | `/api/setup/first-admin` | — | chỉ dùng được khi bảng `users` còn rỗng |
+|✅| GET | `/api/setup/status` | — | `{ requiresSetup }` |
+|✅| POST | `/api/setup/first-admin` | — | chỉ dùng được khi bảng `users` còn rỗng |
 |✅| POST | `/api/auth/login` | — | trả `{ message, data: { userId, userName, email, fullName, roles[], token } }` |
-|⬜| GET | `/api/users/me` | Authenticated | ⚠️ **luôn cần token** (xem 2.1) |
-|⬜| PUT | `/api/users/me` | Authenticated | ⚠️ **luôn cần token** · sửa `fullName`/`email`/`phone` |
-|⬜| POST | `/api/auth/change-password` | Authenticated | `{ oldPassword?, newPassword, confirmPassword }` |
+|✅| GET | `/api/users/me` | Authenticated | ⚠️ **luôn cần token** (xem 2.1) |
+|✅| PUT | `/api/users/me` | Authenticated | ⚠️ **luôn cần token** · sửa `fullName`/`email`/`phone` |
+|✅| POST | `/api/auth/change-password` | Authenticated | `{ currentPassword, newPassword, confirmNewPassword }` |
 
 ### 4.2 Menu (POS dùng để hiển thị)
 
@@ -156,52 +161,52 @@ dotnet run --project RestaurantFoodManagerSystem
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
 |✅| GET | `/api/categories` | Authenticated | |
-|⬜| POST | `/api/categories` | AdminOnly | trả `{ message }` — **không có id** ⇒ `GET /categories` rồi tìm theo tên |
+|✅| POST | `/api/categories` | WarehouseDesk | trả `{ message }` — **không có id** ⇒ `GET /categories` rồi tìm theo tên |
 |⬜| GET | `/api/categories/{id}` | Authenticated | |
-|⬜| PUT | `/api/categories/{id}` | AdminOnly | |
-|⬜| PATCH | `/api/categories/{id}/active` | AdminOnly | `{ isActive }` |
-|⬜| DELETE | `/api/categories/{id}` | AdminOnly | soft-delete |
-|⬜| GET | `/api/foods` | Authenticated | `?includeInactive=true` |
+|✅| PUT | `/api/categories/{id}` | WarehouseDesk | |
+|✅| PATCH | `/api/categories/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| DELETE | `/api/categories/{id}` | WarehouseDesk | soft-delete |
+|✅| GET | `/api/foods` | Authenticated | `?includeInactive=true` |
 |⬜| GET | `/api/foods/{id}` | Authenticated | |
-|⬜| POST | `/api/foods` | AdminOnly | `{ categoryId, foodName, foodDescription?, foodImageUrl?, foodPrice, isAvailable? }` → **201** |
-|⬜| PUT | `/api/foods/{id}` | AdminOnly | |
-|⬜| PATCH | `/api/foods/{id}/availability` | AdminOnly | `{ isAvailable }` |
-|⬜| PATCH | `/api/foods/{id}/active` | AdminOnly | `{ isActive }` |
-|⬜| DELETE | `/api/foods/{id}` | AdminOnly | soft-delete |
-|⬜| GET | `/api/foods/{foodId}/sizes` | Authenticated | `?includeInactive=true` |
-|⬜| POST | `/api/foods/{foodId}/sizes` | AdminOnly | `{ sizeName, sizePrice, isDefault? }` → **201** |
+|✅| POST | `/api/foods` | WarehouseDesk | `{ categoryId, foodName, foodDescription?, foodImageUrl?, foodPrice, isAvailable? }` → **201** |
+|✅| PUT | `/api/foods/{id}` | WarehouseDesk | |
+|✅| PATCH | `/api/foods/{id}/availability` | WarehouseDesk | `{ isAvailable }` |
+|✅| PATCH | `/api/foods/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| DELETE | `/api/foods/{id}` | WarehouseDesk | soft-delete |
+|✅| GET | `/api/foods/{foodId}/sizes` | Authenticated | `?includeInactive=true` |
+|✅| POST | `/api/foods/{foodId}/sizes` | WarehouseDesk | `{ sizeName, sizePrice, isDefault? }` → **201** |
 |⬜| GET | `/api/foods/{foodId}/sizes/{sizeId}` | Authenticated | |
-|⬜| PUT | `/api/foods/{foodId}/sizes/{sizeId}` | AdminOnly | |
-|⬜| PATCH | `/api/foods/{foodId}/sizes/{sizeId}/default` | AdminOnly | đặt cỡ mặc định |
-|⬜| PATCH | `/api/foods/{foodId}/sizes/{sizeId}/active` | AdminOnly | `{ isActive }` |
-|⬜| DELETE | `/api/foods/{foodId}/sizes/{sizeId}` | AdminOnly | soft-delete |
-|⬜| GET | `/api/toppings` | Authenticated | |
-|⬜| POST | `/api/toppings` | AdminOnly | `{ toppingName, toppingPrice, isAvailable? }` → **201** |
-|⬜| PUT | `/api/toppings/{id}` | AdminOnly | |
-|⬜| PATCH | `/api/toppings/{id}/availability` · `/active` | AdminOnly | |
-|⬜| DELETE | `/api/toppings/{id}` | AdminOnly | soft-delete |
-|⬜| GET | `/api/foods/{foodId}/toppings` | Authenticated | |
-|⬜| POST | `/api/foods/{foodId}/toppings` | AdminOnly | `{ toppingId }` — gắn topping cho món |
-|⬜| DELETE | `/api/foods/{foodId}/toppings/{toppingId}` | AdminOnly | gỡ topping |
+|✅| PUT | `/api/foods/{foodId}/sizes/{sizeId}` | WarehouseDesk | |
+|✅| PATCH | `/api/foods/{foodId}/sizes/{sizeId}/default` | WarehouseDesk | đặt cỡ mặc định |
+|✅| PATCH | `/api/foods/{foodId}/sizes/{sizeId}/active` | WarehouseDesk | `{ isActive }` |
+|✅| DELETE | `/api/foods/{foodId}/sizes/{sizeId}` | WarehouseDesk | soft-delete |
+|✅| GET | `/api/toppings` | Authenticated | |
+|✅| POST | `/api/toppings` | WarehouseDesk | `{ toppingName, toppingPrice, isAvailable? }` → **201** |
+|✅| PUT | `/api/toppings/{id}` | WarehouseDesk | |
+|✅| PATCH | `/api/toppings/{id}/availability` · `/active` | WarehouseDesk | |
+|✅| DELETE | `/api/toppings/{id}` | WarehouseDesk | soft-delete |
+|✅| GET | `/api/foods/{foodId}/toppings` | Authenticated | |
+|✅| POST | `/api/foods/{foodId}/toppings` | WarehouseDesk | `{ toppingId }` — gắn topping cho món |
+|✅| DELETE | `/api/foods/{foodId}/toppings/{toppingId}` | WarehouseDesk | gỡ topping |
 
 ### 4.4 POS — đơn (F1)
 
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
-|⬜| GET | `/api/orders` | PosOrCashier | `?status=&tableId=&from=&to=&page=&pageSize=` |
-|⬜| GET | `/api/orders/{id}` | PosKitchenRead | chi tiết + món + topping |
+|✅| GET | `/api/orders` | PosOrCashier | `?status=&tableId=&from=&to=&page=&pageSize=` |
+|✅| GET | `/api/orders/{id}` | PosKitchenRead | chi tiết + món + topping |
 |✅| POST | `/api/orders` | PosOperator | tạo đơn (hỗ trợ `Idempotency-Key`) |
-|⬜| GET | `/api/orders/table/{tableId}/bill` | PosOrCashier | **hoá đơn gộp theo bàn** (mục 4.9) |
-|⬜| POST | `/api/orders/{id}/items` | PosOperator | **gọi thêm** — luôn tạo vòng bếp mới |
-|⬜| PATCH | `/api/orders/{id}/items/{itemId}/quantity` | PosOperator | đổi SL (gửi **đúng một** trong `quantity` / `delta`) |
-|⬜| POST | `/api/orders/{id}/items/{itemId}/cancel` | OrderCancellation | huỷ 1 món + lý do |
-|⬜| PATCH | `/api/orders/{id}/status` | PosOperator | đổi trạng thái đơn (huỷ đơn) |
-|⬜| PATCH | `/api/orders/{id}/promotion/{promotionId}` | PosOperator | áp khuyến mãi (body rỗng) |
-|⬜| DELETE | `/api/orders/{id}/promotion/{promotionId}` | PosOperator | **gỡ** khuyến mãi |
-|⬜| PATCH | `/api/orders/{id}/note` | PosOperator | **ghi chú hoá đơn** (mục 4.9) |
-|⬜| PATCH | `/api/orders/{id}/table` | PosOperator | **chuyển bàn** |
-|⬜| GET | `/api/orders/{id}/history` | PosOrCashier | lịch sử trạng thái **đơn** |
-|⬜| GET | `/api/orders/{id}/item-history` | PosOrCashier | lịch sử trạng thái **từng món** |
+|✅| GET | `/api/orders/table/{tableId}/bill` | PosOrCashier | F3 — **hoá đơn gộp theo bàn**, chỉ hiển thị/in |
+|✅| POST | `/api/orders/{id}/items` | PosOperator | **gọi thêm** — luôn tạo vòng bếp mới |
+|✅| PATCH | `/api/orders/{id}/items/{itemId}/quantity` | PosOperator | đổi SL (gửi **đúng một** trong `quantity` / `delta`) |
+|✅| POST | `/api/orders/{id}/items/{itemId}/cancel` | OrderCancellation | huỷ 1 món + lý do |
+|✅| PATCH | `/api/orders/{id}/status` | PosOperator | đổi trạng thái đơn (huỷ đơn) |
+|✅| PATCH | `/api/orders/{id}/promotion/{promotionId}` | PosOperator | áp khuyến mãi (body rỗng) |
+|✅| DELETE | `/api/orders/{id}/promotion/{promotionId}` | PosOperator | **gỡ** khuyến mãi |
+|✅| PATCH | `/api/orders/{id}/note` | PosOperator | **ghi chú hoá đơn** (mục 4.9) |
+|✅| PATCH | `/api/orders/{id}/table` | PosOperator | **chuyển bàn** |
+|✅| GET | `/api/orders/{id}/history` | PosOrCashier | lịch sử trạng thái **đơn** |
+|✅| GET | `/api/orders/{id}/item-history` | PosOrCashier | lịch sử trạng thái **từng món** |
 |⛔| PUT | `/api/orders/{id}/items` | — | **410 Gone** — không dùng |
 
 ### 4.5 Bếp (F2)
@@ -221,10 +226,14 @@ dotnet run --project RestaurantFoodManagerSystem
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
 |✅| POST | `/api/payments` | CashierDesk | `{ orderId, paymentMethod, transactionCode?, createdBy }` |
-|⬜| GET | `/api/payments` | CashierDesk | `?status=&method=&orderId=&from=&to=&page=&pageSize=` |
-|⬜| GET | `/api/payments/order/{orderId}` | CashierDesk | lịch sử thu của 1 đơn (**dùng để poll trạng thái MoMo**) |
-|⬜| POST | `/api/payments/momo` | CashierDesk | tạo intent MoMo → `{ paymentId, status, isMock, … }` |
-|⬜| POST | `/api/payments/{id}/refund` | CashierDesk | hoàn tiền toàn bộ |
+|✅| GET | `/api/payments` | CashierDesk | `?status=&method=&orderId=&from=&to=&page=&pageSize=` |
+|✅| GET | `/api/payments/order/{orderId}` | CashierDesk | lịch sử thu của 1 đơn (**dùng để poll trạng thái MoMo**) |
+|✅| POST | `/api/payments/momo` | CashierDesk | tạo intent MoMo → `{ paymentId, status, isMock, … }` |
+|✅| POST | `/api/payments/{id}/refund` | CashierDesk | hoàn tiền toàn bộ |
+
+F3 cập nhật 2026-10-31: còn sử dụng route giả lập khi `isMock=true`; xem [bàn giao F3](f3-cashier-progress.md).
+PaymentService lọc `from/to` trực tiếp theo `PaidAt` UTC: FE gửi mốc ISO UTC tương ứng đủ ngày Việt Nam,
+thay vì chỉ ngày trần. MoMo thật và xuất giấy/PDF chưa được xác minh trong F3.
 
 > **Poll trạng thái MoMo:** `POST /api/payments/momo` → lấy `paymentId` → poll
 > `GET /api/payments/order/{orderId}` (2–3 giây/lần) → đơn chuyển `Paid` là thành công.
@@ -237,69 +246,77 @@ dotnet run --project RestaurantFoodManagerSystem
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
 |✅| GET | `/api/management/inventory` | WarehouseDesk | tồn hiện tại (`quanlity`) |
-|⬜| POST | `/api/management/inventory/{ingredientId}/adjust` | WarehouseDesk | điều chỉnh tồn (âm = giảm) → **204**  · ⚠️ **`note` BẮT BUỘC** (C-21, thiếu ⇒ `400`) |
-|⬜| GET | `/api/management/inventory-transactions` | WarehouseDesk | biến động kho (có `unit`) |
-|⬜| GET | `/api/management/inventory/low-stock` | WarehouseDesk | **nguyên liệu cần kho xử lý** · có `stockStatus` (C-21) |
-|⬜| GET | `/api/management/ingredients` | WarehouseDesk | |
-|⬜| GET | `/api/management/ingredients/{id}` | WarehouseDesk | |
-|⬜| POST | `/api/management/ingredients` | WarehouseDesk | `{ name, unit, minimumStock? }` |
-|⬜| PUT | `/api/management/ingredients/{id}` | WarehouseDesk | ⚠️ **đổi `unit` của nguyên liệu đã dùng ⇒ `409`** (mục 5.4) |
-|⬜| DELETE | `/api/management/ingredients/{id}` | WarehouseDesk | soft-delete |
-|⬜| PATCH | `/api/management/ingredients/{id}/active` | WarehouseDesk | `{ isActive }` |
-|⬜| PATCH | `/api/management/ingredients/{id}/status` | WarehouseDesk | `{ stockStatus: Available\|OutOfStock\|Spoiled, note? }` |
-|⬜| GET | `/api/management/suppliers` | WarehouseDesk | |
-|⬜| POST/PUT/DELETE | `/api/management/suppliers[/{id}]` | WarehouseDesk | |
-|⬜| PATCH | `/api/management/suppliers/{id}/active` | WarehouseDesk | `{ isActive }` |
-|⬜| GET | `/api/management/purchase-orders` | WarehouseDesk | |
-|⬜| POST | `/api/management/purchase-orders` | WarehouseDesk | tạo phiếu mua |
-|⬜| GET | `/api/management/purchase-orders/{id}` | WarehouseDesk | |
-|⬜| POST | `/api/management/purchase-orders/{id}/receive` | WarehouseDesk | nhập hàng (cộng kho) → **204** |
-|⬜| POST | `/api/management/purchase-orders/{id}/cancel` | WarehouseDesk | huỷ phiếu (đã nhận ⇒ `409`) |
+|✅| POST | `/api/management/inventory/{ingredientId}/adjust` | WarehouseDesk | điều chỉnh tồn (âm = giảm) → **204** · **`note` bắt buộc**, thiếu/âm kho ⇒ `400`, xung đột ghi ⇒ `409` |
+|✅| GET | `/api/management/inventory-transactions` | WarehouseDesk | biến động kho (có `unit`), lọc/phân trang F4 |
+|✅| GET | `/api/management/inventory/low-stock` | WarehouseDesk | **nguyên liệu cần kho xử lý** · có `stockStatus` (C-21) |
+|✅| GET | `/api/management/ingredients` | WarehouseDesk | Tra tên/đơn vị và lựa chọn đang hoạt động |
+|✅| GET | `/api/management/ingredients/{id}` | WarehouseDesk | |
+|✅| POST | `/api/management/ingredients` | WarehouseDesk | `{ name, unit, minimumStock? }` |
+|✅| PUT | `/api/management/ingredients/{id}` | WarehouseDesk | ⚠️ **đổi `unit` của nguyên liệu đã dùng ⇒ `409`** (mục 5.4) |
+|✅| DELETE | `/api/management/ingredients/{id}` | WarehouseDesk | soft-delete |
+|✅| PATCH | `/api/management/ingredients/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| PATCH | `/api/management/ingredients/{id}/status` | WarehouseDesk | `{ stockStatus: Available\|OutOfStock\|Spoiled, note? }` |
+|✅| GET | `/api/management/suppliers` | WarehouseDesk | Danh sách; F4 còn đọc `/{id}` trước cập nhật |
+|✅| POST/PUT/DELETE | `/api/management/suppliers[/{id}]` | WarehouseDesk | Thêm/sửa/ngừng hợp tác; không xóa lịch sử phiếu |
+|✅| PATCH | `/api/management/suppliers/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| GET | `/api/management/purchase-orders` | WarehouseDesk | |
+|✅| POST | `/api/management/purchase-orders` | WarehouseDesk | Tạo Draft, chưa cộng kho |
+|✅| GET | `/api/management/purchase-orders/{id}` | WarehouseDesk | Chi tiết, thành tiền/tổng tiền server |
+|✅| POST | `/api/management/purchase-orders/{id}/receive` | WarehouseDesk | Nhập hàng → **204**, nhận lại ⇒ `404` |
+|✅| POST | `/api/management/purchase-orders/{id}/cancel` | WarehouseDesk | Huỷ phiếu (đã nhận ⇒ `409`) |
+
+Tiến độ F4 ngày 2026-10-31 và giới hạn đối chiếu mất ACK: [bàn giao Kho/Nhập hàng](f4-warehouse-progress.md).
+
+F6 phần 1 cập nhật 2026-11-01: [Nguyên liệu/Công thức](f6-catalog-progress.md), đã kiểm tra API thật;
+cờ tình trạng không đổi tồn/khả năng bán, note chưa được service lưu.
 
 ### 4.8 Công thức · khuyến mãi · cấu hình (F6/F7)
 
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
-|⬜| GET | `/api/management/recipes` | WarehouseDesk | `?includeInactive=true` |
-|⬜| GET | `/api/management/recipes/{id}` | WarehouseDesk | chi tiết + định lượng |
-|⬜| POST | `/api/management/recipes` | WarehouseDesk | tạo công thức |
-|⬜| PUT | `/api/management/recipes/{id}` | WarehouseDesk | ⚠️ **tạo phiên bản mới**, `recipeId` **đổi** (mục 5.5) |
-|⬜| DELETE | `/api/management/recipes/{id}` | WarehouseDesk | soft-delete |
-|⬜| PATCH | `/api/management/recipes/{id}/active` | WarehouseDesk | `{ isActive }` |
-|⬜| GET | `/api/management/promotions` | AdminOnly | có `sizeIds` / `categoryIds` |
+|✅| GET | `/api/management/recipes` | WarehouseDesk | `?includeInactive=true` |
+|✅| GET | `/api/management/recipes/{id}` | WarehouseDesk | chi tiết + định lượng |
+|✅| POST | `/api/management/recipes` | WarehouseDesk | tạo công thức |
+|✅| PUT | `/api/management/recipes/{id}` | WarehouseDesk | ⚠️ **tạo phiên bản mới**, `recipeId` **đổi** (mục 5.5) |
+|✅| DELETE | `/api/management/recipes/{id}` | WarehouseDesk | soft-delete |
+|✅| PATCH | `/api/management/recipes/{id}/active` | WarehouseDesk | `{ isActive }` |
+|✅| GET | `/api/management/promotions` | AdminOnly | có `sizeIds` / `categoryIds` |
 |⬜| GET | `/api/management/promotions/{id}` | AdminOnly | |
-|⬜| POST | `/api/management/promotions` | AdminOnly | `startAt`/`endAt` = **giờ VN** |
-|⬜| PUT | `/api/management/promotions/{id}` | AdminOnly | |
-|⬜| PUT | `/api/management/promotions/{id}/targets` | AdminOnly | **gắn món/danh mục được giảm** → **204** |
-|⬜| PATCH | `/api/management/promotions/{id}/active` | AdminOnly | `{ isActive }` |
-|⬜| DELETE | `/api/management/promotions/{id}` | AdminOnly | soft-delete |
-|⬜| GET | `/api/management/settings` | AdminOnly | cấu hình quán (VAT, phí DV) |
-|⬜| PUT | `/api/management/settings` | AdminOnly | `{ restaurantName, address, phone, taxCode, currency, taxRate, taxIncluded, serviceChargeRate }` |
+|✅| POST | `/api/management/promotions` | AdminOnly | `startAt`/`endAt` = **giờ VN** |
+|✅| PUT | `/api/management/promotions/{id}` | AdminOnly | |
+|✅| PUT | `/api/management/promotions/{id}/targets` | AdminOnly | **gắn món/danh mục được giảm** → **204** |
+|✅| PATCH | `/api/management/promotions/{id}/active` | AdminOnly | **Query** `?active=true/false`, không body |
+|✅| DELETE | `/api/management/promotions/{id}` | AdminOnly | soft-delete |
+|✅| GET | `/api/management/settings` | AdminOnly | cấu hình quán (VAT, phí DV) |
+|✅| PUT | `/api/management/settings` | AdminOnly | `{ restaurantName, address, phone, taxCode, currency, taxRate, taxIncluded, serviceChargeRate }` |
 
 ### 4.9 Bàn · khu vực · báo cáo · nhân viên
 
 | | Method | Path | Policy | Ghi chú |
 |---|---|---|---|---|
-|✅| GET | `/api/restaurant-tables` | Authenticated | ⚠️ endpoint này **không** ghi DB |
-|⬜| GET | `/api/restaurant-tables/{id}` | Authenticated | ⚠️ endpoint này **CÓ ghi DB** |
-|⬜| POST | `/api/restaurant-tables` | AdminOnly | → `{ message, data: { tableId, … } }` |
-|⬜| PUT | `/api/restaurant-tables/{id}` | AdminOnly | |
-|⬜| DELETE | `/api/restaurant-tables/{id}` | AdminOnly | soft-delete |
-|⬜| PATCH | `/api/restaurant-tables/{id}/maintenance` | AdminOnly | `{ isMaintenance }` |
-|⬜| GET/POST/PUT/DELETE | `/api/table-areas[/{id}]` | AdminOnly | `PATCH /api/table-areas/{id}/active` |
-|⬜| GET | `/api/reports/dashboard` | AdminOnly | tổng quan (doanh thu, bàn, bếp, tồn thấp) |
-|⬜| GET | `/api/reports/revenue` | AdminOnly | `?period=day\|week\|month&date=yyyy-MM-dd` |
-|⬜| GET | `/api/reports/revenue/export.csv` | AdminOnly | tải CSV (cần `blob` trong `api.js`) |
-|⬜| GET | `/api/users` · `/api/users/{id}` | AdminOnly | |
-|⬜| POST | `/api/users` | AdminOnly | `{ userName, email, password, confirmPassword, fullName?, phone?, roleName? }` |
-|⬜| PUT | `/api/users/{id}` | AdminOnly | |
-|⬜| PATCH | `/api/users/{id}/active` | AdminOnly | `{ isActive }` |
-|⬜| POST | `/api/users/{id}/reset-password` | AdminOnly | |
-|⬜| POST | `/api/users/{userId}/roles` | AdminOnly | `{ roleName }` |
-|⬜| DELETE | `/api/users/{userId}/roles/{roleName}` | AdminOnly | thu role |
-|⬜| GET | `/api/roles` | AdminOnly | 5 vai trò |
+|✅| GET | `/api/restaurant-tables` | PosOrCashier | ⚠️ endpoint này **không** ghi DB |
+|⬜| GET | `/api/restaurant-tables/{id}` | PosKitchenRead | ⚠️ endpoint này **CÓ ghi DB** |
+|✅| POST | `/api/restaurant-tables` | AdminOnly | → `{ message, data: { tableId, … } }` |
+|✅| PUT | `/api/restaurant-tables/{id}` | AdminOnly | |
+|✅| DELETE | `/api/restaurant-tables/{id}` | AdminOnly | soft-delete |
+|✅| PATCH | `/api/restaurant-tables/{id}/maintenance` | AdminOnly | **Query** `?enabled=true/false`, không body |
+|✅| GET/POST/PUT/DELETE | `/api/table-areas[/{id}]` | Đọc PosOrCashier; ghi AdminOnly | `PATCH /api/table-areas/{id}/active` |
+|✅| GET | `/api/reports/dashboard` | AdminOnly | F5: tổng quan thật; lowStockCount chỉ lượng ≤ ngưỡng |
+|✅| GET | `/api/reports/revenue` | AdminOnly | F5: `?period=day\|week\|month&date=yyyy-MM-dd`, ngày VN |
+|✅| GET | `/api/reports/revenue/export.csv` | AdminOnly | F5: Blob UTF-8 BOM, đúng kỳ đã tải; số liệu mới lúc xuất |
+|✅| GET | `/api/users` · `/api/users/{id}` | AdminOnly | |
+|✅| POST | `/api/users` | AdminOnly | `{ userName, email, password, confirmPassword, fullName?, phone?, roleName? }` |
+|✅| PUT | `/api/users/{id}` | AdminOnly | |
+|✅| PATCH | `/api/users/{id}/active` | AdminOnly | **Query** `?active=false` (không body), tự khóa/Admin cuối → 400 |
+|✅| POST | `/api/users/{id}/reset-password` | AdminOnly | |
+|✅| POST | `/api/users/{userId}/roles` | AdminOnly | `{ roleName }` |
+|✅| DELETE | `/api/users/{userId}/roles/{roleName}` | AdminOnly | thu role |
+|✅| GET | `/api/roles` | AdminOnly | 5 vai trò |
 
 ---
+
+F6 phần 2 2026-11-01: [bàn giao Nhân viên/Vai trò](f6-staff-progress.md).
+`GET /users` trả mảng; khóa/thu quyền/reset chưa thu hồi JWT cũ, cần backend xử lý (FE-C21).
 
 ## 5. Luật nghiệp vụ FE phải tôn trọng
 
@@ -394,18 +411,23 @@ Chi tiết: `docs/architecture/kitchen-stock-rule-2026-10-21.md`.
 
 ## 7. Checklist bàn giao
 
-- [ ] `api.js` đọc token từ `localStorage` và gắn `Authorization: Bearer` cho **mọi** request
-- [ ] `401` → xoá token, về trang đăng nhập · `403` → báo không đủ quyền · `409` → hiện `message`
-- [ ] `api.js` có `download()` dùng `blob` cho CSV, và cho phép header tuỳ chọn (`Idempotency-Key`)
-- [ ] Không còn gọi `PUT /api/orders/{id}/items` (đã `410`)
-- [ ] Thu ngân chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh `409`)
-- [ ] POS: dùng `POST /api/orders/{id}/items` để gọi thêm (không tạo đơn mới trên bàn đang có đơn)
-- [ ] Bếp poll `GET /api/management/kitchen/orders?status=open` 3–5s; lần đầu **không** kèm `since`
-- [ ] Sửa công thức → gọi lại `GET /api/management/recipes`
-- [ ] Sửa nguyên liệu đã dùng → bắt `409` và disable ô "Đơn vị"
-- [ ] **Không tự tính tiền** — luôn lấy `totalAmount` từ server
+- [x] `api.js` đọc token từ `localStorage` và gắn `Authorization: Bearer` cho **mọi** request
+- [x] `401` → xoá token, về trang đăng nhập · `403` → báo không đủ quyền · `409` → hiện `message`
+- [x] `api.js` có `download()` dùng `blob` cho CSV, và cho phép header tuỳ chọn (`Idempotency-Key`)
+- [x] Không còn gọi `PUT /api/orders/{id}/items` (đã `410`)
+- [x] Thu ngân chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh `409`)
+- [x] POS: dùng `POST /api/orders/{id}/items` để gọi thêm (không tạo đơn mới trên bàn đang có đơn)
+- [x] Bếp poll `GET /api/management/kitchen/orders?status=open` 3–5s; lần đầu **không** kèm `since`
+- [x] Sửa công thức → gọi lại `GET /api/management/recipes`
+- [x] Sửa nguyên liệu đã dùng → bắt `409` và disable ô "Đơn vị"
+- [x] **Không tự tính tiền** — luôn lấy `totalAmount` từ server
 
 ---
+
+
+Các tick xác nhận phần frontend đã triển khai/kiểm tra; không đóng các giới hạn backend FE-C21 và FE-C24–28.
+FE-C23 đã có sửa migration riêng theo [ghi chú kiểm chứng](legacy-order-quantity-fix.md).
+Xem bàn giao F6/F7 cho người phụ trách và điều kiện nghiệm thu còn lại.
 
 ## 8. File liên quan
 

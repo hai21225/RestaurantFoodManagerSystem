@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thanh toán - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/payment.css">
+    <link rel="stylesheet" href="../css/pages/payment.css?v=20261101-mobile-ledger">
 </head>
 <body>
     <div class="app-shell">
@@ -52,12 +52,23 @@
                 <section class="payment-screen" aria-labelledby="payment-title">
                     <div class="section-heading">
                         <div>
-                            <p class="eyebrow">Hóa đơn trong ca</p>
+                            <p class="eyebrow">Thu ngân · dữ liệu trực tiếp</p>
                             <h2 id="payment-title">Phiếu thanh toán</h2>
                         </div>
-                        <button class="primary-action" type="button" id="printBillButton">In tạm tính</button>
+                        <div class="payment-actions">
+                            <button class="secondary-action" type="button" id="refreshPaymentsButton">Làm mới</button>
+                            <button class="secondary-action" type="button" id="tableBillButton" disabled>Tạm tính bàn</button>
+                            <button class="primary-action" type="button" id="printBillButton" disabled>In phiếu đơn</button>
+                        </div>
                     </div>
-
+                    <p id="paymentNotice" class="payment-notice" role="status" hidden></p>
+                    <section id="pendingPayment" class="pending-payment" aria-label="Đối chiếu yêu cầu chưa rõ kết quả" hidden>
+                        <p id="pendingDescription"></p>
+                        <div class="payment-actions">
+                            <button type="button" class="secondary-action" id="reviewPaymentButton">Tải phiếu thu để đối chiếu</button>
+                            <button type="button" class="secondary-action" id="ackPaymentButton" hidden>Đã đối chiếu, tiếp tục</button>
+                        </div>
+                    </section>
                     <div class="payment-summary" id="paymentSummary" aria-label="Thống kê thanh toán"></div>
 
                     <div class="payment-layout">
@@ -71,7 +82,9 @@
                                 <span>Tìm bàn hoặc mã đơn</span>
                                 <input type="search" id="billSearchInput" placeholder="Nhập tên bàn hoặc mã đơn">
                             </label>
-
+                            <label class="search-box"><span>Trạng thái đơn</span><select id="queueStatus">
+                                <option value="all">Tất cả đơn đang mở</option><option value="ready">Đã xong bếp</option><option value="kitchen">Đang chờ bếp</option>
+                            </select></label>
                             <div class="bill-list" id="billList"></div>
                         </section>
 
@@ -82,6 +95,8 @@
                             </div>
 
                             <div class="bill-detail" id="billDetail"></div>
+                            <h3 class="history-heading">Lịch sử thanh toán của đơn</h3>
+                            <div id="orderPayments" class="order-payments"></div>
                         </section>
 
                         <aside class="panel payment-method-panel" aria-labelledby="payment-method-title">
@@ -92,47 +107,58 @@
 
                             <div class="method-list" id="methodList" aria-label="Phương thức thanh toán"></div>
 
+                            <p id="methodHint" class="payment-hint"></p>
                             <label class="discount-box">
-                                <span>Giảm giá</span>
-                                <input type="number" id="discountInput" min="0" step="1000" value="0">
+                                <span>Mã giao dịch (không bắt buộc)</span>
+                                <input type="text" id="transactionCode" maxlength="100" autocomplete="off" placeholder="Để trống để tự tạo mã thu">
                             </label>
-
-                            <label class="payment-note">
-                                <span>Ghi chú thanh toán</span>
-                                <textarea id="paymentNoteInput" rows="3" placeholder="Nhập ghi chú thanh toán"></textarea>
-                            </label>
-
-                            <div class="payment-total" aria-label="Tổng tiền cần thanh toán">
-                                <div>
-                                    <span>Tạm tính</span>
-                                    <strong id="paymentSubtotal">0đ</strong>
+                            <div class="payment-total" id="paymentTotals" aria-label="Tổng tiền đơn"></div>
+                            <p id="paymentBlock" class="payment-hint"></p>
+                            <button class="primary-action confirm-payment-button" type="button" id="confirmPaymentButton" disabled>Xác nhận đã nhận tiền</button>
+                            <section id="momoPanel" class="momo-panel" aria-label="Giao dịch MoMo" hidden>
+                                <h4>MoMo</h4><div id="momoInfo"></div>
+                                <button class="secondary-action" type="button" id="createMomoButton">Tạo giao dịch MoMo</button>
+                                <div id="mockActions" class="payment-actions" hidden>
+                                    <button class="secondary-action" type="button" id="mockSuccessButton">Giả lập thành công</button>
+                                    <button class="secondary-action" type="button" id="mockFailButton">Giả lập thất bại</button>
                                 </div>
-                                <div>
-                                    <span>Thuế</span>
-                                    <strong id="paymentTax">0đ</strong>
-                                </div>
-                                <div>
-                                    <span>Giảm giá</span>
-                                    <strong id="paymentDiscount">0đ</strong>
-                                </div>
-                                <div class="grand-total">
-                                    <span>Cần thanh toán</span>
-                                    <strong id="paymentGrandTotal">0đ</strong>
-                                </div>
-                            </div>
-
-                            <button class="primary-action confirm-payment-button" type="button" id="confirmPaymentButton">Xác nhận thanh toán</button>
+                            </section>
                         </aside>
                     </div>
+                    <section class="panel payment-ledger" aria-labelledby="ledger-title">
+                        <div class="panel-header"><h3 id="ledger-title">Danh sách phiếu thu</h3><span>Ngày lọc theo giờ Việt Nam, dựa trên thời điểm thu</span></div>
+                        <form id="paymentFilters" class="payment-filters">
+                            <label><span>Trạng thái phiếu</span><select name="status"><option value="">Tất cả</option><option value="Paid">Đã thu</option><option value="Pending">Đang chờ</option><option value="Failed">Thất bại</option><option value="Refunded">Đã hoàn</option></select></label>
+                            <label><span>Phương thức</span><select name="method"><option value="">Tất cả</option><option value="Cash">Tiền mặt</option><option value="Card">Thẻ</option><option value="Bank">Ngân hàng</option><option value="EWallet">Ví điện tử khác</option><option value="Transfer">Chuyển khoản</option><option value="MoMo">MoMo</option></select></label>
+                            <label><span>Mã đơn</span><input name="orderId" type="number" min="1" step="1" placeholder="Ví dụ: 42"></label>
+                            <label><span>Từ ngày</span><input name="from" type="date"></label>
+                            <label><span>Đến ngày</span><input name="to" type="date"></label>
+                            <button type="submit" class="secondary-action">Lọc phiếu thu</button>
+                        </form>
+                        <div class="payment-table-wrap"><table class="payment-table" role="table" aria-labelledby="ledger-title"><thead role="rowgroup"><tr role="row"><th scope="col">Phiếu</th><th scope="col">Đơn</th><th scope="col">Phương thức</th><th scope="col">Trạng thái</th><th scope="col">Số tiền</th><th scope="col">Mã giao dịch</th><th scope="col">Thời điểm thu</th></tr></thead><tbody id="paymentRows" role="rowgroup"></tbody></table></div>
+                        <div class="payment-pagination"><button id="ledgerPrev" type="button" class="secondary-action">Trang trước</button><span id="ledgerPage"></span><button id="ledgerNext" type="button" class="secondary-action">Trang sau</button></div>
+                    </section>
                 </section>
             </main>
         </div>
     </div>
+    <dialog id="confirmDialog" class="payment-dialog" aria-labelledby="confirmTitle">
+        <form id="confirmForm">
+            <h2 id="confirmTitle"></h2><p id="confirmDescription"></p>
+            <label id="refundReasonLabel" hidden><span>Lý do hoàn tiền</span><textarea id="refundReason" maxlength="500" rows="3"></textarea></label>
+            <div class="payment-actions"><button class="secondary-action" id="cancelConfirmButton" type="button">Quay lại</button><button class="primary-action" type="submit">Xác nhận</button></div>
+        </form>
+    </dialog>
+    <dialog id="receiptDialog" class="payment-dialog receipt-dialog" aria-label="Xem phiếu trước khi in">
+        <div id="receiptPreview"></div>
+        <div class="payment-actions"><button class="secondary-action" type="button" id="closeReceiptButton">Đóng phiếu</button><button class="primary-action" type="button" id="printReceiptButton">In / Lưu PDF</button></div>
+    </dialog>
+    <article id="printReceipt" aria-label="Nội dung phiếu in"></article>
 
-    <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/auth.js?v=20261101-f67"></script>
+    <script src="../js/common/navigation.js?v=20261101-f67"></script>
     <script src="../js/common/api.js"></script>
-    <script src="../js/common/food-units.js"></script>
-    <script src="../js/data/payment.data.js"></script>
-    <script src="../js/pages/payment.js"></script>
+    <script src="../js/common/payment-session.js?v=20261101-f67"></script>
+    <script src="../js/pages/payment.js?v=20261101-f67"></script>
 </body>
 </html>

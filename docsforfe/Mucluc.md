@@ -1,8 +1,15 @@
 # docsforfe — Tài liệu phía FRONTEND
 
+**Bàn giao mới F6/F7 (2026-11-01):** đọc [f6-f7-handoff.md](f6-f7-handoff.md).
+Trong đó ghi rõ Đông đã làm frontend nào, cách mở/sử dụng, API/payload, các kiểm tra đã chạy,
+và từng ticket giao Hải có file nguồn, bước tái hiện, hướng xử lý và tiêu chí nghiệm thu.
+FE-C21 vẫn chưa sửa; FE-C24–28 là các giới hạn backend mới được phân công cụ thể.
+[FE-C23 — đã sửa kiểu số lượng DB cũ](legacy-order-quantity-fix.md): Đông/Codex thêm migration,
+áp dụng DB gốc và kiểm chứng đơn/bếp HTTP 200; Hải review/đồng bộ source, Đông kiểm tra lại pending UI.
+
 **Mục đích:** đây là nơi **duy nhất** mô tả phần việc FRONTEND của hệ thống Quản lý Nhà hàng.
 
-> **Bắt đầu ở đâu?** Nếu bạn là AI agent: đọc **`AGENTS.md` ở gốc repo** trước — nó chỉ đường dẫn
+> **Bắt đầu ở đâu?** Nếu bạn là AI agent: đọc **`docsforfe/AGENTS.md`** trước — nó chỉ đường dẫn
 > đọc, quy tắc làm FE, và những gì **không được** đụng (backend). Nếu bạn là người: đọc
 > **`api-contract.md`** (hợp đồng API) rồi `fe-work-plan.md` (bảng công việc).
 
@@ -29,9 +36,23 @@
 > **`api-contract.md` là bản tổng hợp, tự chứa đủ.** `fe-api-reference.md` + `fe-payloads.md` là
 > tài liệu chi tiết theo từng đợt — dùng để tra cứu sâu, không bắt buộc đọc hết.
 
+## Tiến độ mới nhất — 2026-11-01
+
+Đọc [tiến độ tích hợp](integration-progress.md) và các bàn giao F1–F6 phần 1 để theo dõi phần đã nối thật.
+[F5 — Tổng quan/Báo cáo](f5-reporting-progress.md) đã có API thật, chọn kỳ/ngày VN và CSV cho Admin;
+128/128 test frontend, 12/12 kiểm tra API Báo cáo/SQL thật đạt. Backend baseline còn 179/697 lỗi có sẵn.
+[F6 phần 1 — Nguyên liệu/Công thức](f6-catalog-progress.md) đã nối CRUD, đơn vị và lịch sử phiên bản;
+155/155 test frontend, 15/15 kiểm tra API thật đạt. F6 còn nhân viên/vai trò và các mục quản trị khác.
+[F6 phần 2 — Nhân viên/Vai trò](f6-staff-progress.md) đã nối 9 route Admin, bỏ ma trận quyền giả;
+183/183 test frontend và 13/13 API thật đạt. FE-C21: backend chưa thu hồi JWT cũ khi khóa/thu quyền/reset.
+[FE-C21 — ghi chú cho Hải](fe-c21-jwt-session-revocation.md): lỗi JWT cũ, bước tái hiện A/B/C, hướng sửa và checklist nghiệm thu; đang chờ backend xử lý.
+[Điều hướng điện thoại](mobile-navigation-progress.md): hai menu Tổng quan/Quản trị, mở popup thay cho thanh kéo ngang; đã kiểm tra 320px, 390px, ngang và desktop.
+[Database gốc và hiển thị sau xóa](original-database-and-delete-progress.md): ứng dụng chuyển sang RestaurantFoodManager, dữ liệu mẫu bổ sung và bộ lọc ẩn các mục đã xóa.
+Các thống kê ngày 2026-10-21 bên dưới là lịch sử, không phản ánh tiến độ hiện tại.
+
 ---
 
-## Trạng thái hiện tại (quét FE ngày 2026-10-21)
+## Trạng thái lịch sử (quét FE ngày 2026-10-21)
 
 | Hạng mục | Số |
 |---|---|
@@ -68,7 +89,7 @@ Chỉ còn **2 mục chưa có API**: `POST /api/orders/{id}/split` (chia bill) 
 | **F2** | **Bếp**: prepared-quantity, shortage, reopen, chi tiết món | Bếp hiện chỉ bấm 2 nút |
 | **F3** | **Thu ngân**: danh sách payment, nhiều phương thức, in bill | Sau F1/F2 |
 | **F4** | **Kho & Mua hàng**: điều chỉnh tồn, biến động kho, tạo/nhận/huỷ phiếu nhập, NCC, tồn thấp | |
-| **F5** | **Báo cáo & Tổng quan**: nối `reports.html` + `dashboard.js` vào API thật | Dashboard hiện là dữ liệu tĩnh |
+| **F5** | **Báo cáo & Tổng quan**: đã nối API thật, kỳ/ngày VN và CSV Admin | Xem bàn giao F5, cập nhật 2026-11-01 |
 | **F6** | **Quản trị**: nhân viên (đầy đủ), vai trò, tài khoản, danh mục/topping/size đầy đủ, khu vực bàn, khuyến mãi (+ **gắn phạm vi giảm**) | |
 | **F7** | **Đã có API** → làm ngay: cấu hình quán + VAT, chuyển bàn, **bill theo bàn**, **ghi chú hoá đơn**, MoMo + hoàn tiền. **Còn chờ BE:** *chia bill* (`/orders/{id}/split`) · *ca làm việc* (`/management/shifts/*`) | 2 mục cuối chưa có API |
 | **F8** | Sau khi BE làm xong payment provider (MoMo): QR, redirect, trạng thái, hoàn tiền | Làm **cuối cùng** |

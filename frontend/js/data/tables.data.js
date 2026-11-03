@@ -6,10 +6,12 @@ window.tablesData = {
         { value: "outdoor", label: "Ngoài trời" }
     ],
     statuses: [
-        { value: "all", label: "Tất cả" },
+        { value: "active", label: "Đang dùng" },
+        { value: "all", label: "Tất cả (cả đã xóa)" },
         { value: "empty", label: "Trống" },
         { value: "serving", label: "Đang sử dụng" },
-        { value: "inactive", label: "Bảo trì" }
+        { value: "inactive", label: "Bảo trì" },
+        { value: "deleted", label: "Đã xóa" }
     ],
     tables: []
 };

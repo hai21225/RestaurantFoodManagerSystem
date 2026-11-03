@@ -156,7 +156,10 @@ public partial class Program {
 
         // Phải đứng trước UseAuthentication/UseAuthorization để preflight và header
         // Authorization của request cross-origin được xử lý.
-        app.UseCors("FrontendPolicy");
+        if (app.Environment.IsDevelopment())
+        {
+            app.UseCors("FrontendPolicy");
+        }
 
         app.UseAuthentication();
         app.UseAuthorization();

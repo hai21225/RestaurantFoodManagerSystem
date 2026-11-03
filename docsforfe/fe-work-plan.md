@@ -47,6 +47,11 @@
 
 ---
 
+> **Tiến độ mới 2026-10-29:** đã gộp `hai` vào `dong`, hoàn tất hạ tầng F0 (JWT, 401/403,
+> đăng xuất, vai trò thật, download/header). `Auth:Enforce=true`. Hồ sơ CRUD/đổi mật khẩu vẫn thuộc F6.
+> Kết quả hiện tại: 18/18 test F0 đạt; backend còn 179/697 lỗi đã có trên Hải.
+> Đọc [integration-progress.md](integration-progress.md) trước khi dùng các số kiểm thử và trạng thái cũ bên dưới.
+
 ## A. Bảng công việc tổng
 
 | # | Màn hình / file FE | Hiện trạng FE (đã kiểm tra code) | Việc cần làm | Endpoint BE phải gọi | Phase |
@@ -54,18 +59,18 @@
 | **FE-01** | Hạ tầng `js/common/api.js` | Chỉ có `get/post/put/patch/delete`, **không** gửi `Authorization`, không tải blob, không phân biệt 401/403 | Lưu token; gắn `Authorization: Bearer`; `401` → về login; `403` → báo không đủ quyền; thêm `download()` cho CSV; cho phép header tuỳ chọn (`Idempotency-Key`) | — (hạ tầng) | **F0** |
 | **FE-02** | `pages/login.js` | `GET /api/setup/status`, `POST /api/login` → không lưu token, không gửi Bearer | Lưu token (`localStorage`), gửi kèm mọi request, nút đăng xuất, hết hạn token → bắt nhập lại, hiện role đang đăng nhập | `POST /api/auth/login` (đã có) · `POST /api/auth/change-password` (chưa dùng) | **F0** |
 | **FE-03** | `pages/account.html` | **Không có file JS** | Tạo `js/pages/account.js`: thông tin tôi, sửa hồ sơ, đổi mật khẩu | `GET /api/users/me` · `PUT /api/users/me` · `POST /api/auth/change-password` | F0 / F6 |
-| **FE-04** | `pages/dashboard.js` | **0 lần gọi API** — dùng `js/data/dashboard.data.js` (dữ liệu tĩnh) | Bỏ dữ liệu tĩnh, nối API thật: doanh thu hôm nay, đơn mở, bàn, bếp, cảnh báo tồn thấp, 10 đơn gần nhất | `GET /api/reports/dashboard` | **F5** |
+| **FE-04** | `pages/dashboard.js` | ✅ F5 2026-11-01: API thật cho Admin; bỏ file dữ liệu tĩnh | Doanh thu/số đơn đã thu hôm nay, đơn mở, bàn, bếp, tồn dưới ngưỡng, tối đa 10 đơn mở gần nhất | `GET /api/reports/dashboard` · `GET /api/restaurant-tables` thuần đọc | **F5** |
 | **FE-05** | `pages/tables.js` | 6 call: list/create/delete/bảo trì bàn; `GET /api/table-areas?includeInactive=true` | Sửa bàn (thiếu `PUT`), CRUD khu vực đầy đủ, bật/tắt khu vực, **xem đơn đang mở của bàn** (để bấm vào bàn → mở đơn) | `PUT /api/restaurant-tables/{id}` · `POST/PUT/DELETE /api/table-areas` · `PATCH /api/table-areas/{id}/active` · `GET /api/orders?tableId={id}` | F6 (đơn của bàn: F1) |
 | **FE-06** | `pages/order.js` (POS) | **2 call**: `GET /api/menu` + `POST /api/orders` ⇒ **chỉ tạo được đơn, không sửa được đơn** | Mở đơn đang có theo bàn; **gọi thêm**; **đổi số lượng** (cả khi bếp đã nhận); **huỷ món** (có lý do + reasonCode); áp khuyến mãi; xem lịch sử đơn/món; huỷ đơn | `GET /api/orders?tableId=` · `GET /api/orders/{id}` · `POST /api/orders/{id}/items` · `PATCH /api/orders/{id}/items/{itemId}/quantity` · `POST /api/orders/{id}/items/{itemId}/cancel` · `PATCH /api/orders/{id}/promotion/{promotionId}` · `PATCH /api/orders/{id}/status` · `GET /api/orders/{id}/history` · `GET /api/orders/{id}/item-history` | **F1** |
 | **FE-07** | `pages/kitchen.js` | 6 call; bếp chỉ bấm được "Preparing" và "xong/ready" | Báo **đã nấu được mấy phần** (prepared-quantity); báo **thiếu nguyên liệu** (shortage, có lý do); **mở lại món đã xong** (reopen); hiện lý do huỷ trên UI | `PATCH /api/management/kitchen/items/{id}/prepared-quantity` · `POST /api/management/kitchen/items/{id}/shortage` · `POST /api/management/kitchen/items/{id}/reopen` | **F2** |
 | **FE-08** | `pages/payment.js` | 3 call: lấy đơn, lấy bàn, `POST /api/payments` | Danh sách phiếu thu; lịch sử thu của đơn; chọn phương thức thanh toán (Cash/Card/Bank/EWallet/Transfer); in bill; sau khi thu → bàn tự trả | `GET /api/payments` · `GET /api/payments/order/{orderId}` · `GET /api/orders?status=Ready` (danh sách đơn chờ thu) | **F3** |
 | **FE-09** | `pages/foods.js` | 10 call: category list/create, food list/create/edit/delete/active/availability, food size list/create | Quản lý **topping** (chưa có màn hình nào gọi `/api/toppings`), gán topping cho món, xoá/sửa/đặt mặc định/khoá size, khoá & xoá category | `GET/POST/PUT/PATCH/DELETE /api/toppings` · `GET/POST/DELETE /api/foods/{foodId}/toppings` · `PUT/DELETE /api/foods/{foodId}/sizes/{sizeId}` · `PATCH /api/foods/{foodId}/sizes/{sizeId}/default` · `PATCH /api/foods/{foodId}/sizes/{sizeId}/active` · `PUT/DELETE /api/categories/{id}` · `PATCH /api/categories/{id}/active` | **F6** |
-| **FE-10** | `pages/recipes.js` | 10 call; nguyên liệu **chỉ tạo được**, không sửa/xoá/khoá | Sửa / xoá / khoá nguyên liệu; xem chi tiết định lượng khi sửa công thức | `PUT /api/management/ingredients/{id}` · `DELETE /api/management/ingredients/{id}` · `PATCH /api/management/ingredients/{id}/active` · `GET /api/management/ingredients/{id}` | **F6** |
+| **FE-10** | `pages/recipes.js` | ✅ F6 phần 1: CRUD nguyên liệu, tình trạng, khóa đơn vị và phiên bản công thức | Đã nối đủ route danh mục, test frontend/API thật; xem [bàn giao F6](f6-catalog-progress.md) | Ingredients 7 route + Recipes 6 route | **F6 — đã làm phần FE-10** |
 | **FE-11** | `pages/inventory.js` | **2 call**: `GET /api/management/inventory`, `GET /api/management/ingredients` ⇒ chỉ xem | **Điều chỉnh tồn** (có lý do); xem **biến động kho**; quản lý **nhà cung cấp**; xem **tồn kho thấp** | `POST /api/management/inventory/{ingredientId}/adjust` · `GET /api/management/inventory-transactions` · `GET/POST/PUT/DELETE /api/management/suppliers` · `PATCH /api/management/suppliers/{id}/active` · ✅ `GET /api/management/inventory/low-stock` (**Đã có** — Đợt 3) | **F4** |
 | **FE-12** | `pages/purchases.js` | **1 call**: `GET /api/management/purchase-orders` ⇒ chỉ xem danh sách | Tạo phiếu nhập (NCC + dòng hàng + giá), xem chi tiết, **nhập hàng** (cộng kho), huỷ phiếu | `POST /api/management/purchase-orders` · `GET /api/management/purchase-orders/{id}` · `POST /api/management/purchase-orders/{id}/receive` · `POST /api/management/purchase-orders/{id}/cancel` | **F4** |
-| **FE-13** | `pages/employees.js` | 2 call: `GET /api/users`, `POST /api/users` | Sửa nhân viên, khoá/mở khoá, đặt lại mật khẩu, **gán/thu role**, xem danh sách role | `GET/PUT /api/users/{id}` · `PATCH /api/users/{id}/active` · `POST /api/users/{id}/reset-password` · `POST /api/users/{userId}/roles` · `DELETE /api/users/{userId}/roles/{roleName}` · `GET /api/roles` | **F6** |
-| **FE-14** | `pages/roles.html` | **Không có JS** | Tạo `js/pages/roles.js` hiển thị 5 vai trò + mô tả quyền | `GET /api/roles` | **F6** |
-| **FE-15** | `pages/reports.html` | **Không có JS** | Tạo `js/pages/reports.js`: chọn kỳ (day/week/month) + ngày, xem bảng doanh thu theo nhóm, **tải CSV** | `GET /api/reports/revenue?period=&date=` · `GET /api/reports/revenue/export.csv?period=&date=` (cần `blob` trong api.js) | **F5** |
+| **FE-13** | `pages/employees.js` | ✅ F6 phần 2: thêm/sửa hồ sơ, khóa/mở, reset và nhiều role | Đã nối API/test, có đối chiếu mất ACK; giới hạn JWT cũ xem [bàn giao](f6-staff-progress.md) | Users 8 route Admin + GET roles | **F6 — đã làm frontend** |
+| **FE-14** | `pages/roles.html` + `pages/roles.js` | ✅ Đọc 5 vai trò/mô tả từ server | Bỏ ma trận giả; liên kết lọc nhân viên. Không có API sửa quyền/CRUD role | `GET /api/roles` | **F6 — đã làm** |
+| **FE-15** | `pages/reports.html` | ✅ F5 2026-11-01: có JS và nối API Admin | Chọn kỳ/ngày VN, số liệu tổng/nhóm từ server, CSV đúng kỳ đã tải; khóa xuất khi bộ lọc chưa áp dụng | `GET /api/reports/revenue?period=&date=` · `GET /api/reports/revenue/export.csv?period=&date=` bằng Blob | **F5** |
 | **FE-16** | Khuyến mãi | **Chưa có màn hình nào** | Tạo `pages/promotions.html` + `js/pages/promotions.js`: CRUD khuyến mãi, bật/tắt, xem khuyến mãi đang áp cho đơn và **gỡ khuyến mãi** | `GET/POST/PUT/DELETE /api/management/promotions` · `PATCH /api/management/promotions/{id}/active` · `PATCH /api/orders/{id}/promotion/{promotionId}` · ✅ `DELETE /api/orders/{id}/promotion/{promotionId}` (**Đã có** — C-14) · ✅ `PUT /api/management/promotions/{id}/targets` (**Đã có** — C-18) | **F6** |
 | **FE-17** | Thiết lập quán / VAT | Chưa có | Chờ BE có settings + thuế | `GET/PUT /api/management/settings` | F7 |
 | **FE-18** | Chuyển bàn / gộp bàn | Chưa có | Chờ BE | `PATCH /api/orders/{id}/table` | F7 |
@@ -90,6 +95,11 @@
 > ⚠️ Sau khi bật enforce: các trang cũ gọi API mà chưa qua `api.js` sẽ 401 — phải rà lại toàn bộ 12 file `js/pages`.
 
 ### F1 — POS: gọi thêm / đổi số lượng / huỷ món (ưu tiên cao nhất về nghiệp vụ)
+
+**Tiến độ 2026-10-29:** đã nối F1-1/2/3/4/6/7 và giữ chặn route cũ F1-8; **F1-5 áp/gỡ khuyến mãi còn lại**.
+36/36 test frontend đạt; 9/9 kiểm tra POS với API SQL Server thật đạt. Đọc [bàn giao F1](f1-pos-progress.md)
+để xem phạm vi, quy tắc nhóm dòng món, retry và dữ liệu kiểm thử.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F1-1 | Màn hình bàn → bấm bàn đang có đơn → mở chi tiết đơn | `GET /api/orders?tableId={id}&status=...` rồi `GET /api/orders/{orderId}` |
@@ -102,6 +112,11 @@
 | F1-8 | **Cấm dùng** `PUT /api/orders/{id}/items` | Route đã bị chặn, trả `410 Gone` — nếu FE còn code cũ thì sửa ngay |
 
 ### F2 — Bếp: prepared / shortage / reopen
+
+**Tiến độ 2026-10-29:** đã nối nhận từng món, báo số phần, thiếu/hỏng có hao hụt, hủy và mở lại đúng command.
+54/54 test frontend và 11/11 kiểm tra API Bếp/POS thật đạt. Xem [bàn giao F2](f2-kitchen-progress.md)
+để biết quy tắc retry/đối chiếu, quyền Chef và giới hạn chọn nguyên liệu.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F2-1 | Bấm "nấu được mấy phần" (ví dụ món 3 phần mới nấu được 1) | `PATCH /api/management/kitchen/items/{id}/prepared-quantity` body `{ preparedQuantity (≥1), changedBy, reason? }` — BE tách dòng thành phần `Completed` + phần còn lại, tổng tiền/kho **không đổi** |
@@ -110,51 +125,102 @@
 | F2-4 | Hiển thị lý do huỷ món trên bảng bếp | Đọc từ `GET /api/management/kitchen/orders/{ticketId}/items` + `GET /api/orders/{orderId}/item-history` |
 
 ### F3 — Thu ngân
+
+**Tiến độ 2026-10-31:** đã nối F3-1–5, hoàn toàn bộ, MoMo intent/poll và giả lập có nhãn Mock.
+80/80 test frontend và 13/13 kiểm tra API Thu ngân thật đạt. Xem [bàn giao F3](f3-cashier-progress.md)
+về đối chiếu khi mất ACK, giới hạn in giấy/PDF và guard hoàn tiền khi bàn đã có đơn mới.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
 | F3-1 | Danh sách đơn chờ thu (nút bấm từ bàn) | `GET /api/orders?status=Ready` / `status=Completed` + `GET /api/orders/{id}` |
 | F3-2 | Chọn phương thức thanh toán | `POST /api/payments` body `{ orderId, paymentMethod: "Cash"\|"Card"\|"Bank"\|"EWallet"\|"Transfer", transactionCode?, createdBy }` |
 | F3-3 | Lịch sử thu của đơn + danh sách phiếu thu | `GET /api/payments/order/{orderId}` · `GET /api/payments?page=&pageSize=&method=&from=&to=` |
-| F3-4 | In bill | Dữ liệu đã có ở `GET /api/orders/{id}` + `GET /api/restaurant-tables/{tableId}`; **chưa có** endpoint bill hợp nhất (xem mục C) |
+| F3-4 | Xem trước / in bill | Phiếu đơn: `GET /api/orders/{id}` + `GET /api/restaurant-tables`; tạm tính bàn: `GET /api/orders/table/{tableId}/bill`. Không dùng GET bàn/{id} để đọc. In giấy/PDF chưa xác minh thực tế. |
 | F3-5 | **Không** gọi `POST /api/payments` khi đơn chưa `Ready`/`Completed` hoặc còn món chưa xong — BE sẽ trả `409` | |
 
 ### F4 — Kho & Mua hàng
+
+**Tiến độ 2026-10-31:** đã nối điều chỉnh có lý do, ledger/lọc/phân trang, low-stock gồm hỏng/hết,
+tạo/xem/nhận/hủy phiếu và CRUD/soft delete/khôi phục NCC. 106/106 test frontend và 14/14 API Kho thật đạt.
+Xem [bàn giao F4](f4-warehouse-progress.md); các lệnh kho chưa có idempotency nên mất ACK phải đối chiếu.
+
 | Bước | Việc | Endpoint + body tối thiểu |
 |---|---|---|
-| F4-1 | Điều chỉnh tồn (thêm/bớt khi kiểm kê, hết hạn…) | `POST /api/management/inventory/{ingredientId}/adjust` body `{ quantity (+/-), createdBy (≥1), note? }` — số âm làm tồn âm sẽ bị `409` |
+| F4-1 | Điều chỉnh tồn (thêm/bớt khi kiểm kê, hết hạn…) | `POST /api/management/inventory/{ingredientId}/adjust` body `{ quantity (+/-), createdBy (≥1), note }` — **note bắt buộc**; âm kho trả `400` ở controller hiện tại; xung đột ghi trả `409` |
 | F4-2 | Xem biến động kho (có lọc theo nguyên liệu/loại/đơn hàng/thời gian) | `GET /api/management/inventory-transactions?ingredientId=&type=&referenceType=&referenceId=&from=&to=&page=&pageSize=` — lưu ý: `referenceId` **bắt buộc** kèm `referenceType` |
 | F4-3 | Tạo phiếu nhập | `POST /api/management/purchase-orders` body `{ supplierId, createdBy (≥1), items:[{ ingredientId, quantity (>0), unitPrice }] }` |
 | F4-4 | Nhập hàng (cộng kho) | `POST /api/management/purchase-orders/{id}/receive` body `{ receivedBy (≥1) }` — nhập 2 lần sẽ bị chặn |
 | F4-5 | Huỷ phiếu nhập | `POST /api/management/purchase-orders/{id}/cancel` — phiếu đã nhập thì không huỷ được (`409`) |
 | F4-6 | Quản lý nhà cung cấp | `GET/POST/PUT/DELETE /api/management/suppliers` · `PATCH /api/management/suppliers/{id}/active` |
+| F4-7 | Nguyên liệu cần kho xử lý | `GET /api/management/inventory/low-stock`; phân biệt `stockStatus` hỏng/hết với số lượng ghi sổ |
 
 ### F5 — Báo cáo & Tổng quan
+
+**Tiến độ 2026-11-01:** đã nối F5-1–3 theo quyền Admin; số tiền/ngày nhóm lấy từ server.
+128/128 test frontend và 12/12 kiểm tra API/SQL Báo cáo thật đạt; tải CSV thật qua trình duyệt đã đối chiếu.
+Xem [bàn giao F5](f5-reporting-progress.md) để biết cách dùng, giới hạn kỳ/snapshot và các báo cáo chưa có API.
+
 | Bước | Việc | Endpoint |
 |---|---|---|
-| F5-1 | Bỏ dữ liệu tĩnh ở `dashboard.js`, nối API thật | `GET /api/reports/dashboard` |
-| F5-2 | Báo cáo doanh thu theo kỳ | `GET /api/reports/revenue?period=day\|week\|month&date=yyyy-MM-dd` |
-| F5-3 | Tải CSV | `GET /api/reports/revenue/export.csv?period=&date=` (cần `blob` — F0-3) |
+| F5-1 | ✅ Tổng quan thật; làm mới, bàn/bếp và đơn gần nhất | `GET /api/reports/dashboard` |
+| F5-2 | ✅ Báo cáo ngày/tuần/tháng và ngày theo giờ VN | `GET /api/reports/revenue?period=day\|week\|month&date=yyyy-MM-dd` |
+| F5-3 | ✅ Tải CSV UTF-8 BOM đúng kỳ đã áp dụng | `GET /api/reports/revenue/export.csv?period=&date=` qua helper Blob F0 |
 
 ### F6 — Quản trị
-Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/topping/size/category (F6-4), khu vực bàn (F6-5), khuyến mãi (F6-6) — endpoint đã liệt kê ở bảng A.
+
+**2026-11-01 — đã nối FE-10 (Nguyên liệu/Công thức)**: CRUD, tình trạng, khóa đơn vị và lịch sử phiên bản;
+155/155 test frontend và 15/15 kiểm tra API thật đạt trên database Integration riêng.
+Xem [bàn giao F6 phần 1](f6-catalog-progress.md). Các mục dưới đây vẫn còn; chưa hoàn tất toàn bộ F6.
+
+**2026-11-01 — đã nối FE-13/FE-14 (Nhân viên/Vai trò)**: 183/183 test frontend, 13/13 kiểm tra API thật đạt;
+xem [bàn giao F6 phần 2](f6-staff-progress.md). Khóa/thu role/reset chưa thu hồi JWT cũ ở backend.
+
+**2026-11-01 — bổ sung F6-3/4/5/6:** Tài khoản cá nhân, danh mục/topping/kích cỡ/liên kết topping,
+khu vực/sửa bàn, khuyến mãi và phạm vi đã có frontend gọi API thật. Xem
+[bàn giao F6/F7 theo người phụ trách](f6-f7-handoff.md) để biết đường dẫn màn hình, payload, kiểm tra và phần Hải cần sửa.
+Các mô tả FE cũ trong bảng A là lịch sử trước khi nối API; dùng cập nhật này và các file bàn giao để đánh giá tiến độ.
+
+### F7 — Thiết lập và tiện ích đơn
+
+Đông đã thêm thiết lập quán/VAT/phí dịch vụ; trang tiện ích đơn để ghi chú, chuyển bàn và áp/gỡ khuyến mãi.
+Bill theo bàn/hoàn tiền/MoMo Mock dùng lại F3. Phục vụ hiện nhập mã promotion do Admin cung cấp (FE-C24);
+Thu ngân chưa có merchant metadata để in (FE-C25). Chia/gộp bill và ca/két vẫn chờ Hải bổ sung API;
+MoMo provider thật và in giấy/PDF chưa nghiệm thu. Không gọi toàn bộ F7 là đã hoàn tất vận hành.
 
 ---
 
-## C. Việc FE **chưa làm được** cho tới khi BE bổ sung (mục C của audit backend)
+## C. Theo dõi backend: việc còn thiếu và các mục lịch sử đã có API
 
 | # | Tính năng | BE còn thiếu | Ưu tiên BE |
 |---|---|---|---|
-| FE-C1 | Gỡ khuyến mãi khỏi đơn | `DELETE /api/orders/{id}/promotion/{promotionId}` | **P0** |
-| FE-C2 | VAT + phí dịch vụ hiển thị trên bill | bảng `settings` + tính lại `TotalAmount` | **P0** |
-| FE-C3 | Bill theo bàn (gom mọi đơn của bàn) | `GET /api/orders/table/{tableId}/bill` | P1 |
-| FE-C4 | Chuyển bàn | `PATCH /api/orders/{id}/table` | P1 |
+| FE-C1 | Gỡ khuyến mãi khỏi đơn | Đã có DELETE và FE đã nối ở Tiện ích đơn; lookup Phục vụ còn FE-C24. | Đã có API |
+| FE-C2 | VAT + phí dịch vụ hiển thị trên bill | Đã có settings/server totals; Đông đã nối form thiết lập và hiển thị tiền server. | Đã có API |
+| FE-C3 | Bill theo bàn (gom mọi đơn của bàn) | Đã có GET và F3 đã dùng; metadata quán cho Cashier còn FE-C25. | Đã có API |
+| FE-C4 | Chuyển bàn | Đã có PATCH và Đông đã nối Tiện ích đơn; đọc lại orderId/tableId sau lệnh. | Đã có API |
 | FE-C5 | Chia / gộp bill | `POST /api/orders/{id}/split` | P1 |
-| FE-C6 | Danh sách tồn kho thấp | `GET /api/management/inventory/low-stock` | P1 |
-| FE-C7 | Cấu hình quán (tên, MST, ĐT, giờ, tiền tệ) | `GET/PUT /api/management/settings` | P1 |
+| FE-C6 | Danh sách tồn kho thấp | Đã có GET và F4 đã nối; không còn là API thiếu. | Đã có API |
+| FE-C7 | Cấu hình quán | Đã có GET/PUT settings và Đông đã nối; giờ mở cửa chưa có field trong contract, không tự thêm. | Đã có API |
 | FE-C8 | Ca làm việc / két tiền | `/api/management/shifts/*` | P1 |
 | FE-C9 | Báo cáo vận hành (theo phương thức thu, món bán chạy, hao hụt, tồn kho, mua hàng) | `/api/reports/*` mới | P1 |
-| FE-C10 | Ghi chú ở mức đơn | `Order.Note` + `PATCH /api/orders/{id}/note` | P1 |
+| FE-C10 | Ghi chú ở mức đơn | Đã có PATCH và Đông đã nối Tiện ích đơn; F3 đọc/in note theo server. | Đã có API |
 | FE-C11 | Thanh toán MoMo / QR / hoàn tiền | payment provider | **cuối cùng** |
+| FE-C12 | Chef chọn nguyên liệu cụ thể khi báo thiếu | Lookup nguyên liệu của dòng món cho KitchenDesk; hiện ingredients/recipes đều WarehouseDesk. F2 cơ bản đang bỏ trống ingredientId. | P2 |
+| FE-C13 | Tự gửi lại lệnh báo số phần/thiếu mà không ghi trùng | Idempotency/receipt bền vững cho các lệnh Bếp; hiện UI khóa và yêu cầu đối chiếu thay vì tự retry. | P1 |
+| FE-C14 | Hoàn đơn cũ khi bàn đã có lượt khách mới | RefundAsync hiện mở lại Ready ở bàn cũ; cần BE kiểm tra/khóa cùng transaction với tạo đơn mới. F3 chặn nếu fresh GET thấy đơn khác đang mở, chưa thay được bảo đảm nguyên tử server. | P1 |
+| FE-C15 | Đổi phương thức khi MoMo còn Pending | Lệnh hủy/đóng intent có đối chiếu provider; F3 khóa thu trực tiếp đến khi có kết quả, không tự giả Failed. | P1 |
+| FE-C16 | Tự retry ghi Kho/tạo phiếu/tạo NCC khi mất ACK | Idempotency/receipt bền vững cho các route Kho; hiện F4 lưu pending, khóa lệnh và đối chiếu, không suy thành công từ tồn mới hay bản ghi giống nhau. | P1 |
+| FE-C17 | Khóa đơn vị không phải tải toàn bộ lịch sử | Thêm unitLocked/usage metadata cho Ingredient DTO; F6 hiện kiểm tra ledger, từng detail công thức và phiếu mua, có thể nhiều request. | P2 |
+| FE-C18 | Retry/ghi catalog đồng thời có bảo đảm | Idempotency/receipt và concurrency token cho nguyên liệu/công thức; snapshot FE chỉ phát hiện thay đổi trước lúc kiểm tra, mất ACK phải đối chiếu thủ công. | P1 |
+| FE-C19 | Khôi phục công thức chỉ dùng dữ liệu hợp lệ | Recipe active route chưa kiểm tra size/ingredient còn active; F6 preflight chặn nhưng cần validation nguyên tử ở server. | P1 |
+| FE-C20 | Chốt ý nghĩa ngừng nguyên liệu / cờ Hỏng | Tiêu hao kho hiện chưa kiểm tra Ingredient.IsActive/StockStatus; ngừng danh mục không tự ngừng công thức/món. Chốt quy tắc, bổ sung chặn/audit nếu cần; status note hiện chưa được lưu. | P1 |
+| [FE-C21](fe-c21-jwt-session-revocation.md) | Thu hồi phiên khi khóa/thu role/reset mật khẩu | JWT cũ vẫn được chấp nhận theo claim tới hết hạn; đã xác minh API thật. Cần kiểm tra tài khoản/role hiện tại hoặc security stamp/token version/revocation tại server. UI không thể thay thế thu hồi mọi thiết bị. | **P0** |
+| FE-C22 | Ghi nhân viên/quyền đồng thời và retry có bảo đảm | Idempotency/receipt, concurrency token và chốt Admin cuối nguyên tử; F6 hiện snapshot/preflight, khóa khi mất ACK và đối chiếu thủ công, không tự retry. | P1 |
+| [FE-C23](legacy-order-quantity-fix.md) | Đồng bộ kiểu số lượng trên database gốc | **Đông/Codex đã sửa theo yêu cầu riêng 2026-11-01:** migration 20261101103000 đổi hai cột đơn/bếp về int sau kiểm tra; backup xác minh, 30 bảng giữ giá trị, 16/16 test SQL Server đạt, đơn/bếp 1 và 2 đọc HTTP 200. Hải review/đồng bộ migration; Đông xác nhận lại pending cũ trên UI. | **Đã sửa trên DB gốc** |
+| FE-C24 | Phục vụ tra cứu khuyến mãi | Hải: lookup PosOperator chỉ đọc; hiện quản lý promotions AdminOnly. Đông: đã cho nhập mã, sẽ thay bằng selector khi có contract. Chi tiết/tái hiện/nghiệm thu ở [bàn giao F6/F7](f6-f7-handoff.md). | P1 |
+| FE-C25 | Metadata quán trên phiếu của Thu ngân | Hải: DTO/lookup merchant info cho PosOrCashier, không mở PUT settings. Đông: hiện Admin đọc settings khi preview, sẽ nối metadata chung sau. [Chi tiết](f6-f7-handoff.md). | P1 |
+| FE-C26 | Ghi đồng thời/receipt cho danh mục, cấu hình và tiện ích đơn | Hải: version/receipt theo từng route mới; Đông: preflight/snapshot/pending không tự retry đã có, chờ contract server. [Phạm vi và nghiệm thu](f6-f7-handoff.md). | P1 |
+| FE-C27 | Xem/gỡ liên kết topping đã ngừng | Hải: lookup quản trị includeInactive; hiện FoodToppingService lọc active. Đông: tạm hướng dẫn khôi phục topping rồi gỡ. [Chi tiết](f6-f7-handoff.md). | P2 |
+| FE-C28 | Validation tên bàn | Hải: DTO Required/MaxLength(20) khớp DB, trả 400 rõ. Đông: form tạo/sửa giới hạn 20. [Tái hiện](f6-f7-handoff.md). | P2 |
 
 ---
 
@@ -184,7 +250,7 @@ Nhân viên (F6-1), vai trò (F6-2), tài khoản (F6-3), danh mục món/toppin
 - [ ] Không còn gọi `PUT /api/orders/{id}/items` (đã `410`).
 - [ ] Gọi thêm / đổi số lượng / huỷ món đều **truyền `reason` / `reasonCode`** đúng, và hiển thị lại lý do do BE trả về.
 - [ ] Bếp có đủ 3 nút: prepared / shortage / reopen, và hiển thị được lý do huỷ món.
-- [ ] Thu ngân: chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh 409) và hiện rõ thông báo lỗi.
+- [x] Thu ngân: chỉ gọi `POST /api/payments` khi đơn đủ điều kiện (để tránh 409) và hiện rõ thông báo lỗi. Xem giới hạn F3/FE-C14/15.
 - [ ] Tổng quan & báo cáo lấy từ API thật, không còn dữ liệu tĩnh.
 - [ ] CSV tải đúng tên file + mở bằng Excel không lỗi dấu.
 - [ ] Không tự tính tiền/tax ở FE — mọi con số hiển thị lấy từ response BE (`subtotal`, `discountAmount`, `taxAmount`, `totalAmount`).

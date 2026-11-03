@@ -1,0 +1,66 @@
+.staff-page [hidden] { display: none !important; }
+.staff-page { --muted: #4b5969; }
+.staff-page .app-shell, .staff-page .workspace { overflow: clip; }
+.staff-page .topbar, .staff-page .section-heading, .staff-page .panel-header { flex-wrap: wrap; gap: 12px; }
+.staff-page h2 { font-size: 20px; }
+.staff-page h3 { font-size: 17px; }
+.staff-page a { color: #075c55; text-underline-offset: 3px; }
+.staff-page a.primary-action { color: white; }
+.staff-page a.secondary-action, .staff-page a.primary-action { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.staff-page :focus-visible { outline: 3px solid #2563eb; outline-offset: 2px; }
+.staff-page button:disabled { opacity: .5; cursor: not-allowed; }
+.staff-actions, .staff-dialog-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.staff-caption { color: var(--muted); font-size: 14px; line-height: 1.6; }
+.staff-notice { padding: 12px 14px; margin: 0 0 16px; border: 1px solid #a7d9c4; border-radius: 7px; background: #edf8f4; color: #075c55; line-height: 1.6; overflow-wrap: anywhere; }
+.staff-notice:empty { display: none; }
+.staff-notice.is-error { background: #fff4f3; border-color: #f5b5ae; color: #a1271b; }
+.staff-pending { padding: 18px; margin-bottom: 20px; background: #fffbeb; border: 1px solid #e3b65c; border-left: 4px solid #a16207; border-radius: 8px; color: #70470a; line-height: 1.6; }
+.staff-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 20px; }
+.staff-summary article { display: grid; gap: 10px; padding: 16px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+.staff-summary article span { color: var(--muted); font-size: 15px; }
+.staff-summary strong { font-size: 30px; }
+.staff-toolbar { display: grid; grid-template-columns: minmax(220px, 1.5fr) repeat(2, minmax(130px, 1fr)); gap: 14px; margin-bottom: 20px; align-items: end; }
+.staff-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+.staff-layout > * { min-width: 0; }
+.staff-list { display: grid; gap: 12px; }
+.staff-row { display: grid; gap: 12px; padding: 16px; border: 1px solid var(--line); border-radius: 7px; }
+.staff-row.is-selected { border-color: var(--primary); background: #f0faf7; }
+.staff-row > div:first-child { display: grid; gap: 6px; }
+.staff-row strong, .staff-row span { overflow-wrap: anywhere; }
+.staff-row > div:first-child span, .staff-row-meta { color: var(--muted); font-size: 14px; }
+.staff-row-meta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; line-height: 1.6; }
+.staff-row > button { justify-self: start; }
+.staff-badge { display: inline-block; padding: 5px 8px; border-radius: 5px; background: #edf7f1; color: #166534; font-size: 13px; font-weight: 700; }
+.staff-badge.is-locked { background: #fff0ed; color: #a1271b; }
+.staff-detail h3 { margin: 0; overflow-wrap: anywhere; }
+.staff-detail dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; margin: 18px 0; line-height: 1.6; font-size: 15px; }
+.staff-detail dt { color: var(--muted); }
+.staff-detail dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+.staff-role-section { border-top: 1px solid var(--line); margin-top: 20px; padding-top: 18px; }
+.staff-role-list { padding: 0; list-style: none; display: grid; gap: 10px; }
+.staff-role-list li { display: flex; gap: 12px; justify-content: space-between; align-items: start; padding: 12px; border: 1px solid var(--line); border-radius: 7px; }
+.staff-role-list li > div { min-width: 0; }
+.staff-role-list small { display: block; margin-top: 5px; color: var(--muted); overflow-wrap: anywhere; }
+.staff-role-list button { flex-shrink: 0; }
+.staff-assign { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+.staff-dialog-actions { justify-content: end; margin-top: 18px; }
+.staff-page .dialog-form .is-full { grid-column: 1 / -1; }
+.staff-empty { color: var(--muted); line-height: 1.6; padding: 16px 0; }
+.staff-role-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.staff-role-card { display: grid; gap: 12px; align-content: start; }
+.staff-role-card h3, .staff-role-card p { margin: 0; }
+.staff-role-card strong, .staff-role-card p { overflow-wrap: anywhere; line-height: 1.6; }
+.staff-role-card .staff-badge { justify-self: start; }
+.staff-role-guide { margin-bottom: 18px; line-height: 1.6; }
+@media (min-width: 761px) { .staff-page .sidebar { align-self: start; height: 100dvh; } }
+@media (max-width: 1150px) { .staff-layout { grid-template-columns: 1fr; } }
+@media (max-width: 760px) {
+    .staff-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .staff-summary article { padding: 12px; }
+    .staff-toolbar, .staff-role-cards { grid-template-columns: 1fr; }
+    .staff-page .section-heading .staff-actions { width: 100%; }
+    .staff-page .section-heading .staff-actions > * { flex: 1 1 auto; }
+    .staff-page .topbar .operator { width: 100%; text-align: left; }
+    .staff-assign { grid-template-columns: 1fr; }
+    .staff-dialog-actions button { flex: 1; }
+}
