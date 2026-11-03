@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using RestaurantFoodManagerSystem.Domain.AppDbContext;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 #nullable disable
 
@@ -43,8 +43,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<bool>("DisplayOrder")
-                        .HasColumnType("bit");
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -55,7 +55,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("CategoryId");
 
                     b.HasIndex("CategoryName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("categories", (string)null);
                 });
@@ -92,6 +93,13 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<decimal>("FoodPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("InactiveAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("InactiveReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -144,7 +152,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("SizeId");
 
                     b.HasIndex("FoodId", "SizeName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("food_sizes", (string)null);
                 });
@@ -184,6 +193,13 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("StockStatus")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasDefaultValue("Available");
+
                     b.Property<string>("Unit")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -192,7 +208,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("IngredientId");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("ingredients", (string)null);
                 });
@@ -211,6 +228,12 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<decimal>("Quanlity")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -244,6 +267,9 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("OrderItemId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("Quanlity")
                         .HasPrecision(18, 3)
                         .HasColumnType("decimal(18,3)");
@@ -268,11 +294,17 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("Unit")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedBy");
 
                     b.HasIndex("IngredientId");
+
+                    b.HasIndex("OrderItemId");
 
                     b.HasIndex("ReferenceType", "ReferenceId");
 
@@ -313,7 +345,10 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("Status");
 
-                    b.ToTable("kitchen_orders", (string)null);
+                    b.ToTable("kitchen_orders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_kitchen_orders_Status", "[Status] IN ('Pending','Accepted','Preparing','Ready','Completed','Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("KitchenOrderItem", b =>
@@ -348,7 +383,10 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("OrderItemId");
 
-                    b.ToTable("kitchen_order_items", (string)null);
+                    b.ToTable("kitchen_order_items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_kitchen_order_items_Status", "[Status] IN ('Pending','Preparing','Ready','Completed','Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("Order", b =>
@@ -366,6 +404,31 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("DiscountAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("PromotionDiscountType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal?>("PromotionDiscountValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int?>("PromotionId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("ServiceChargeAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
@@ -396,11 +459,16 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("CreatedBy");
 
+                    b.HasIndex("PromotionId");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("TableId");
 
-                    b.ToTable("orders", (string)null);
+                    b.ToTable("orders", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_orders_Status", "[Status] IN ('Pending','SentToKitchen','Preparing','Ready','Completed','Paid','Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("OrderItem", b =>
@@ -411,6 +479,16 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CancelledBy")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -420,6 +498,9 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("OrderItemGroupId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Quanlity")
                         .HasColumnType("int");
@@ -438,11 +519,74 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CancelledBy");
+
                     b.HasIndex("OrderId");
+
+                    b.HasIndex("OrderItemGroupId");
 
                     b.HasIndex("SizeId");
 
-                    b.ToTable("order_items", (string)null);
+                    b.ToTable("order_items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_order_items_Status", "[Status] IN ('Pending','Preparing','Ready','Completed','Cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("OrderItemStatusHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChangedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("KitchenOrderItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("OldStatus")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("OrderItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangedBy");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("KitchenOrderItemId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.ToTable("order_item_status_histories", (string)null);
                 });
 
             modelBuilder.Entity("OrderItemTopping", b =>
@@ -506,6 +650,10 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ReasonCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ChangedBy");
@@ -527,17 +675,43 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("OrderId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("PaidAt")
+                    b.Property<DateTime?>("PaidAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("ProviderResponse")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProviderTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RequestId")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
@@ -555,11 +729,20 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("CreatedBy");
 
-                    b.HasIndex("OrderId");
+                    b.HasIndex("OrderId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Paid'");
 
-                    b.HasIndex("TransactionCode");
+                    b.HasIndex("RequestId");
 
-                    b.ToTable("payments", (string)null);
+                    b.HasIndex("TransactionCode")
+                        .IsUnique()
+                        .HasFilter("[TransactionCode] <> ''");
+
+                    b.ToTable("payments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_payments_Status", "[Status] IN ('Pending','Paid','Failed','Refunded','Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("Promotion", b =>
@@ -760,7 +943,9 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasKey("RecipeId");
 
-                    b.HasIndex("SizeId");
+                    b.HasIndex("SizeId")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("recipes", (string)null);
                 });
@@ -784,6 +969,55 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.ToTable("recipe_ingredients", (string)null);
                 });
 
+            modelBuilder.Entity("RestaurantSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("RestaurantName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("ServiceChargeRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<string>("TaxCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("TaxIncluded")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("decimal(5,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("restaurant_settings", (string)null);
+                });
+
             modelBuilder.Entity("RestaurantTable", b =>
                 {
                     b.Property<int>("TableId")
@@ -792,11 +1026,20 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TableId"));
 
+                    b.Property<int?>("AreaId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Capacity")
                         .HasColumnType("int");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -810,8 +1053,11 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasKey("TableId");
 
+                    b.HasIndex("AreaId");
+
                     b.HasIndex("TableNumber")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("restaurant_tables", (string)null);
                 });
@@ -880,6 +1126,39 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("TableArea", b =>
+                {
+                    b.Property<int>("AreaId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AreaId"));
+
+                    b.Property<string>("AreaName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.HasKey("AreaId");
+
+                    b.HasIndex("AreaName")
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
+
+                    b.ToTable("table_areas", (string)null);
+                });
+
             modelBuilder.Entity("Topping", b =>
                 {
                     b.Property<int>("ToppingId")
@@ -906,7 +1185,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("ToppingId");
 
                     b.HasIndex("ToppingName")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[IsActive] = 1");
 
                     b.ToTable("toppings", (string)null);
                 });
@@ -1034,6 +1314,11 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasForeignKey("IngredientId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("OrderItem", null)
+                        .WithMany()
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("KitchenOrder", b =>
@@ -1068,6 +1353,11 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Promotion", null)
+                        .WithMany()
+                        .HasForeignKey("PromotionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("RestaurantTable", null)
                         .WithMany()
                         .HasForeignKey("TableId")
@@ -1077,6 +1367,11 @@ namespace RestaurantFoodManagerSystem.Migrations
 
             modelBuilder.Entity("OrderItem", b =>
                 {
+                    b.HasOne("Users", null)
+                        .WithMany()
+                        .HasForeignKey("CancelledBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Order", null)
                         .WithMany()
                         .HasForeignKey("OrderId")
@@ -1087,6 +1382,21 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .WithMany()
                         .HasForeignKey("SizeId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("OrderItemStatusHistory", b =>
+                {
+                    b.HasOne("Users", null)
+                        .WithMany()
+                        .HasForeignKey("ChangedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Order", null)
+                        .WithMany()
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -1217,6 +1527,16 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasForeignKey("RecipeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RestaurantTable", b =>
+                {
+                    b.HasOne("TableArea", "Area")
+                        .WithMany()
+                        .HasForeignKey("AreaId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Area");
                 });
 
             modelBuilder.Entity("UserRoles", b =>

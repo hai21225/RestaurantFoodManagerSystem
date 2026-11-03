@@ -2,7 +2,7 @@
 
 public class UpdateToppingRequest
 {
-    [Required]
+    [Required, MaxLength(100)]
     public string ToppingName { get; set; } = string.Empty;
 
     [Range(0, double.MaxValue)]

@@ -1,145 +1,89 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Công thức - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/management.css">
-    <link rel="stylesheet" href="../css/pages/recipes.css">
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nguyên liệu &amp; công thức - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav"><link rel="stylesheet" href="../css/components.css">
+    <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/recipes.css?v=20261101-f6-2">
 </head>
-<body>
-    <div class="app-shell">
-        <aside class="sidebar" aria-label="Điều hướng chính">
-            <div class="brand">
-                <span class="brand-mark" aria-hidden="true">RF</span>
-                <div><strong>Restaurant</strong><span>POS nội bộ</span></div>
-            </div>
-            <nav class="main-nav">
-                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
-                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
-                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
-                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
-                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
-                <button class="nav-item is-active" type="button" data-page="foods.html">Món ăn</button>
-                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
-                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
-                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
-                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
-                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
-                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
-            </nav>
-        </aside>
-
-        <div class="workspace">
-            <header class="topbar">
-                <div><p class="eyebrow">Quản lý thực đơn</p><h1>Công thức</h1></div>
-                <div class="operator"><span class="operator-role">Quản lý</span><strong>Chưa đăng nhập</strong></div>
-            </header>
-
-            <main class="content">
-                <section aria-labelledby="recipesTitle">
-                    <div class="section-heading">
-                        <div><p class="eyebrow">Định lượng theo kích cỡ</p><h2 id="recipesTitle">Công thức chế biến</h2></div>
-                        <div class="heading-actions">
-                            <button class="secondary-action" type="button" data-page="foods.html">Món ăn</button>
-                            <button class="secondary-action" type="button" id="addIngredientButton">Thêm nguyên liệu</button>
-                        </div>
-                    </div>
-
-                    <div class="recipe-summary" aria-label="Tổng quan công thức">
-                        <article><span>Kích cỡ đang bán</span><strong id="totalSizeCount">0</strong></article>
-                        <article><span>Đã có công thức</span><strong id="configuredCount">0</strong></article>
-                        <article><span>Chưa thiết lập</span><strong id="missingCount">0</strong></article>
-                    </div>
-
-                    <section class="panel recipe-toolbar" aria-label="Lọc công thức">
-                        <label class="form-field">
-                            <span>Tìm món</span>
-                            <input id="recipeSearch" type="search" placeholder="Nhập tên món">
-                        </label>
-                        <label class="form-field">
-                            <span>Món ăn</span>
-                            <select id="foodFilter"><option value="all">Tất cả món</option></select>
-                        </label>
-                        <div class="recipe-status-filter" id="recipeStatusFilter" aria-label="Trạng thái công thức">
-                            <button class="is-active" type="button" data-status="all">Tất cả</button>
-                            <button type="button" data-status="configured">Đã có</button>
-                            <button type="button" data-status="missing">Chưa có</button>
-                        </div>
+<body class="catalog-page">
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Điều hướng chính">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
+        <nav class="main-nav">
+            <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button><button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+            <button class="nav-item" type="button" data-page="order.html">Đặt món</button><button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+            <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button><button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+            <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button><button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+            <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button><button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+            <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button><button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+        </nav>
+    </aside>
+    <div class="workspace">
+        <header class="topbar"><div><p class="eyebrow">Quản trị</p><h1>Nguyên liệu &amp; công thức</h1></div><div class="operator"><span class="operator-role">Nhân viên kho</span><strong>Chưa đăng nhập</strong></div></header>
+        <main class="content">
+            <section id="catalogAccess" class="panel" hidden><h2>Chưa có quyền truy cập</h2><p>Phần này dành cho Nhân viên kho và Quản trị viên.</p><a href="../index.html">Về trang chủ</a></section>
+            <section id="catalogContent" aria-label="Quản lý nguyên liệu và công thức">
+                <div class="section-heading"><div class="catalog-tabs" role="tablist" aria-label="Danh mục quản lý">
+                    <button id="ingredientsTab" type="button" role="tab" aria-selected="true" aria-controls="ingredientsPanel">Nguyên liệu</button>
+                    <button id="recipesTab" type="button" role="tab" aria-selected="false" aria-controls="recipesPanel">Công thức</button>
+                </div><div class="catalog-actions"><button id="catalogRefresh" class="secondary-action" type="button">Làm mới</button><button id="addIngredient" class="primary-action" type="button">Thêm nguyên liệu</button><button id="addRecipe" class="primary-action" type="button" hidden>Tạo công thức</button></div></div>
+                <p id="catalogNotice" class="catalog-notice" role="status"></p>
+                <section id="catalogPending" class="catalog-pending" hidden aria-label="Yêu cầu cần đối chiếu">
+                    <h3>Kiểm tra thao tác vừa gửi</h3><p id="pendingSummary"></p><p>Đối chiếu danh mục và các phiên bản công thức trước khi thao tác tiếp. Không gửi lại yêu cầu chưa rõ kết quả.</p>
+                    <div class="catalog-actions"><button id="reviewPending" class="secondary-action" type="button">Tải dữ liệu để đối chiếu</button><button id="acknowledgePending" class="secondary-action" type="button" hidden>Tôi đã đối chiếu xong</button></div>
+                </section>
+                <div id="catalogSummary" class="catalog-summary" aria-label="Tổng quan danh mục"></div>
+                <section id="ingredientsPanel" role="tabpanel" aria-labelledby="ingredientsTab">
+                    <form id="ingredientFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc nguyên liệu">
+                        <label class="form-field"><span>Tìm nguyên liệu</span><input id="ingredientSearch" type="search" placeholder="Tên hoặc đơn vị"></label>
+                        <label class="form-field"><span>Hoạt động</span><select id="ingredientActiveFilter"><option value="all">Tất cả</option><option value="active" selected>Đang dùng</option><option value="inactive">Ngừng dùng</option></select></label>
+                        <label class="form-field"><span>Tình trạng kho</span><select id="ingredientStockFilter"><option value="all">Tất cả</option><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label>
+                    </form>
+                    <section class="panel" aria-labelledby="ingredientListTitle"><div class="panel-header"><h2 id="ingredientListTitle">Danh mục nguyên liệu</h2><span id="ingredientCount"></span></div>
+                        <p class="catalog-caption">Thêm nguyên liệu tại đây để chọn trong công thức và phiếu nhập. Số lượng tồn được cập nhật tại Kho/Nhập hàng.</p>
+                        <div class="catalog-table-wrap"><table class="catalog-table"><thead><tr><th>Tên / Mã</th><th>Đơn vị</th><th>Tồn tối thiểu</th><th>Tình trạng</th><th>Thao tác</th></tr></thead><tbody id="ingredientRows"></tbody></table></div>
                     </section>
-
-                    <div class="recipe-layout">
-                        <section class="panel recipe-list-panel" aria-labelledby="recipeListTitle">
-                            <div class="panel-header"><h3 id="recipeListTitle">Món và kích cỡ</h3><span id="recipeListCount">0 kích cỡ</span></div>
-                            <div id="recipeList" class="recipe-list"></div>
-                        </section>
-
-                        <aside class="panel recipe-detail-panel" aria-labelledby="recipeDetailTitle">
-                            <div class="panel-header">
-                                <h3 id="recipeDetailTitle">Chi tiết công thức</h3>
-                                <button class="detail-close-button" type="button" id="closeRecipeDetail" aria-label="Đóng chi tiết">×</button>
-                            </div>
-                            <div id="recipeDetail" class="recipe-detail">
-                                <div class="recipe-empty"><strong>Chưa chọn công thức</strong><span>Chọn một kích cỡ trong danh sách.</span></div>
-                            </div>
-                        </aside>
+                </section>
+                <section id="recipesPanel" role="tabpanel" aria-labelledby="recipesTab" hidden>
+                    <form id="recipeFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc công thức">
+                        <label class="form-field"><span>Tìm món / Công thức</span><input id="recipeSearch" type="search" placeholder="Tên món, công thức hoặc phiên bản"></label>
+                        <label class="form-field"><span>Món ăn</span><select id="recipeFoodFilter"><option value="all">Tất cả món</option></select></label>
+                        <label class="form-field"><span>Thiết lập</span><select id="recipeStateFilter"><option value="all">Tất cả kích cỡ</option><option value="configured" selected>Đã có công thức</option><option value="missing">Chưa có công thức</option></select></label>
+                    </form>
+                    <div class="catalog-recipe-layout">
+                        <section class="panel" aria-labelledby="recipeListTitle"><div class="panel-header"><h2 id="recipeListTitle">Món và kích cỡ</h2><span id="recipeCount"></span></div><div id="recipeRows" class="catalog-recipe-rows"></div></section>
+                        <section class="panel catalog-detail" aria-labelledby="recipeDetailTitle"><div class="panel-header"><h2 id="recipeDetailTitle">Chi tiết / Phiên bản</h2></div><div id="recipeDetail"></div></section>
                     </div>
                 </section>
-            </main>
-        </div>
+            </section>
+        </main>
     </div>
-
-    <dialog id="recipeDialog" class="form-dialog recipe-dialog" aria-labelledby="recipeDialogTitle">
-        <div class="form-dialog-header">
-            <div><h2 id="recipeDialogTitle">Tạo công thức</h2><p id="recipeDialogContext"></p></div>
-            <button class="dialog-close-button" type="button" data-close-recipe-dialog="recipeDialog" aria-label="Đóng">×</button>
-        </div>
-        <form id="recipeForm" class="dialog-form">
-            <input id="recipeSizeId" name="sizeId" type="hidden">
-            <div class="dialog-form-grid recipe-meta-fields">
-                <label class="form-field"><span>Tên công thức</span><input name="name" type="text" maxlength="150" required></label>
-                <label class="form-field"><span>Phiên bản</span><input name="version" type="text" maxlength="50" value="1" required></label>
-            </div>
-
-            <div class="recipe-ingredient-heading">
-                <div><strong>Nguyên liệu</strong><span id="availableIngredientCount">0 nguyên liệu khả dụng</span></div>
-                <button class="secondary-action" id="addIngredientRowButton" type="button">Thêm dòng</button>
-            </div>
-            <div id="recipeIngredientRows" class="recipe-ingredient-rows"></div>
-            <p id="recipeFormMessage" class="form-message" role="alert"></p>
-            <div class="dialog-actions">
-                <button class="secondary-action" type="button" data-close-recipe-dialog="recipeDialog">Hủy</button>
-                <button class="primary-action" id="recipeSubmit" type="submit">Lưu công thức</button>
-            </div>
-        </form>
-    </dialog>
-
-    <dialog id="ingredientDialog" class="form-dialog" aria-labelledby="ingredientDialogTitle">
-        <div class="form-dialog-header">
-            <div><h2 id="ingredientDialogTitle">Thêm nguyên liệu</h2><p>Đơn vị này được dùng thống nhất trong kho và công thức.</p></div>
-            <button class="dialog-close-button" type="button" data-close-recipe-dialog="ingredientDialog" aria-label="Đóng">×</button>
-        </div>
-        <form id="ingredientForm" class="dialog-form">
-            <div class="dialog-form-grid">
-                <label class="form-field is-full"><span>Tên nguyên liệu</span><input name="name" type="text" maxlength="150" required></label>
-                <label class="form-field"><span>Đơn vị kho</span><select name="unit" required><option value="">Chọn đơn vị</option><option value="g">Gam (g)</option><option value="kg">Kilôgam (kg)</option><option value="ml">Mililít (ml)</option><option value="l">Lít (l)</option><option value="cái">Cái</option></select></label>
-                <label class="form-field"><span>Mức tồn tối thiểu</span><input name="minimumStock" type="number" inputmode="decimal" min="0" step="0.001" value="0" required></label>
-            </div>
-            <p id="ingredientFormMessage" class="form-message" role="alert"></p>
-            <div class="dialog-actions">
-                <button class="secondary-action" type="button" data-close-recipe-dialog="ingredientDialog">Hủy</button>
-                <button class="primary-action" id="ingredientSubmit" type="submit">Tạo nguyên liệu</button>
-            </div>
-        </form>
-    </dialog>
-
-    <script src="../js/common/navigation.js"></script>
-    <script src="../js/common/api.js"></script>
-    <script src="../js/common/dialogs.js"></script>
-    <script src="../js/common/food-sizes.js"></script>
-    <script src="../js/pages/recipes.js"></script>
+</div>
+<dialog id="ingredientDialog" class="form-dialog" aria-labelledby="ingredientDialogTitle">
+    <div class="form-dialog-header"><div><h2 id="ingredientDialogTitle">Thêm nguyên liệu</h2><p id="ingredientDialogContext">Tạo danh mục trước, nhập số lượng tại Kho/Nhập hàng.</p></div><button class="dialog-close-button" data-close="ingredientDialog" type="button" aria-label="Đóng">×</button></div>
+    <form id="ingredientForm" class="dialog-form"><div class="dialog-form-grid">
+        <label class="form-field is-full"><span>Tên nguyên liệu</span><input id="ingredientName" name="name" maxlength="150" required></label>
+        <label class="form-field"><span>Đơn vị kho</span><input id="ingredientUnit" name="unit" maxlength="50" list="commonUnits" required><datalist id="commonUnits"><option value="kg"><option value="g"><option value="l"><option value="ml"><option value="lít"><option value="cái"></datalist></label>
+        <label class="form-field"><span>Mức tồn tối thiểu</span><input id="ingredientMinimum" name="minimumStock" type="number" min="0" step="0.001" value="0" required></label>
+        <p id="unitHelp" class="catalog-caption is-full" role="status"></p>
+    </div><p id="ingredientFormMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="ingredientDialog" type="button">Hủy</button><button id="ingredientSubmit" class="primary-action" type="submit">Lưu nguyên liệu</button></div></form>
+</dialog>
+<dialog id="recipeDialog" class="form-dialog catalog-recipe-dialog" aria-labelledby="recipeDialogTitle">
+    <div class="form-dialog-header"><div><h2 id="recipeDialogTitle">Tạo công thức</h2><p id="recipeDialogContext"></p></div><button class="dialog-close-button" data-close="recipeDialog" type="button" aria-label="Đóng">×</button></div>
+    <form id="recipeForm" class="dialog-form"><div class="dialog-form-grid">
+        <label class="form-field is-full"><span>Món / Kích cỡ</span><select id="recipeSize" required></select></label>
+        <label class="form-field"><span>Tên công thức</span><input id="recipeName" maxlength="150" required></label>
+        <label class="form-field"><span>Phiên bản (tùy chọn)</span><input id="recipeVersion" maxlength="50" placeholder="Tự đánh phiên bản"><small>Để trống khi sửa để tự tăng phiên bản.</small></label>
+    </div><div class="panel-header catalog-lines-heading"><h3>Định lượng cho 1 phần</h3><button id="addRecipeLine" class="secondary-action" type="button">Thêm dòng</button></div>
+    <p class="catalog-caption">Nhập theo đúng đơn vị kho, tối đa 3 số lẻ. Ví dụ: 0,2 kg hoặc 200 g tùy đơn vị nguyên liệu.</p>
+    <div id="recipeLines" class="catalog-lines"></div><p id="recipeFormMessage" class="catalog-notice" role="alert"></p>
+    <div class="catalog-dialog-actions"><button class="secondary-action" data-close="recipeDialog" type="button">Hủy</button><button id="recipeSubmit" class="primary-action" type="submit">Lưu công thức</button></div></form>
+</dialog>
+<dialog id="stockStatusDialog" class="form-dialog" aria-labelledby="stockStatusTitle"><div class="form-dialog-header"><div><h2 id="stockStatusTitle">Tình trạng nguyên liệu</h2><p id="stockStatusContext"></p></div><button class="dialog-close-button" data-close="stockStatusDialog" type="button" aria-label="Đóng">×</button></div>
+    <form id="stockStatusForm" class="dialog-form"><label class="form-field"><span>Tình trạng kho</span><select id="stockStatusValue"><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label><p class="catalog-caption">Đánh dấu tình trạng không đổi số lượng tồn và không tự bật bán lại món. Kiểm kê/điều chỉnh số lượng tại Kho.</p><p id="stockStatusMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="stockStatusDialog" type="button">Hủy</button><button id="stockStatusSubmit" class="primary-action" type="submit">Lưu tình trạng</button></div></form>
+</dialog>
+<dialog id="catalogConfirm" class="form-dialog" aria-labelledby="confirmTitle"><div class="form-dialog-header"><h2 id="confirmTitle">Xác nhận thao tác</h2><button class="dialog-close-button" data-close="catalogConfirm" type="button" aria-label="Đóng">×</button></div><form id="confirmForm" class="dialog-form"><p id="confirmText"></p><p id="confirmMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="catalogConfirm" type="button">Quay lại</button><button id="confirmSubmit" class="primary-action" type="submit">Xác nhận</button></div></form></dialog>
+<script src="../js/common/auth.js?v=20261101-f67"></script><script src="../js/common/api.js"></script><script src="../js/common/navigation.js?v=20261101-f67"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261101-delete-visibility"></script>
 </body>
 </html>

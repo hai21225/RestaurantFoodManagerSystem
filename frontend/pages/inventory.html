@@ -1,6 +1,77 @@
-<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Kho hàng - Restaurant Food Manager</title><link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css"><link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/management.css"></head><body><div class="app-shell">
-<aside class="sidebar" aria-label="Điều hướng chính"><div class="brand"><span class="brand-mark">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div><nav class="main-nav"><button class="nav-item" data-page="../index.html">Tổng quan</button><button class="nav-item" data-page="tables.html">Bàn ăn</button><button class="nav-item" data-page="order.html">Đặt món</button><button class="nav-item" data-page="kitchen.html">Bếp</button><button class="nav-item" data-page="payment.html">Thanh toán</button><button class="nav-item" data-page="foods.html">Món ăn</button><button class="nav-item" data-page="employees.html">Nhân viên</button><button class="nav-item" data-page="roles.html">Phân quyền</button><button class="nav-item is-active" data-page="inventory.html">Kho hàng</button><button class="nav-item" data-page="purchases.html">Nhập hàng</button><button class="nav-item" data-page="reports.html">Báo cáo</button><button class="nav-item" data-page="account.html">Tài khoản</button></nav></aside>
-<div class="workspace"><header class="topbar"><div><p class="eyebrow">Quản lý nguyên liệu</p><h1>Kho hàng</h1></div><div class="operator"><span class="operator-role">Nhân viên kho</span><strong>Chưa đăng nhập</strong></div></header><main class="content"><section aria-labelledby="pageTitle"><div class="section-heading"><div><p class="eyebrow">Tồn kho hiện tại</p><h2 id="pageTitle">Nguyên liệu</h2></div><button class="primary-action" data-page="purchases.html">Tạo phiếu nhập</button></div>
-<div class="management-summary"><article class="summary-tile"><span>Tổng nguyên liệu</span><strong>0</strong></article><article class="summary-tile"><span>Sắp hết</span><strong>0</strong></article><article class="summary-tile"><span>Đã hết</span><strong>0</strong></article><article class="summary-tile"><span>Cần kiểm kê</span><strong>0</strong></article></div>
-<section class="panel management-toolbar"><label class="field"><span class="field-label">Tìm nguyên liệu</span><input data-filter-input type="search" placeholder="Tên hoặc mã nguyên liệu"></label><label class="field"><span class="field-label">Nhóm nguyên liệu</span><select data-filter-input><option>Tất cả nhóm</option><option>Thịt và hải sản</option><option>Rau củ</option><option>Gia vị</option><option>Đồ uống</option></select></label><label class="field"><span class="field-label">Mức tồn</span><select data-filter-input><option>Tất cả</option><option>Đủ hàng</option><option>Sắp hết</option><option>Đã hết</option></select></label></section>
-<div class="management-grid"><section class="panel management-list"><div class="panel-header"><h3>Danh sách tồn kho</h3><span id="inventoryCount">0 nguyên liệu</span></div><div id="inventoryList" class="empty-workspace"><div><strong>Đang tải dữ liệu kho</strong></div></div></section><aside class="panel"><div class="panel-header"><h3>Nghiệp vụ kho</h3></div><div class="quick-actions"><button class="secondary-action" data-feedback="Chức năng kiểm kê sẽ hoạt động sau khi kết nối dữ liệu.">Kiểm kê kho</button><button class="secondary-action" data-feedback="Chưa có nguyên liệu được chọn.">Điều chỉnh tồn</button><button class="secondary-action" data-feedback="Lịch sử kho chưa có dữ liệu.">Xem lịch sử kho</button></div><p id="uiMessage" class="ui-message" role="status"></p></aside></div></section></main></div></div><script src="../js/common/navigation.js"></script><script src="../js/common/api.js"></script><script src="../js/common/management.js"></script><script src="../js/pages/inventory.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kho hàng - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css"><link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
+    <link rel="stylesheet" href="../css/components.css"><link rel="stylesheet" href="../css/pages/management.css">
+    <link rel="stylesheet" href="../css/pages/warehouse.css?v=20261101-f6">
+</head>
+<body class="warehouse-page">
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="order.html">Đặt món</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item is-active" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+        <div class="workspace">
+            <header class="topbar"><div><p class="eyebrow">Nghiệp vụ kho</p><h1>Kho hàng</h1></div><div class="operator"><span class="operator-role">Nhân viên kho</span><strong>Chưa đăng nhập</strong></div></header>
+            <main class="content">
+                <section aria-labelledby="pageTitle">
+                    <div class="section-heading"><div><p class="eyebrow">Tồn kho hiện tại</p><h2 id="pageTitle">Nguyên liệu &amp; biến động kho</h2></div><div class="warehouse-actions"><a class="secondary-action" href="recipes.html?tab=ingredients">Danh mục nguyên liệu</a><button class="secondary-action" id="warehouseRefresh" type="button">Làm mới</button><button class="primary-action" data-page="purchases.html" type="button">Tạo phiếu nhập</button></div></div>
+                    <p id="uiMessage" class="ui-message" role="status"></p>
+                    <section class="warehouse-pending" id="warehousePending" hidden aria-label="Đối chiếu thao tác kho">
+                        <p id="warehousePendingSummary"></p><div class="warehouse-actions"><button class="secondary-action" type="button" id="warehouseReview">Tải dữ liệu để đối chiếu</button><button class="secondary-action" type="button" id="warehouseAck" hidden>Đã đối chiếu, tiếp tục</button><a id="warehousePendingLink" href="purchases.html" hidden>Mở màn hình đối chiếu</a></div>
+                    </section>
+                    <div class="management-summary" id="inventorySummary"></div>
+                    <section class="panel management-toolbar" aria-label="Bộ lọc tồn kho">
+                        <label class="field"><span class="field-label">Tìm nguyên liệu</span><input id="inventorySearch" type="search" placeholder="Tên hoặc mã nguyên liệu"></label>
+                        <label class="field"><span class="field-label">Danh sách</span><select id="inventoryView"><option value="all">Tất cả tồn kho</option><option value="low">Cần kho xử lý</option><option value="Spoiled">Đánh dấu hỏng</option><option value="OutOfStock">Đánh dấu hết hàng</option></select></label>
+                    </section>
+                    <section class="panel warehouse-panel" aria-labelledby="inventoryTitle">
+                        <div class="panel-header"><h3 id="inventoryTitle">Danh sách tồn kho</h3><span id="inventoryCount">0 nguyên liệu</span></div>
+                        <p class="warehouse-hint">Lượng tồn là số ghi sổ. Nguyên liệu báo hỏng/hết vẫn cần kiểm tra dù sổ còn hàng. Điều chỉnh là phần tăng/giảm, cần ghi lý do.</p>
+                        <div id="inventoryList" class="warehouse-cards"></div>
+                    </section>
+                    <section class="panel warehouse-panel" id="ledgerSection" aria-labelledby="ledgerTitle">
+                        <div class="panel-header"><h3 id="ledgerTitle">Lịch sử biến động kho</h3><span>Thời gian theo giờ Việt Nam</span></div>
+                        <form id="ledgerFilters" class="warehouse-filters">
+                            <label class="field"><span>Nguyên liệu</span><select id="ledgerIngredient" name="ingredientId"><option value="">Tất cả</option></select></label>
+                            <label class="field"><span>Loại biến động</span><select name="type"><option value="">Tất cả</option><option value="Sale">Xuất cho đơn</option><option value="Purchase">Nhận hàng</option><option value="AdjustmentIn">Điều chỉnh tăng</option><option value="AdjustmentOut">Điều chỉnh giảm</option><option value="Wastage">Hao hụt</option></select></label>
+                            <label class="field"><span>Nguồn chứng từ</span><select name="referenceType"><option value="">Tất cả</option><option value="Order">Đơn hàng</option><option value="PurchaseOrder">Phiếu nhập</option><option value="ManualAdjustment">Điều chỉnh tay</option></select></label>
+                            <label class="field"><span>Mã chứng từ</span><input name="referenceId" type="number" min="1" step="1" placeholder="Chọn nguồn trước"></label>
+                            <label class="field"><span>Từ ngày</span><input name="from" type="date"></label><label class="field"><span>Đến ngày</span><input name="to" type="date"></label>
+                            <button class="secondary-action" type="submit">Lọc lịch sử</button>
+                        </form>
+                        <div class="warehouse-table-wrap"><table class="warehouse-table"><thead><tr><th>Thời điểm</th><th>Nguyên liệu</th><th>Loại</th><th>Lượng</th><th>Trước → Sau</th><th>Chứng từ / Lý do</th><th>Người tạo</th></tr></thead><tbody id="ledgerRows"></tbody></table></div>
+                        <div class="warehouse-pagination"><button class="secondary-action" type="button" id="ledgerPrev">Trang trước</button><span id="ledgerPage"></span><button class="secondary-action" type="button" id="ledgerNext">Trang sau</button></div>
+                    </section>
+                </section>
+            </main>
+        </div>
+    </div>
+    <dialog class="form-dialog" id="adjustDialog" aria-labelledby="adjustTitle">
+        <form class="dialog-form" id="adjustForm">
+            <h2 id="adjustTitle">Điều chỉnh tồn kho</h2><p id="adjustCurrent"></p>
+            <label class="form-field"><span>Lượng tăng / giảm</span><input id="adjustQuantity" name="quantity" type="number" step="0.001" min="-1000000" max="1000000" required placeholder="Ví dụ: -1.25 hoặc 2"></label>
+            <label class="form-field"><span>Lý do điều chỉnh</span><textarea name="note" id="adjustNote" rows="3" maxlength="500" required></textarea></label>
+            <p id="adjustMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions"><button class="secondary-action" type="button" id="closeAdjust">Quay lại</button><button class="primary-action" type="submit" id="adjustSubmit">Xác nhận điều chỉnh</button></div>
+        </form>
+    </dialog>
+    <script src="../js/common/auth.js?v=20261101-f67"></script><script src="../js/common/navigation.js?v=20261101-f67"></script><script src="../js/common/api.js"></script>
+    <script src="../js/common/warehouse-session.js"></script><script src="../js/common/warehouse-ui.js"></script><script src="../js/pages/inventory.js"></script>
+</body>
+</html>

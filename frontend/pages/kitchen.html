@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bếp - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/kitchen.css">
+    <link rel="stylesheet" href="../css/pages/kitchen.css?v=20261029">
 </head>
 <body class="kitchen-page">
     <div class="app-shell">
@@ -63,8 +63,8 @@
 
                     <section class="panel kitchen-toolbar" aria-label="Bộ lọc bếp">
                         <div class="filter-group">
-                            <span>Khu vực bếp</span>
-                            <div class="segmented-control" id="stationFilters"></div>
+                            <label for="kitchenSearch">Tìm bàn, món hoặc phục vụ</label>
+                            <input id="kitchenSearch" type="search" placeholder="Tên bàn, tên món, phục vụ">
                         </div>
 
                         <div class="filter-group">
@@ -75,16 +75,34 @@
 
                     <div class="kitchen-status-tabs" id="kitchenStatusTabs" aria-label="Trạng thái phiếu bếp"></div>
                     <p class="kitchen-announcement" id="kitchenAnnouncement" role="status" aria-live="polite" aria-atomic="true"></p>
+                    <section id="kitchenPendingNotice" class="panel kitchen-pending-notice" hidden aria-labelledby="pendingKitchenTitle">
+                        <h3 id="pendingKitchenTitle">Yêu cầu cần đối chiếu</h3><p id="pendingKitchenDescription"></p>
+                        <div class="ticket-actions"><button type="button" class="ticket-action" id="reviewKitchenRequest">Tải lại để đối chiếu</button><button type="button" class="ticket-action" id="acknowledgeKitchenRequest" hidden>Đã đối chiếu phiếu, tiếp tục</button></div>
+                    </section>
                     <div class="kitchen-board" id="kitchenBoard" aria-label="Bảng trạng thái món"></div>
+                    <section id="kitchenReceipt" class="panel kitchen-receipt" hidden aria-labelledby="receiptKitchenTitle"><h3 id="receiptKitchenTitle">Kết quả phiếu vừa xử lý</h3><p class="field-hint">Phiếu đã rời hàng đợi. Kết quả này chỉ để đối chiếu; dùng Làm mới để tải lại.</p><div id="kitchenReceiptContent"></div></section>
                 </section>
             </main>
         </div>
     </div>
 
-    <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/auth.js?v=20261101-f67"></script>
+    <script src="../js/common/navigation.js?v=20261101-f67"></script>
     <script src="../js/common/api.js"></script>
-    <script src="../js/common/food-units.js"></script>
-    <script src="../js/data/kitchen.data.js"></script>
-    <script src="../js/pages/kitchen.js"></script>
+    <dialog id="kitchenActionDialog" class="form-dialog" aria-labelledby="kitchenActionTitle">
+        <div class="form-dialog-header"><div><h2 id="kitchenActionTitle">Xử lý món</h2><p id="kitchenActionDescription"></p></div><button class="dialog-close-button" type="button" data-close-kitchen-action aria-label="Đóng">×</button></div>
+        <form id="kitchenActionForm" class="dialog-form">
+            <label class="form-field" id="kitchenQuantityField"><span id="kitchenQuantityLabel">Số phần đã làm được của dòng này</span><input id="kitchenPreparedQuantity" type="number" min="0" max="2147483647" step="1"></label>
+            <label class="form-field" id="kitchenShortageReasonField"><span>Nguyên nhân thiếu</span><select id="kitchenShortageReason"><option value="PhysicalShortage">Thiếu / hỏng nguyên liệu thực tế</option><option value="OutOfStock">Hết nguyên liệu</option></select></label>
+            <label class="form-field" id="kitchenCancelReasonField"><span>Nguyên nhân hủy</span><select id="kitchenCancelReason"><option value="KitchenError">Sự cố chế biến</option><option value="CustomerChange">Khách thay đổi</option></select></label>
+            <label class="form-field"><span>Lý do / ghi chú</span><textarea id="kitchenActionReason" rows="3" maxlength="500"></textarea></label>
+            <label id="kitchenDeactivateField" class="kitchen-deactivate"><input id="kitchenDeactivateDish" type="checkbox"> Ngừng bán món này vì nguyên liệu không còn đảm bảo. Lý do trên được lưu cho món.</label>
+            <p id="kitchenActionHint" class="field-hint"></p><p id="kitchenActionMessage" class="form-message" role="alert"></p>
+            <div class="dialog-actions"><button type="button" class="secondary-action" data-close-kitchen-action>Đóng</button><button id="kitchenActionConfirm" class="primary-action" type="submit">Xác nhận</button></div>
+        </form>
+    </dialog>
+    <script src="../js/common/dialogs.js"></script>
+    <script src="../js/common/kitchen-session.js"></script>
+    <script src="../js/pages/kitchen.js?v=20261029"></script>
 </body>
 </html>

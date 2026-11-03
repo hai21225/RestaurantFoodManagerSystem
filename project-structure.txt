@@ -1,0 +1,317 @@
+﻿|-- .github
+|   `-- workflows
+|-- .opencode
+|   `-- skills
+|       `-- restaurant-backend
+|-- docs
+|   `-- architecture
+|-- docsforfe
+|-- frontend
+|   |-- css
+|   |   `-- pages
+|   |-- js
+|   |   |-- common
+|   |   |-- data
+|   |   `-- pages
+|   `-- pages
+|-- RestaurantFoodManagerSystem
+|   |-- Application
+|   |   |-- Common
+|   |   |   |-- ConcurrencyConflictException.cs
+|   |   |   |-- CurrentUserExtensions.cs
+|   |   |   |-- ICurrentUser.cs
+|   |   |   |-- IngredientUnits.cs
+|   |   |   |-- KitchenStatuses.cs
+|   |   |   |-- OrderCancellation.cs
+|   |   |   |-- OrderCancellationPolicy.cs
+|   |   |   |-- OrderIdempotencyStore.cs
+|   |   |   |-- OrderItemMutations.cs
+|   |   |   |-- OrderStatuses.cs
+|   |   |   |-- OrderTotalsCalculator.cs
+|   |   |   |-- Paging.cs
+|   |   |   |-- PaymentProviders.cs
+|   |   |   |-- PaymentStatuses.cs
+|   |   |   |-- PaymentTransactionCodes.cs
+|   |   |   `-- VietnamTime.cs
+|   |   |-- DTO
+|   |   |   |-- Common
+|   |   |   |   |-- PagedResponse.cs
+|   |   |   |   |-- UpdateActiveRequest.cs
+|   |   |   |   `-- UserRoleDto.cs
+|   |   |   |-- Requests
+|   |   |   |   |-- Auth
+|   |   |   |   |   |-- ChangePasswordRequest.cs
+|   |   |   |   |   |-- LoginRequest.cs
+|   |   |   |   |   `-- RegisterRequest.cs
+|   |   |   |   |-- Food
+|   |   |   |   |   |-- AssignFoodToppingRequest.cs
+|   |   |   |   |   |-- CreateFoodRequest.cs
+|   |   |   |   |   |-- CreateFoodSizeRequest.cs
+|   |   |   |   |   |-- CreateToppingRequest.cs
+|   |   |   |   |   |-- UpdateFoodActiveRequest.cs
+|   |   |   |   |   |-- UpdateFoodAvailabilityRequest.cs
+|   |   |   |   |   |-- UpdateFoodRequest.cs
+|   |   |   |   |   |-- UpdateFoodSizeRequest.cs
+|   |   |   |   |   |-- UpdateToppingAvailabilityRequest.cs
+|   |   |   |   |   `-- UpdateToppingRequest.cs
+|   |   |   |   |-- Management
+|   |   |   |   |   |-- KitchenRequests.cs
+|   |   |   |   |   |-- ManagementRequests.cs
+|   |   |   |   |   `-- SettingsRequests.cs
+|   |   |   |   |-- Order
+|   |   |   |   |   `-- OrderRequests.cs
+|   |   |   |   |-- Payment
+|   |   |   |   |   `-- PaymentRequests.cs
+|   |   |   |   |-- Reports
+|   |   |   |   |   `-- RevenueReportQuery.cs
+|   |   |   |   |-- Restaurant
+|   |   |   |   |   `-- TableAreaRequest.cs
+|   |   |   |   `-- User
+|   |   |   |       |-- AssignRoleRequest.cs
+|   |   |   |       |-- CreateUserRequest.cs
+|   |   |   |       |-- UpdateProfileRequest.cs
+|   |   |   |       `-- UpdateUserRequest.cs
+|   |   |   `-- Responses
+|   |   |       |-- Auth
+|   |   |       |   |-- LoginResponse.cs
+|   |   |       |   `-- SetupStatusResponse.cs
+|   |   |       |-- Food
+|   |   |       |   |-- CategoryResponse.cs
+|   |   |       |   |-- FoodResponse.cs
+|   |   |       |   |-- FoodSizeResponse.cs
+|   |   |       |   `-- ToppingResponse.cs
+|   |   |       |-- Management
+|   |   |       |   |-- IngredientResponse.cs
+|   |   |       |   |-- InventoryResponse.cs
+|   |   |       |   |-- InventoryTransactionResponse.cs
+|   |   |       |   |-- KitchenItemResponse.cs
+|   |   |       |   |-- KitchenOrderResponse.cs
+|   |   |       |   |-- LowStockItemResponse.cs
+|   |   |       |   |-- PromotionResponse.cs
+|   |   |       |   |-- PurchaseOrderDetailResponse.cs
+|   |   |       |   |-- PurchaseOrderResponse.cs
+|   |   |       |   |-- RecipeResponse.cs
+|   |   |       |   |-- RestaurantSettingsResponse.cs
+|   |   |       |   `-- SupplierResponse.cs
+|   |   |       |-- Order
+|   |   |       |   |-- OrderCreatedResponse.cs
+|   |   |       |   |-- OrderDetailResponse.cs
+|   |   |       |   |-- OrderItemHistoryResponse.cs
+|   |   |       |   |-- OrderListItemResponse.cs
+|   |   |       |   |-- OrderStatusHistoryResponse.cs
+|   |   |       |   `-- TableBillResponse.cs
+|   |   |       |-- Payment
+|   |   |       |   |-- MomoIntentResponse.cs
+|   |   |       |   `-- PaymentResponse.cs
+|   |   |       |-- Reports
+|   |   |       |   |-- DashboardSummaryResponse.cs
+|   |   |       |   `-- RevenueReportResponse.cs
+|   |   |       |-- User
+|   |   |       |   |-- RoleResponse.cs
+|   |   |       |   |-- UserListItemResponse.cs
+|   |   |       |   |-- UserProfileResponse.cs
+|   |   |       |   `-- UserResponse.cs
+|   |   |       |-- RestaurantTableResponse.cs
+|   |   |       `-- TableAreaResponse.cs
+|   |   |-- Features
+|   |   |   `-- Auth
+|   |   |       |-- AuthPolicies.cs
+|   |   |       |-- AuthService.cs
+|   |   |       |-- JwtOptions.cs
+|   |   |       `-- TokenService.cs
+|   |   `-- Services
+|   |       |-- Food
+|   |       |   |-- CategoryService.cs
+|   |       |   |-- FoodService.cs
+|   |       |   |-- FoodSizeService.cs
+|   |       |   |-- FoodToppingService.cs
+|   |       |   |-- MenuService.cs
+|   |       |   `-- ToppingService.cs
+|   |       |-- Inventory
+|   |       |   |-- IngredientService.cs
+|   |       |   |-- InventoryService.cs
+|   |       |   `-- PurchaseOrderService.cs
+|   |       |-- Payment
+|   |       |   |-- MomoOptions.cs
+|   |       |   |-- MomoPaymentService.cs
+|   |       |   `-- PaymentOptions.cs
+|   |       |-- Restaurant
+|   |       |   |-- RestaurantTableService.cs
+|   |       |   `-- TableAreaService.cs
+|   |       |-- Settings
+|   |       |   `-- RestaurantSettingsService.cs
+|   |       |-- User
+|   |       |   |-- RoleService.cs
+|   |       |   |-- UserRoleService.cs
+|   |       |   `-- UserService.cs
+|   |       |-- KitchenService.cs
+|   |       |-- OrderLifecycleCoordinator.cs
+|   |       |-- OrderService.cs
+|   |       |-- PaymentService.cs
+|   |       |-- PromotionService.cs
+|   |       |-- RecipeService.cs
+|   |       |-- ReportService.cs
+|   |       |-- SetupService.cs
+|   |       `-- SupplierService.cs
+|   |-- Controllers
+|   |   |-- Food
+|   |   |   |-- CategoriesController.cs
+|   |   |   |-- FoodsController.cs
+|   |   |   |-- FoodSizesController.cs
+|   |   |   |-- FoodToppingsController.cs
+|   |   |   `-- ToppingsController.cs
+|   |   |-- RestaurantTables
+|   |   |   |-- RestaurantTablesController.cs
+|   |   |   `-- TableAreasController.cs
+|   |   |-- Users
+|   |   |   |-- AuthController.cs
+|   |   |   |-- RolesController.cs
+|   |   |   `-- UsersController.cs
+|   |   |-- ManagementController.cs
+|   |   |-- MenuController.cs
+|   |   |-- OrdersController.cs
+|   |   |-- PaymentsController.cs
+|   |   |-- ReportsController.cs
+|   |   `-- SetupController.cs
+|   |-- Domain
+|   |   |-- Entity
+|   |   |   |-- Food
+|   |   |   |   |-- Category.cs
+|   |   |   |   |-- Food.cs
+|   |   |   |   |-- FoodSize.cs
+|   |   |   |   |-- FoodTopping.cs
+|   |   |   |   `-- Topping.cs
+|   |   |   |-- Kitchen
+|   |   |   |   |-- KitchenOrder.cs
+|   |   |   |   `-- KitchenOrderItem.cs
+|   |   |   |-- Order
+|   |   |   |   |-- Order.cs
+|   |   |   |   |-- OrderItem.cs
+|   |   |   |   |-- OrderItemStatusHistory.cs
+|   |   |   |   |-- OrderItemTopping.cs
+|   |   |   |   `-- OrderStatusHistory.cs
+|   |   |   |-- Payment
+|   |   |   |   `-- Payment.cs
+|   |   |   |-- Promotion
+|   |   |   |   |-- Promotion.cs
+|   |   |   |   |-- PromotionCategory.cs
+|   |   |   |   `-- PromotionFood.cs
+|   |   |   |-- Recipe_Inventory
+|   |   |   |   |-- Ingredient.cs
+|   |   |   |   |-- Inventory.cs
+|   |   |   |   |-- InventoryTransaction.cs
+|   |   |   |   |-- PurchaseOrder.cs
+|   |   |   |   |-- PurchaseOrderItem.cs
+|   |   |   |   |-- Recipe.cs
+|   |   |   |   |-- RecipeIngredient.cs
+|   |   |   |   `-- Supplier.cs
+|   |   |   |-- Restaurant
+|   |   |   |   |-- RestaurantTable.cs
+|   |   |   |   `-- TableArea.cs
+|   |   |   |-- Settings
+|   |   |   |   `-- RestaurantSettings.cs
+|   |   |   `-- User
+|   |   |       |-- Roles.cs
+|   |   |       |-- UserRoles.cs
+|   |   |       `-- Users.cs
+|   |   `-- Enums
+|   |       `-- IngredientStockStatuses.cs
+|   |-- Infrastructure
+|   |   |-- Auth
+|   |   |   |-- AuthOptions.cs
+|   |   |   |-- AuthorizationServiceCollectionExtensions.cs
+|   |   |   |-- EnforceableAuthorizationPolicyProvider.cs
+|   |   |   `-- HttpContextCurrentUser.cs
+|   |   |-- Errors
+|   |   |   `-- ApiExceptionFilter.cs
+|   |   `-- Persistence
+|   |       |-- AppDbContext.cs
+|   |       |-- DatabaseInitializationOptions.cs
+|   |       `-- DatabaseInitializer.cs
+|   |-- Migrations
+|   |   |-- 20260909011511_InitialCreate.cs
+|   |   |-- 20260909011511_InitialCreate.Designer.cs
+|   |   |-- 20260926024608_UpdateDatabase.cs
+|   |   |-- 20260926024608_UpdateDatabase.Designer.cs
+|   |   |-- 20261019090127_NhomB_DataIntegrity.cs
+|   |   |-- 20261019090127_NhomB_DataIntegrity.Designer.cs
+|   |   |-- 20261020075758_AddTableAreas.cs
+|   |   |-- 20261020075758_AddTableAreas.Designer.cs
+|   |   |-- 20261020093304_AddOrderItemCancellationAndItemLedger.cs
+|   |   |-- 20261020093304_AddOrderItemCancellationAndItemLedger.Designer.cs
+|   |   |-- 20261020150925_AddOrderItemGrouping.cs
+|   |   |-- 20261020150925_AddOrderItemGrouping.Designer.cs
+|   |   |-- 20261020155551_AddOrderItemHistoryAndStatusGuards.cs
+|   |   |-- 20261020155551_AddOrderItemHistoryAndStatusGuards.Designer.cs
+|   |   |-- 20261021025953_AddIngredientStockStatusAndFoodInactiveReason.cs
+|   |   |-- 20261021025953_AddIngredientStockStatusAndFoodInactiveReason.Designer.cs
+|   |   |-- 20261021041728_AddSettingsTotalsPromotionSnapshot.cs
+|   |   |-- 20261021041728_AddSettingsTotalsPromotionSnapshot.Designer.cs
+|   |   |-- 20261021052642_AddMomoPaymentProvider.cs
+|   |   |-- 20261021052642_AddMomoPaymentProvider.Designer.cs
+|   |   |-- 20261021055037_AddPaymentsStatusCheckConstraint.cs
+|   |   |-- 20261021055037_AddPaymentsStatusCheckConstraint.Designer.cs
+|   |   |-- 20261021061510_AddInventoryTransactionUnit.cs
+|   |   |-- 20261021061510_AddInventoryTransactionUnit.Designer.cs
+|   |   |-- 20261021064129_AddPaymentTransactionCodeUnique.cs
+|   |   |-- 20261021064129_AddPaymentTransactionCodeUnique.Designer.cs
+|   |   |-- 20261021070215_AddOrderBillNote.cs
+|   |   |-- 20261021070215_AddOrderBillNote.Designer.cs
+|   |   `-- AppDbContextModelSnapshot.cs
+|   |-- Properties
+|   |-- wwwroot
+|   `-- Program.cs
+|-- RestaurantFoodManagerSystem.Tests
+|   |-- ActorFromTokenTests.cs
+|   |-- ApiErrorHandlingTests.cs
+|   |-- ApiHostSmokeTests.cs
+|   |-- AuthHttpTests.cs
+|   |-- AuthorizationPolicyTests.cs
+|   |-- AuthTests.cs
+|   |-- BatchA2HttpTests.cs
+|   |-- BatchA2IntegrityTests.cs
+|   |-- C06C10C11Tests.cs
+|   |-- C21ReportIntegrityTests.cs
+|   |-- C23OrderContractTests.cs
+|   |-- CatalogEditTests.cs
+|   |-- ConcurrencyAndQueryGuardTests.cs
+|   |-- CoreOrderKitchenTests.cs
+|   |-- DatabaseInitializerTests.cs
+|   |-- Doi3OperationsTests.cs
+|   |-- DtoJsonContractTests.cs
+|   |-- FoodCatalogTests.cs
+|   |-- HistoryAndTransactionsTests.cs
+|   |-- InventoryFlowTests.cs
+|   |-- InventoryUnitTests.cs
+|   |-- KitchenFlowTests.cs
+|   |-- KitchenStockRuleTests.cs
+|   |-- ListEndpointsTests.cs
+|   |-- ManagementDtoHttpTests.cs
+|   |-- MenuTests.cs
+|   |-- NhomBDataIntegrityTests.cs
+|   |-- OrderCancellationTests.cs
+|   |-- OrdersFlowTests.cs
+|   |-- P1ValidationTests.cs
+|   |-- PaymentsFlowTests.cs
+|   |-- Phase2HttpTests.cs
+|   |-- Phase2LifecycleTests.cs
+|   |-- Phase2MoneyTests.cs
+|   |-- Phase3HttpTests.cs
+|   |-- Phase3MomoPaymentTests.cs
+|   |-- Phase3TableTransferTests.cs
+|   |-- PromotionTargetTests.cs
+|   |-- RecipeVersionTests.cs
+|   |-- RegressionFixTests.cs
+|   |-- ReportRevenueTests.cs
+|   |-- ResponseDtoHttpTests.cs
+|   |-- RestaurantTableTests.cs
+|   |-- SetupFlowTests.cs
+|   |-- SoftDeleteLifecycleTests.cs
+|   |-- SoftDeleteRestoreHttpTests.cs
+|   |-- TableAreaHttpTests.cs
+|   |-- TableAreaTests.cs
+|   |-- TestBase.cs
+|   |-- TokenServiceTests.cs
+|   |-- UserAccountHttpTests.cs
+|   `-- UserAccountTests.cs
+`-- scripts

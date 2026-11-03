@@ -1,18 +1,13 @@
-﻿public class FoodService
+using Microsoft.EntityFrameworkCore;
+using RestaurantFoodManagerSystem.Infrastructure.Persistence;
+
+public class FoodService
 {
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly AppDbContext _db;
 
-    private readonly IRepository<Food> _foodRepository;
-    private readonly IRepository<Category> _categoryRepository;
-
-    public FoodService(
-        IUnitOfWork unitOfWork,
-        IRepository<Food> foodRepository,
-        IRepository<Category> categoryRepository)
+    public FoodService(AppDbContext db)
     {
-        _unitOfWork = unitOfWork;
-        _foodRepository = foodRepository;
-        _categoryRepository = categoryRepository;
+        _db = db;
     }
 
 
@@ -21,19 +16,23 @@
     // =========================
 
     public async Task<List<FoodResponseDto>> GetAllFoodsAsync(
-        bool includeInactive = false)
+        bool includeInactive = false,
+        CancellationToken ct = default)
     {
         List<Food> foods;
 
         if (includeInactive)
         {
-            foods = await _foodRepository.GetAllAsync();
+            foods = await _db.Foods
+                .AsNoTracking()
+                .ToListAsync(ct);
         }
         else
         {
-            foods = await _foodRepository.FindAsync(
-                x => x.IsActive
-            );
+            foods = await _db.Foods
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .ToListAsync(ct);
         }
 
         return foods.Select(MapToDto).ToList();
@@ -44,9 +43,9 @@
     // GET BY ID
     // =========================
 
-    public async Task<FoodResponseDto?> GetFoodByIdAsync(int id)
+    public async Task<FoodResponseDto?> GetFoodByIdAsync(int id, CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -62,13 +61,21 @@
     // =========================
 
     public async Task<List<FoodResponseDto>>
-        GetFoodsByCategoryIdAsync(int categoryId)
+        GetFoodsByCategoryIdAsync(
+            int categoryId,
+            bool includeInactive = false,
+            CancellationToken ct = default)
     {
-        var foods = await _foodRepository.FindAsync(
-            x =>
-                x.CategoryId == categoryId &&
-                x.IsActive
-        );
+        var query = _db.Foods
+            .AsNoTracking()
+            .Where(x => x.CategoryId == categoryId);
+
+        if (!includeInactive)
+        {
+            query = query.Where(x => x.IsActive);
+        }
+
+        var foods = await query.ToListAsync(ct);
 
         return foods
             .Select(MapToDto)
@@ -81,14 +88,15 @@
     // =========================
 
     public async Task<FoodResponseDto> AddFoodAsync(
-        CreateFoodRequest request)
+        CreateFoodRequest request,
+        CancellationToken ct = default)
     {
-        var category = await _categoryRepository
-            .GetByIdAsync(request.CategoryId);
+        var category = await _db.Categories
+            .FindAsync([request.CategoryId], ct);
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         var food = new Food
@@ -116,13 +124,13 @@
             UpdatedAt = DateTime.UtcNow
         };
 
-        await _foodRepository.AddAsync(food);
+        await _db.Foods.AddAsync(food, ct);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
-            throw new Exception("Failed to create food");
+            throw new InvalidOperationException("Failed to create food");
         }
 
         return MapToDto(food);
@@ -135,21 +143,22 @@
 
     public async Task<FoodResponseDto?> UpdateFoodAsync(
         int id,
-        UpdateFoodRequest request)
+        UpdateFoodRequest request,
+        CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
             return null;
         }
 
-        var category = await _categoryRepository
-            .GetByIdAsync(request.CategoryId);
+        var category = await _db.Categories
+            .FindAsync([request.CategoryId], ct);
 
         if (category == null)
         {
-            throw new Exception("Category not found");
+            throw new KeyNotFoundException("Category not found");
         }
 
         food.CategoryId = request.CategoryId;
@@ -170,9 +179,9 @@
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        var result = await _unitOfWork.SaveChangesAsync();
+        var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
         {
@@ -189,9 +198,10 @@
 
     public async Task<bool> UpdateAvailabilityAsync(
         int id,
-        bool isAvailable)
+        bool isAvailable,
+        CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -201,9 +211,45 @@
         food.IsAvailable = isAvailable;
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
+    }
+
+
+    // =========================
+    // UPDATE ACTIVE (soft delete / reactivate)
+    // =========================
+
+    public async Task<bool> UpdateActiveAsync(
+        int id,
+        bool isActive,
+        CancellationToken ct = default)
+    {
+        var food = await _db.Foods.FindAsync([id], ct);
+
+        if (food == null)
+        {
+            return false;
+        }
+
+        food.IsActive = isActive;
+
+        // Ngừng dùng thì cũng không cho order (đối xứng với DeleteFoodAsync).
+        if (!isActive)
+        {
+            food.IsAvailable = false;
+            food.InactiveAt = DateTime.UtcNow;
+        }
+
+        // C-13: InactiveReason/InactiveAt là lý do của lần vô hiệu hoá gần nhất — giữ lại làm
+        // báo cáo, không xoá khi bật lại món.
+
+        food.UpdatedAt = DateTime.UtcNow;
+
+        _db.Foods.Update(food);
+
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
@@ -211,9 +257,9 @@
     // DELETE - SOFT DELETE
     // =========================
 
-    public async Task<bool> DeleteFoodAsync(int id)
+    public async Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default)
     {
-        var food = await _foodRepository.GetByIdAsync(id);
+        var food = await _db.Foods.FindAsync([id], ct);
 
         if (food == null)
         {
@@ -224,12 +270,13 @@
 
         // Món đã bị disable thì cũng không nên order được
         food.IsAvailable = false;
+        food.InactiveAt = DateTime.UtcNow;
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _foodRepository.Update(food);
+        _db.Foods.Update(food);
 
-        return await _unitOfWork.SaveChangesAsync() > 0;
+        return await _db.SaveChangesAsync(ct) > 0;
     }
 
 

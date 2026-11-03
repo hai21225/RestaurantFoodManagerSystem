@@ -8,11 +8,11 @@ window.foodsData = {
         { value: "dessert", label: "Tráng miệng" }
     ],
     statuses: [
-        { value: "all", label: "Tất cả" },
+        { value: "active", label: "Đang sử dụng" },
+        { value: "all", label: "Tất cả (cả đã xóa)" },
         { value: "available", label: "Đang bán" },
         { value: "out", label: "Tạm hết" },
-        { value: "hidden", label: "Ẩn" },
-        { value: "stopped", label: "Ngừng bán" }
+        { value: "stopped", label: "Đã xóa / Ngừng bán" }
     ],
     foods: []
 };

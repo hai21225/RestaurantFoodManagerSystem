@@ -3,13 +3,29 @@
 }
 
 .kitchen-announcement {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    margin: 0 0 14px;
+    color: var(--primary);
+    overflow-wrap: anywhere;
 }
+
+.kitchen-announcement.is-error, .kitchen-cancel-reason { color: var(--danger); }
+.kitchen-screen [hidden], #kitchenActionDialog [hidden] { display: none !important; }
+.kitchen-pending-notice { margin-bottom: 16px; border-color: var(--warning); }
+.kitchen-pending-notice p { line-height: 1.5; }
+.kitchen-receipt { margin-top: 18px; }
+#kitchenReceiptContent { max-width: 600px; }
+.kitchen-dish { padding: 10px; overflow-wrap: anywhere; }
+.kitchen-dish.is-cancelled { opacity: 0.75; }
+.kitchen-dish:not(.is-complete) .ticket-item-status { color: var(--info); }
+.kitchen-dish.is-cancelled .ticket-item-status { color: var(--danger); }
+.kitchen-item-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.kitchen-item-actions .ticket-action { min-height: 34px; padding: 5px 9px; font-size: 12px; }
+.ticket-parent-status { margin: 0; color: var(--muted); font-size: 12px; }
+.ticket-meta { flex-wrap: wrap; }
+#kitchenSearch { min-height: 38px; width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 0 10px; font: inherit; }
+#kitchenActionDialog textarea { width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font: inherit; }
+.kitchen-deactivate { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.kitchen-deactivate input { width: 18px; height: 18px; min-height: 18px; flex-shrink: 0; }
 
 .kitchen-access-note {
     margin: 6px 0 0;

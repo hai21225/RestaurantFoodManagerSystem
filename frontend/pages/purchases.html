@@ -5,12 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nhập hàng - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css">
+    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
     <link rel="stylesheet" href="../css/components.css">
     <link rel="stylesheet" href="../css/pages/management.css">
     <link rel="stylesheet" href="../css/pages/purchases.css">
+    <link rel="stylesheet" href="../css/pages/warehouse.css?v=20261101-f6">
 </head>
-<body>
+<body class="warehouse-page">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -42,35 +43,28 @@
                 <section aria-labelledby="pageTitle">
                     <div class="section-heading">
                         <div><p class="eyebrow">Phiếu nhập</p><h2 id="pageTitle">Danh sách nhập hàng</h2></div>
-                        <button class="primary-action" id="addPurchaseButton" type="button">Tạo phiếu nhập</button>
+                        <div class="warehouse-actions"><a class="secondary-action" href="recipes.html?tab=ingredients">Danh mục nguyên liệu</a><button class="secondary-action" id="warehouseRefresh" type="button">Làm mới</button><button class="primary-action" id="addPurchaseButton" type="button">Tạo phiếu nhập</button></div>
                     </div>
                     <p id="uiMessage" class="ui-message" role="status"></p>
-                    <div class="management-summary">
-                        <article class="summary-tile"><span>Chờ duyệt</span><strong>0</strong></article>
-                        <article class="summary-tile"><span>Đã duyệt</span><strong>0</strong></article>
-                        <article class="summary-tile"><span>Đã nhận hàng</span><strong>0</strong></article>
-                        <article class="summary-tile"><span>Tổng chi tháng</span><strong>0đ</strong></article>
-                    </div>
+                    <section class="warehouse-pending" id="warehousePending" hidden aria-label="Đối chiếu thao tác kho"><p id="warehousePendingSummary"></p><div class="warehouse-actions"><button class="secondary-action" type="button" id="warehouseReview">Tải dữ liệu để đối chiếu</button><button class="secondary-action" type="button" id="warehouseAck" hidden>Đã đối chiếu, tiếp tục</button><a id="warehousePendingLink" href="inventory.html" hidden>Mở màn hình đối chiếu</a></div></section>
+                    <div class="management-summary" id="purchaseSummary"></div>
                     <section class="panel management-toolbar" aria-label="Bộ lọc phiếu nhập">
-                        <label class="field"><span class="field-label">Tìm phiếu nhập</span><input data-filter-input type="search" placeholder="Mã phiếu hoặc nhà cung cấp"></label>
-                        <label class="field"><span class="field-label">Trạng thái</span><select data-filter-input><option>Tất cả trạng thái</option><option>Nháp</option><option>Chờ duyệt</option><option>Đã duyệt</option><option>Đã nhận hàng</option></select></label>
-                        <label class="field"><span class="field-label">Thời gian</span><input data-filter-input type="month"></label>
+                        <label class="field"><span class="field-label">Tìm phiếu nhập</span><input id="purchaseSearch" type="search" placeholder="Mã phiếu hoặc nhà cung cấp"></label>
+                        <label class="field"><span class="field-label">Trạng thái phiếu</span><select id="purchaseStatus"><option value="">Tất cả trạng thái</option><option value="Draft">Nháp</option><option value="Received">Đã nhận hàng</option><option value="Cancelled">Đã hủy</option></select></label>
+                        <label class="field"><span class="field-label">Tháng tạo phiếu</span><input id="purchaseMonth" type="month"></label>
                     </section>
-                    <div class="management-grid">
+                    <div class="warehouse-purchase-layout">
                         <section class="panel management-list" aria-labelledby="purchaseListTitle">
                             <div class="panel-header"><h3 id="purchaseListTitle">Phiếu nhập gần đây</h3><span id="purchaseCount">0 phiếu</span></div>
                             <div id="purchaseList" class="empty-workspace"><div><strong>Đang tải phiếu nhập</strong></div></div>
                         </section>
-                        <aside class="panel" aria-labelledby="purchaseProcessTitle">
-                            <div class="panel-header"><h3 id="purchaseProcessTitle">Quy trình</h3></div>
-                            <div class="settings-list">
-                                <span>1. Tạo phiếu và chọn nhà cung cấp</span>
-                                <span>2. Thêm nguyên liệu, số lượng, giá nhập</span>
-                                <span>3. Quản lý duyệt phiếu</span>
-                                <span>4. Xác nhận nhận hàng vào kho</span>
-                            </div>
-                        </aside>
+                        <section class="panel warehouse-panel" aria-labelledby="purchaseDetailTitle"><div class="panel-header"><h3 id="purchaseDetailTitle">Chi tiết phiếu nhập</h3></div><div id="purchaseDetail"></div></section>
                     </div>
+                    <section class="panel warehouse-panel" aria-labelledby="supplierListTitle">
+                        <div class="panel-header"><h3 id="supplierListTitle">Nhà cung cấp</h3><button class="secondary-action" id="manageSupplierAdd" type="button">Thêm nhà cung cấp</button></div>
+                        <div class="management-toolbar"><label class="field"><span class="field-label">Tìm nhà cung cấp</span><input id="supplierSearch" type="search" placeholder="Tên, email hoặc số điện thoại"></label><label class="field"><span class="field-label">Hợp tác</span><select id="supplierStatus"><option value="">Tất cả</option><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hợp tác</option></select></label></div>
+                        <div id="supplierList" class="warehouse-cards"></div>
+                    </section>
                 </section>
             </main>
         </div>
@@ -95,7 +89,7 @@
             </div>
             <div id="purchaseItemRows" class="purchase-item-rows"></div>
             <a id="purchaseIngredientLink" class="purchase-ingredient-link" href="recipes.html" hidden>Thêm nguyên liệu ở Công thức</a>
-            <p id="purchaseTotal" class="purchase-total">Tổng tiền: 0đ</p>
+            <p id="purchaseTotal" class="purchase-total">Tổng tiền được chốt khi lưu phiếu. Xem số tiền và thành tiền từng dòng tại Chi tiết phiếu.</p>
             <p id="purchaseFormMessage" class="form-message" role="alert"></p>
             <div class="dialog-actions">
                 <button class="secondary-action" type="button" data-close-purchase-dialog>Hủy</button>
@@ -114,7 +108,7 @@
                 <label class="form-field is-full"><span>Tên nhà cung cấp</span><input name="name" type="text" maxlength="150" required></label>
                 <label class="form-field"><span>Số điện thoại</span><input name="phone" type="tel" maxlength="20" required></label>
                 <label class="form-field"><span>Email</span><input name="email" type="email" maxlength="150" required></label>
-                <label class="form-field is-full"><span>Địa chỉ</span><input name="address" type="text" maxlength="250" required></label>
+                <label class="form-field is-full"><span>Địa chỉ</span><input name="address" type="text" maxlength="500" required></label>
             </div>
             <p id="supplierFormMessage" class="form-message" role="alert"></p>
             <div class="dialog-actions">
@@ -123,10 +117,15 @@
             </div>
         </form>
     </dialog>
+    <dialog id="warehouseConfirm" class="form-dialog" aria-labelledby="warehouseConfirmTitle">
+        <form id="warehouseConfirmForm" class="dialog-form"><h2 id="warehouseConfirmTitle"></h2><p id="warehouseConfirmText"></p><div class="dialog-actions"><button class="secondary-action" id="closeWarehouseConfirm" type="button">Quay lại</button><button class="primary-action" type="submit">Xác nhận</button></div></form>
+    </dialog>
 
-    <script src="../js/common/navigation.js"></script>
+    <script src="../js/common/auth.js?v=20261101-f67"></script>
+    <script src="../js/common/navigation.js?v=20261101-f67"></script>
     <script src="../js/common/api.js"></script>
-    <script src="../js/common/management.js"></script>
+    <script src="../js/common/warehouse-session.js"></script>
+    <script src="../js/common/warehouse-ui.js"></script>
     <script src="../js/pages/purchases.js"></script>
 </body>
 </html>
