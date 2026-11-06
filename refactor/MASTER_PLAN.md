@@ -16,8 +16,8 @@
 | **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | Mục 1–4 | `[x] Done` | `218300b` |
 | **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | Mục 5–6 | `[x] Done` | `cb2e6b6` |
 | **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | Mục 8–9 | `[x] Done` | `1a83b36` |
-| **Phase 5** | Đồng bộ `includeInactive` danh mục & gom logic User/Auth trùng lặp | Mục 6, 8, 9 | `[x] Done` | `phase-5` |
-| **Phase 6** | Giảm Over-engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`) | Mục 10 | `[ ] Pending` | — |
+| **Phase 5** | Đồng bộ `includeInactive` danh mục & gom logic User/Auth trùng lặp | Mục 6, 8, 9 | `[x] Done` | `6788af8` |
+| **Phase 6** | Giảm Over-engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`) | Mục 10 | `[x] Done` | `phase-6` |
 | **Phase 7** | Khử truy vấn N+1 trong `OrderService` & xóa `.Update()` thừa | Mục 11 | `[ ] Pending` | — |
 | **Phase 8** | Thu gọn & tách nhỏ 3 God Class (`OrderService`, `KitchenService`, `AppDbContext`) | Mục 7, 8 | `[ ] Pending` | — |
 
@@ -55,10 +55,10 @@
 ### Phase 6 (Mục 10): Giảm Over-Engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`)
 **Mục đích:** Hạ mức cô lập transaction ở các tác vụ CRUD danh mục để tránh khóa bảng/deadlock không cần thiết và làm gọn bộ nhớ đệm chống gửi trùng.
 
-- [ ] **6.1. Hạ `IsolationLevel.Serializable` thừa ở CRUD danh mục về `BeginTransactionAsync(ct)`**
+- [x] **6.1. Hạ `IsolationLevel.Serializable` thừa ở CRUD danh mục về `BeginTransactionAsync(ct)`**
   - **File:** `Application/Services/Food/FoodSizeService.cs`, `Application/Services/Promotion/PromotionService.cs`, `Application/Services/Recipe/RecipeService.cs`, `Application/Services/Restaurant/RestaurantTableService.cs`, `Application/Services/Order/OrderService.cs`
   - **Việc cần làm:** Đổi `BeginTransactionAsync(IsolationLevel.Serializable, ct)` thành `BeginTransactionAsync(ct)` (`ReadCommitted`) tại `FoodSizeService` (`CreateAsync`, `UpdateAsync`, `SetDefaultAsync`), `PromotionService.SetTargetsAsync`, `RecipeService.UpdateAsync`, `RestaurantTableService` (`DeleteRestaurantTableAsync`, `SetMaintenanceAsync`), và `OrderService` (`ApplyPromotionAsync`, `RemovePromotionAsync` — đã có `RowVersion` + filtered unique index bảo vệ).
-- [ ] **6.2. Đơn giản hóa `InMemoryOrderIdempotencyStore`**
+- [x] **6.2. Đơn giản hóa `InMemoryOrderIdempotencyStore`**
   - **File:** `Application/Common/OrderIdempotencyStore.cs`
   - **Việc cần làm:** Thay mảng 64 `SemaphoreSlim` stripes phức tạp và hàm `RemoveExpired()` không khóa bằng 1 `SemaphoreSlim(1, 1)` + `Dictionary<string, Entry>` gọn nhẹ, an toàn luồng tuyệt đối.
 - **Kiểm tra & Commit:** Build + kiểm tra trên DB $\rightarrow$ `git commit -m "refactor(phase-6): downgrade unnecessary serializable transactions and simplify idempotency store"`

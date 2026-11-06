@@ -1,4 +1,3 @@
-using System.Data;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -77,7 +76,7 @@ public class FoodSizeService
     {
         // Defect #32: serialize thao tác "clear default + set default" để hai request đồng thời
         // không cùng tạo ra hai size default cho một món.
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var food = await _db.Foods.FindAsync([foodId], ct);
 
@@ -140,7 +139,7 @@ public class FoodSizeService
         UpdateFoodSizeRequest request,
         CancellationToken ct = default)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         // Defect #31: dùng entity đang tracked thay vì AsNoTracking + Update(), để EF chỉ
         // UPDATE các cột thực sự thay đổi và không ghi đè thay đổi đồng thời của request khác.
@@ -196,7 +195,7 @@ public class FoodSizeService
         int sizeId,
         CancellationToken ct = default)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var size = await _db.FoodSizes
             .FirstOrDefaultAsync(x =>

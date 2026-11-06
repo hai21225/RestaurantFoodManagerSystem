@@ -1667,7 +1667,7 @@ public sealed class OrderService
     {
         var settings = await _settings.GetAsync(ct);
 
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
         if (order is null) return false;
@@ -1808,7 +1808,7 @@ public sealed class OrderService
     {
         var settings = await _settings.GetAsync(ct);
 
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == orderId, ct);
         if (order is null) return false;

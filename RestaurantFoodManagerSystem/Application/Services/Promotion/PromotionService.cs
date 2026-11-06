@@ -164,8 +164,7 @@ public sealed class PromotionService
         PromotionTargetsRequest r,
         CancellationToken ct)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var promotion = await _db.Promotions.FindAsync([promotionId], ct);
         if (promotion is null) return false;

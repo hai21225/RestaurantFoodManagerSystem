@@ -157,8 +157,7 @@ public sealed class RecipeService
 
         // Serializable: đọc–ghi–ghi phải nguyên tử, nếu không sẽ có lúc size không còn
         // công thức đang chạy (⇒ trừ kho sai) hoặc hai bản cùng active.
-        await using var tx = await _db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         // Bước 1: chuyển bản cũ sang không hoạt động. SaveChanges riêng để lệnh UPDATE
         // chạy TRƯỚC lệnh INSERT của bản mới — unique index (SizeId) WHERE IsActive=1
