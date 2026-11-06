@@ -35,7 +35,6 @@ internal static class OrderCancellation
     {
         var now = DateTime.UtcNow;
         var effectiveReasonCode = OrderItemMutations.NormalizeReasonCode(reasonCode);
-        var returnsStock = OrderItemMutations.ReturnsStock(effectiveReasonCode);
 
         var orderItems = await db.OrderItems
             .Where(x => x.OrderId == order.OrderId)
@@ -61,63 +60,17 @@ internal static class OrderCancellation
         foreach (var orderItem in orderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
             kitchenItemsByOrderItem.TryGetValue(orderItem.Id, out var linkedKitchenItems);
-            var kitchenStatus = linkedKitchenItems is { Count: > 0 }
-                ? linkedKitchenItems[0].Status
-                : orderItem.Status;
-
-            // Chỉ món bếp chưa nhận mới được xử lý nguyên liệu. Nếu khách đổi món thì
-            // hoàn kho; nếu hết hàng/hỏng/lỗi bếp thì ghi wastage, không tạo tồn kho ảo.
-            if (KitchenStatuses.IsPending(kitchenStatus) &&
-                KitchenStatuses.IsPending(orderItem.Status))
-            {
-                if (returnsStock)
-                {
-                    await ReturnStockForItemAsync(
-                        db, order.OrderId, orderItem, remainingConsumption, changedBy, now, ct);
-                }
-                else
-                {
-                    await OrderItemMutations.RecordWastageAsync(
-                        db,
-                        order.OrderId,
-                        orderItem,
-                        orderItem.Quanlity,
-                        changedBy,
-                        now,
-                        effectiveReasonCode,
-                        reason,
-                        ct);
-                }
-            }
-            else if (KitchenStatuses.IsPreparing(kitchenStatus) ||
-                     KitchenStatuses.IsPreparing(orderItem.Status))
-            {
-                // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
-                // ghi hao hụt để báo cáo không mất dấu vết.
-                await OrderItemMutations.RecordWastageAsync(
-                    db,
-                    order.OrderId,
-                    orderItem,
-                    orderItem.Quanlity,
-                    changedBy,
-                    now,
-                    OrderItemMutations.KitchenError,
-                    reason,
-                    ct);
-            }
-
-            OrderItemMutations.RecordItemHistory(
+            await CancelSingleItemAsync(
                 db,
+                order.OrderId,
                 orderItem,
-                linkedKitchenItems?.FirstOrDefault()?.Id,
-                orderItem.Status,
-                KitchenStatuses.Cancelled,
+                linkedKitchenItems?.FirstOrDefault(),
+                effectiveReasonCode,
+                reason,
                 changedBy,
                 now,
-                reason,
-                effectiveReasonCode);
-
-            MarkItemCancelled(orderItem, now, changedBy, reason);
+                ct,
+                remainingConsumption);
         }
 
         // Phiếu/món đã đóng (Completed/Cancelled) là terminal: giữ nguyên để không phá lịch
@@ -143,6 +96,86 @@ internal static class OrderCancellation
 
         order.Status = OrderStatuses.Cancelled;
         order.UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Huỷ một dòng món: hoàn kho (nếu <c>Pending</c> và mã lý do cho phép) hoặc ghi
+    /// <c>Wastage</c> (nếu <c>Pending</c> không hoàn kho / đang <c>Preparing</c>), ghi lịch sử
+    /// dòng món và đánh dấu <c>Cancelled</c> cho cả <see cref="OrderItem"/> lẫn <see cref="KitchenOrderItem"/>.
+    /// </summary>
+    public static async Task CancelSingleItemAsync(
+        AppDbContext db,
+        int orderId,
+        OrderItem orderItem,
+        KitchenOrderItem? kitchenItem,
+        string? reasonCode,
+        string? reason,
+        int changedBy,
+        DateTime now,
+        CancellationToken ct,
+        IDictionary<int, decimal>? remainingConsumption = null)
+    {
+        var effectiveReasonCode = OrderItemMutations.NormalizeReasonCode(reasonCode);
+        var kitchenStatus = kitchenItem?.Status ?? orderItem.Status;
+
+        // Chỉ món bếp chưa nhận mới được xử lý nguyên liệu. Nếu khách đổi món thì
+        // hoàn kho; nếu hết hàng/hỏng/lỗi bếp thì ghi wastage, không tạo tồn kho ảo.
+        if (KitchenStatuses.IsPending(kitchenStatus) &&
+            KitchenStatuses.IsPending(orderItem.Status))
+        {
+            if (OrderItemMutations.ReturnsStock(effectiveReasonCode))
+            {
+                remainingConsumption ??= await LoadOrderRemainingAsync(db, orderId, ct);
+                await ReturnStockForItemAsync(
+                    db, orderId, orderItem, remainingConsumption, changedBy, now, ct);
+            }
+            else
+            {
+                await OrderItemMutations.RecordWastageAsync(
+                    db,
+                    orderId,
+                    orderItem,
+                    orderItem.Quanlity,
+                    changedBy,
+                    now,
+                    effectiveReasonCode,
+                    reason,
+                    ct);
+            }
+        }
+        else if (KitchenStatuses.IsPreparing(kitchenStatus) ||
+                 KitchenStatuses.IsPreparing(orderItem.Status))
+        {
+            // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
+            // ghi hao hụt để báo cáo không mất dấu vết.
+            await OrderItemMutations.RecordWastageAsync(
+                db,
+                orderId,
+                orderItem,
+                orderItem.Quanlity,
+                changedBy,
+                now,
+                OrderItemMutations.KitchenError,
+                reason,
+                ct);
+        }
+
+        OrderItemMutations.RecordItemHistory(
+            db,
+            orderItem,
+            kitchenItem?.Id,
+            orderItem.Status,
+            KitchenStatuses.Cancelled,
+            changedBy,
+            now,
+            reason,
+            effectiveReasonCode);
+
+        MarkItemCancelled(orderItem, now, changedBy, reason);
+        if (kitchenItem is not null && !KitchenStatuses.IsTerminal(kitchenItem.Status))
+        {
+            kitchenItem.Status = KitchenStatuses.Cancelled;
+        }
     }
 
     /// <summary>

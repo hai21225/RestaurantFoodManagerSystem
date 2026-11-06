@@ -262,36 +262,22 @@ public sealed class KitchenService
             if (isCancelling)
             {
                 var effectiveReasonCode = reasonCode ?? OrderItemMutations.CustomerChange;
-                var returnsStock = OrderItemMutations.ReturnsStock(effectiveReasonCode);
                 var remainingConsumption = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
 
                 foreach (var oi in ticketOrderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status)))
                 {
                     var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
-                    var kitchenStatus = linkedKi?.Status ?? oi.Status;
-
-                    if (KitchenStatuses.IsPending(kitchenStatus) && KitchenStatuses.IsPending(oi.Status))
-                    {
-                        if (returnsStock)
-                        {
-                            await OrderCancellation.ReturnStockForItemAsync(
-                                _db, order.OrderId, oi, remainingConsumption, changedBy, now, ct);
-                        }
-                        else
-                        {
-                            await OrderItemMutations.RecordWastageAsync(
-                                _db, order.OrderId, oi, oi.Quanlity, changedBy, now, effectiveReasonCode, cancelReason, ct);
-                        }
-                    }
-                    else if (KitchenStatuses.IsPreparing(kitchenStatus) || KitchenStatuses.IsPreparing(oi.Status))
-                    {
-                        await OrderItemMutations.RecordWastageAsync(
-                            _db, order.OrderId, oi, oi.Quanlity, changedBy, now, OrderItemMutations.KitchenError, cancelReason, ct);
-                    }
-
-                    OrderItemMutations.RecordItemHistory(
-                        _db, oi, linkedKi?.Id, oi.Status, KitchenStatuses.Cancelled, changedBy, now, cancelReason, effectiveReasonCode);
-                    OrderCancellation.MarkItemCancelled(oi, now, changedBy, cancelReason);
+                    await OrderCancellation.CancelSingleItemAsync(
+                        _db,
+                        order.OrderId,
+                        oi,
+                        linkedKi,
+                        effectiveReasonCode,
+                        cancelReason,
+                        changedBy,
+                        now,
+                        ct,
+                        remainingConsumption);
                 }
 
                 foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsTerminal(x.Status)))
@@ -312,7 +298,7 @@ public sealed class KitchenService
                 {
                     if (allOrderItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
                     {
-                        OrderItemMutations.RecalculateTotals(order, allOrderItems, now, settings!);
+                        await OrderItemMutations.RecalculateTotalsAsync(_db, order, allOrderItems, now, settings!, ct);
                     }
 
                     await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
@@ -434,77 +420,32 @@ public sealed class KitchenService
 
             if (orderItem is not null && order is not null)
             {
-                if (KitchenStatuses.IsPending(item.Status) &&
-                    KitchenStatuses.IsPending(orderItem.Status))
-                {
-                    var effectiveReasonCode = reasonCode ?? OrderItemMutations.CustomerChange;
-                    if (OrderItemMutations.ReturnsStock(effectiveReasonCode))
-                    {
-                        var remaining = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
-                        await OrderCancellation.ReturnStockForItemAsync(
-                            _db, order.OrderId, orderItem, remaining, changedBy, now, ct);
-                    }
-                    else
-                    {
-                        await OrderItemMutations.RecordWastageAsync(
-                            _db,
-                            order.OrderId,
-                            orderItem,
-                            orderItem.Quanlity,
-                            changedBy,
-                            now,
-                            effectiveReasonCode,
-                            string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
-                            ct);
-                    }
-                }
-                else if (KitchenStatuses.IsPreparing(item.Status) ||
-                         KitchenStatuses.IsPreparing(orderItem.Status))
-                {
-                    // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
-                    // ghi hao hụt. Lý do huỷ vẫn nằm ở item history + OrderItem.CancelReason.
-                    await OrderItemMutations.RecordWastageAsync(
-                        _db,
-                        order.OrderId,
-                        orderItem,
-                        orderItem.Quanlity,
-                        changedBy,
-                        now,
-                        OrderItemMutations.KitchenError,
-                        string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
-                        ct);
-                }
-
-                OrderCancellation.MarkItemCancelled(
+                await OrderCancellation.CancelSingleItemAsync(
+                    _db,
+                    order.OrderId,
                     orderItem,
-                    now,
+                    item,
+                    reasonCode,
+                    historyReason,
                     changedBy,
-                    string.IsNullOrWhiteSpace(request.Reason) ? "Cancelled from kitchen" : request.Reason.Trim());
+                    now,
+                    ct);
 
-                // Món còn lại vẫn phải được tính tiền; bỏ discount cũ vì cơ sở khuyến mãi đã đổi.
-                // Món cuối bị huỷ thì giữ nguyên tổng lịch sử (đơn chuyển Cancelled bên dưới),
-                // khớp quy tắc của OrderService.CancelItemAsync.
-                var siblingItems = await _db.OrderItems
-                    .Where(x => x.OrderId == order.OrderId && x.Id != orderItem.Id)
+                // Món còn lại vẫn phải được tính tiền; món cuối bị huỷ thì giữ nguyên tổng lịch sử
+                // (đơn chuyển Cancelled bên dưới), khớp quy tắc của OrderService.CancelItemAsync.
+                var orderItems = await _db.OrderItems
+                    .Where(x => x.OrderId == order.OrderId)
                     .ToListAsync(ct);
-                var activeSiblings = siblingItems
-                    .Where(x => !KitchenStatuses.IsCancelled(x.Status))
-                    .ToList();
-                if (activeSiblings.Count > 0)
+                if (orderItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
                 {
-                    order.Subtotal = activeSiblings.Sum(x => x.UnitPrice * x.Quanlity);
-                    order.DiscountAmount = 0m;
-                    order.PromotionId = null;
-                    order.PromotionDiscountType = null;
-                    order.PromotionDiscountValue = null;
-                    OrderTotalsCalculator.Apply(order, settings);
-                    order.UpdatedAt = now;
+                    await OrderItemMutations.RecalculateTotalsAsync(_db, order, orderItems, now, settings, ct);
                 }
             }
         }
 
         item.Status = status;
-        if (orderItem is not null)
+        if (orderItem is not null &&
+            !(status.Equals(KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) && order is not null))
         {
             orderItem.Status = status;
             OrderItemMutations.RecordItemHistory(
@@ -1056,7 +997,7 @@ public sealed class KitchenService
         // Nếu shortage huỷ luôn dòng cuối cùng, giữ tổng tiền lịch sử của đơn đã huỷ.
         if (allItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
-            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
+            await OrderItemMutations.RecalculateTotalsAsync(_db, order, allItems, now, settings, ct);
         }
 
         await _lifecycle.SyncTicketAndOrderAsync(

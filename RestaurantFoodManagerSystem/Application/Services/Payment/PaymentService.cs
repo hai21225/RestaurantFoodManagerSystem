@@ -1,6 +1,4 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -86,24 +84,13 @@ public sealed class PaymentService
         }
 
         var scope = (_currentUser.UserId ?? request.CreatedBy).ToString();
-        var fingerprint = BuildFingerprint("payments", request);
+        var fingerprint = OrderIdempotencyStore.BuildFingerprint("payments", request);
 
         return await _idempotency.ExecuteAsync<Payment?>(
             $"{scope}:payments:{key}",
             fingerprint,
             token => CreateAsync(request, token),
             ct);
-    }
-
-    /// <summary>
-    /// Fingerprint của payload thanh toán: SHA-256 của <c>scope + JSON payload</c>.
-    /// Cùng key nhưng payload khác ⇒ báo lỗi (409) thay vì trả kết quả cũ.
-    /// </summary>
-    private static string BuildFingerprint(string scope, object payload)
-    {
-        var json = JsonSerializer.Serialize(payload);
-        var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
-        return Convert.ToHexString(SHA256.HashData(bytes));
     }
 
     public async Task<Payment?> CreateAsync(CreatePaymentRequest request, CancellationToken ct)

@@ -260,6 +260,95 @@ public sealed class Phase2MoneyTests : TestBase
         Assert.True(saved.DiscountAmount > 0);
     }
 
+    [Fact]
+    public async Task ItemChanges_RecalculateDiscountWhenAboveMinimum_AndClearWhenBelowMinimum()
+    {
+        var s = SeedOrderScenario(sizePrice: 50m, stock: 100m);
+        var order = await Orders.CreateAsync(new CreateOrderRequest
+        {
+            TableId = s.Table.TableId,
+            CreatedBy = s.Staff.Id,
+            Items = [new CreateOrderItemRequest { SizeId = s.Size.SizeId, Quanlity = 3 }]
+        }, CancellationToken.None);
+
+        var nowVn = DateTime.SpecifyKind(DateTime.UtcNow.AddHours(7), DateTimeKind.Unspecified);
+        var promotion = await Promotions.CreateAsync(new PromotionRequest
+        {
+            Name = "Giảm 10% cho đơn từ 100",
+            DiscountType = "Percent",
+            DiscountValue = 10m,
+            StartAt = nowVn.AddDays(-1),
+            EndAt = nowVn.AddDays(1),
+            MinimumOrderAmount = 100m,
+            MaxDiscountAmount = 0m
+        }, CancellationToken.None);
+
+        Assert.True(await Orders.ApplyPromotionAsync(order.OrderId, promotion.Id, CancellationToken.None));
+
+        var item = Db.OrderItems.Single(x => x.OrderId == order.OrderId);
+
+        // Giảm từ 3 phần (150) xuống 2 phần (100) ⇒ vẫn >= MinimumOrderAmount (100), tính lại giảm 10.
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            order.OrderId,
+            item.Id,
+            new AdjustOrderItemQuantityRequest { Quantity = 2, ChangedBy = s.Staff.Id },
+            CancellationToken.None));
+
+        using (var mid = NewContext())
+        {
+            var afterReduce = mid.Orders.Single(x => x.OrderId == order.OrderId);
+            Assert.Equal(100m, afterReduce.Subtotal);
+            Assert.Equal(promotion.Id, afterReduce.PromotionId);
+            Assert.Equal(10m, afterReduce.DiscountAmount);
+            Assert.Equal(90m, afterReduce.TotalAmount);
+        }
+
+        // Giảm tiếp xuống 1 phần (50) ⇒ dưới MinimumOrderAmount (100) ⇒ tự động gỡ khuyến mãi.
+        Assert.True(await Orders.AdjustItemQuantityAsync(
+            order.OrderId,
+            item.Id,
+            new AdjustOrderItemQuantityRequest { Quantity = 1, ChangedBy = s.Staff.Id },
+            CancellationToken.None));
+
+        using var check = NewContext();
+        var finalOrder = check.Orders.Single(x => x.OrderId == order.OrderId);
+        Assert.Equal(50m, finalOrder.Subtotal);
+        Assert.Null(finalOrder.PromotionId);
+        Assert.Equal(0m, finalOrder.DiscountAmount);
+        Assert.Equal(50m, finalOrder.TotalAmount);
+    }
+
+    [Fact]
+    public async Task IdempotencyStore_DoesNotCacheNullResponse()
+    {
+        var store = new InMemoryOrderIdempotencyStore();
+        var calls = 0;
+
+        var first = await store.ExecuteAsync<string?>(
+            "key-null",
+            "fp-1",
+            _ =>
+            {
+                calls++;
+                return Task.FromResult<string?>(null);
+            },
+            CancellationToken.None);
+
+        var second = await store.ExecuteAsync<string?>(
+            "key-null",
+            "fp-1",
+            _ =>
+            {
+                calls++;
+                return Task.FromResult<string?>("created");
+            },
+            CancellationToken.None);
+
+        Assert.Null(first);
+        Assert.Equal("created", second);
+        Assert.Equal(2, calls);
+    }
+
     // ==================== P0-05 — múi giờ khuyến mãi ====================
 
     [Fact]

@@ -1,4 +1,7 @@
 using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 /// <summary>
 /// Lưu kết quả của các lệnh ghi theo <c>Idempotency-Key</c> để client retry
@@ -20,6 +23,20 @@ public interface IOrderIdempotencyStore
         string requestFingerprint,
         Func<CancellationToken, Task<TResponse>> create,
         CancellationToken ct);
+}
+
+public static class OrderIdempotencyStore
+{
+    /// <summary>
+    /// Fingerprint của payload: SHA-256 của <c>scope + JSON payload</c>. Cùng key nhưng
+    /// payload khác ⇒ báo lỗi (409) thay vì âm thầm trả kết quả cũ.
+    /// </summary>
+    public static string BuildFingerprint(string scope, object payload)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
+        return Convert.ToHexString(SHA256.HashData(bytes));
+    }
 }
 
 /// <summary>
@@ -75,7 +92,10 @@ public sealed class InMemoryOrderIdempotencyStore : IOrderIdempotencyStore
             }
 
             var response = await create(ct);
-            _entries[key] = new Entry(requestFingerprint, response!, DateTimeOffset.UtcNow.Add(Ttl));
+            if (response is not null)
+            {
+                _entries[key] = new Entry(requestFingerprint, response, DateTimeOffset.UtcNow.Add(Ttl));
+            }
 
             if (_entries.Count > 2048)
             {

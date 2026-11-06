@@ -1,7 +1,4 @@
 using System.Data;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -400,7 +397,7 @@ public sealed class OrderService
         }
 
         var scope = (_currentUser.UserId ?? request.CreatedBy).ToString();
-        var fingerprint = BuildIdempotencyFingerprint(request);
+        var fingerprint = OrderIdempotencyStore.BuildFingerprint("orders", request);
 
         return await _idempotency.ExecuteAsync(
             $"{scope}:{key}",
@@ -566,7 +563,7 @@ public sealed class OrderService
         var allItems = await _db.OrderItems
             .Where(x => x.OrderId == order.OrderId)
             .ToListAsync(ct);
-        OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
+        await OrderItemMutations.RecalculateTotalsAsync(_db, order, allItems, now, settings, ct);
 
         var statusChanged = await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
             order,
@@ -614,7 +611,7 @@ public sealed class OrderService
         }
 
         var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
-        var fingerprint = BuildFingerprint($"orders/{orderId}/items", request);
+        var fingerprint = OrderIdempotencyStore.BuildFingerprint($"orders/{orderId}/items", request);
 
         return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
             $"{scope}:orders:{orderId}:items:{key}",
@@ -663,7 +660,7 @@ public sealed class OrderService
         }
 
         var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
-        var fingerprint = BuildFingerprint($"orders/{orderId}/items/{itemId}/quantity", request);
+        var fingerprint = OrderIdempotencyStore.BuildFingerprint($"orders/{orderId}/items/{itemId}/quantity", request);
 
         return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
             $"{scope}:orders:{orderId}:items:{itemId}:quantity:{key}",
@@ -1163,7 +1160,7 @@ public sealed class OrderService
         // CancelItemAsync/CancelOrderAsync. Chỉ tính lại khi còn món hoạt động.
         if (allItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
-            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
+            await OrderItemMutations.RecalculateTotalsAsync(_db, order, allItems, now, settings, ct);
         }
 
         var statusChanged = await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
@@ -1271,25 +1268,8 @@ public sealed class OrderService
 
         foreach (var item in items)
         {
-            var recipeIngredients = await (
-                from recipe in _db.Recipes.AsNoTracking()
-                join recipeIngredient in _db.RecipeIngredients.AsNoTracking()
-                    on recipe.RecipeId equals recipeIngredient.RecipeId
-                where recipe.SizeId == item.SizeId && recipe.IsActive
-                select recipeIngredient).ToListAsync(ct);
-
-            if (recipeIngredients.Count == 0)
-                throw new InvalidOperationException($"Food size {item.SizeId} does not have an active recipe");
-
-            var requirements = new Dictionary<int, decimal>();
-            foreach (var ingredient in recipeIngredients)
-            {
-                var required = ingredient.Quanlity * item.Quanlity;
-                requirements[ingredient.IngredientId] =
-                    requirements.GetValueOrDefault(ingredient.IngredientId) + required;
-            }
-
-            result.Add(requirements);
+            result.Add(await OrderItemMutations.CalculateRequirementsForQuantityAsync(
+                _db, item.SizeId, item.Quanlity, ct));
         }
 
         return result;
@@ -1488,20 +1468,6 @@ public sealed class OrderService
         }
     }
 
-    private static string BuildIdempotencyFingerprint(CreateOrderRequest request) =>
-        BuildFingerprint("orders", request);
-
-    /// <summary>
-    /// Fingerprint của payload: SHA-256 của <c>scope + JSON payload</c>. Cùng key nhưng
-    /// payload khác ⇒ báo lỗi (409) thay vì âm thầm trả kết quả cũ.
-    /// </summary>
-    private static string BuildFingerprint(string scope, object payload)
-    {
-        var json = JsonSerializer.Serialize(payload);
-        var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
-        return Convert.ToHexString(SHA256.HashData(bytes));
-    }
-
     private sealed record PreparedOrderItem(
         int SizeId,
         int Quanlity,
@@ -1640,48 +1606,16 @@ public sealed class OrderService
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
         var now = DateTime.UtcNow;
 
-        // Chỉ món bếp chưa nhận mới xử lý nguyên liệu. Khách đổi món thì hoàn kho;
-        // hết hàng/hỏng/lỗi bếp thì ghi wastage, không hoàn tồn kho ảo.
-        if (KitchenStatuses.IsPending(currentStatus) && KitchenStatuses.IsPending(item.Status))
-        {
-            if (OrderItemMutations.ReturnsStock(reasonCode))
-            {
-                var remaining = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
-                await OrderCancellation.ReturnStockForItemAsync(
-                    _db, order.OrderId, item, remaining, changedBy, now, ct);
-            }
-            else
-            {
-                await OrderItemMutations.RecordWastageAsync(
-                    _db, order.OrderId, item, item.Quanlity,
-                    changedBy, now, reasonCode, reason, ct);
-            }
-        }
-        else if (KitchenStatuses.IsPreparing(currentStatus) || KitchenStatuses.IsPreparing(item.Status))
-        {
-            // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
-            // ghi hao hụt để báo cáo không mất dấu vết. Lý do huỷ vẫn nằm ở item history.
-            await OrderItemMutations.RecordWastageAsync(
-                _db, order.OrderId, item, item.Quanlity,
-                changedBy, now, OrderItemMutations.KitchenError, reason, ct);
-        }
-
-        OrderItemMutations.RecordItemHistory(
+        await OrderCancellation.CancelSingleItemAsync(
             _db,
+            order.OrderId,
             item,
-            kitchenItem?.Id,
-            item.Status,
-            KitchenStatuses.Cancelled,
+            kitchenItem,
+            reasonCode,
+            reason,
             changedBy,
             now,
-            reason,
-            reasonCode);
-
-        OrderCancellation.MarkItemCancelled(item, now, changedBy, reason);
-        if (kitchenItem is not null)
-        {
-            kitchenItem.Status = KitchenStatuses.Cancelled;
-        }
+            ct);
 
         var allItems = await _db.OrderItems
             .Where(x => x.OrderId == orderId)
@@ -1698,10 +1632,9 @@ public sealed class OrderService
         }
         else
         {
-            // Dòng huỷ không còn được tính tiền; bỏ discount cũ vì cơ sở khuyến mãi đã đổi.
-            // Dùng chung hàm RecalculateTotals với các luồng gọi thêm / điều chỉnh SL
-            // ⇒ công thức tiền chỉ có 1 nơi định nghĩa.
-            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
+            // Dùng chung hàm RecalculateTotalsAsync với các luồng gọi thêm / điều chỉnh SL
+            // ⇒ công thức tiền và khuyến mãi chỉ có 1 nơi định nghĩa.
+            await OrderItemMutations.RecalculateTotalsAsync(_db, order, allItems, now, settings, ct);
 
             if (kitchenOrder is not null && kitchenItem is not null)
             {
@@ -1865,28 +1798,20 @@ public sealed class OrderService
             ct);
         if (promotion is null || order.Subtotal < promotion.MinimumOrderAmount) return false;
 
-        var discountType = promotion.DiscountType?.Trim() ?? string.Empty;
-        var isPercent = discountType.Equals("Percent", StringComparison.OrdinalIgnoreCase);
-        var isFixed = discountType.Equals("Fixed", StringComparison.OrdinalIgnoreCase);
-        if (!isPercent && !isFixed) return false;
+        var activeItems = await _db.OrderItems
+            .AsNoTracking()
+            .Where(x => x.OrderId == order.OrderId && x.Status != KitchenStatuses.Cancelled)
+            .ToListAsync(ct);
 
-        var discountBase = await ResolveDiscountBaseAsync(order, promotionId, ct);
-        if (discountBase <= 0) return false;
+        var roundedDiscount = await OrderItemMutations.ComputePromotionDiscountAsync(
+            _db,
+            promotion,
+            activeItems,
+            order.Subtotal,
+            ct);
+        if (roundedDiscount is null) return false;
 
-        var discount = isFixed
-            ? Math.Min(promotion.DiscountValue, discountBase)
-            : discountBase * promotion.DiscountValue / 100m;
-
-        if (promotion.MaxDiscountAmount > 0) discount = Math.Min(discount, promotion.MaxDiscountAmount);
-
-        // Defect #18: DB lưu decimal(18,2); làm tròn ngay tại đây để giá trị trả về/tính tiếp
-        // khớp với giá trị thực sự được lưu (SQL Server làm tròn half away from zero).
-        // Clamp 0..Subtotal để promotion cấu hình sai (giá trị âm) không làm tăng tổng tiền.
-        var roundedDiscount = Math.Round(
-            Math.Clamp(discount, 0m, order.Subtotal),
-            2,
-            MidpointRounding.AwayFromZero);
-        order.DiscountAmount = roundedDiscount;
+        order.DiscountAmount = roundedDiscount.Value;
         // Đợt 2 / A3: lưu FK + snapshot khuyến mãi. Nhờ vậy tra lại được "đơn này dùng
         // khuyến mãi nào", và sửa/xoá khuyến mãi sau này không làm đổi nghĩa của đơn cũ.
         order.PromotionId = promotion.Id;
@@ -2025,58 +1950,5 @@ public sealed class OrderService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return true;
-    }
-
-    /// <summary>
-    /// Phần tiền được hưởng khuyến mãi: toàn bộ <c>Subtotal</c> khi promotion không targeting,
-    /// ngược lại chỉ các dòng món thuộc <c>PromotionFood.SizeId</c> hoặc
-    /// <c>PromotionCategory.CategoryId</c> của món.
-    /// </summary>
-    private async Task<decimal> ResolveDiscountBaseAsync(
-        Order order,
-        int promotionId,
-        CancellationToken ct)
-    {
-        var targetSizeIds = await _db.PromotionFoods
-            .AsNoTracking()
-            .Where(x => x.PromotionId == promotionId)
-            .Select(x => x.SizeId)
-            .ToListAsync(ct);
-        var targetCategoryIds = await _db.PromotionCategories
-            .AsNoTracking()
-            .Where(x => x.PromotionId == promotionId)
-            .Select(x => x.CategoryId)
-            .ToListAsync(ct);
-
-        if (targetSizeIds.Count == 0 && targetCategoryIds.Count == 0)
-        {
-            return order.Subtotal;
-        }
-
-        var sizeIds = targetSizeIds.ToHashSet();
-        var categoryIds = targetCategoryIds.ToHashSet();
-
-        var lines = await (
-            from orderItem in _db.OrderItems.AsNoTracking()
-            // LEFT JOIN (như GetAsync / GetTableBillAsync): món/size bị xoá cứng thì dòng món
-            // vẫn phải tính vào cơ sở khuyến mãi, nếu không cả đơn sẽ bị từ chối khuyến mãi
-            // một cách âm thầm (base = 0).
-            join size in _db.FoodSizes.AsNoTracking() on orderItem.SizeId equals size.SizeId into sizeGroup
-            from size in sizeGroup.DefaultIfEmpty()
-            join food in _db.Foods.AsNoTracking() on size.FoodId equals food.FoodId into foodGroup
-            from food in foodGroup.DefaultIfEmpty()
-            where orderItem.OrderId == order.OrderId
-               && orderItem.Status != KitchenStatuses.Cancelled
-            select new
-            {
-                orderItem.SizeId,
-                CategoryId = food != null ? food.CategoryId : (int?)null,
-                LineTotal = orderItem.UnitPrice * orderItem.Quanlity
-            }).ToListAsync(ct);
-
-        return lines
-            .Where(x => sizeIds.Contains(x.SizeId)
-                     || (x.CategoryId.HasValue && categoryIds.Contains(x.CategoryId.Value)))
-            .Sum(x => x.LineTotal);
     }
 }

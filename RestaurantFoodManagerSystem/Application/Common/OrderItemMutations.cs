@@ -129,9 +129,9 @@ internal static class OrderItemMutations
     /// Tính lại tiền của đơn sau khi dòng món thay đổi.
     ///
     /// <para>
-    /// Mọi thay đổi dòng món làm thay đổi cơ sở khuyến mãi ⇒ bỏ discount và bỏ tham chiếu
-    /// khuyến mãi (nếu giữ <c>PromotionId</c> mà <c>DiscountAmount = 0</c> thì đơn nói dối:
-    /// có khuyến mãi nhưng không giảm tiền).
+    /// Nếu đơn đang gắn <c>PromotionId</c> còn hiệu lực và <c>Subtotal</c> mới vẫn đạt
+    /// <c>MinimumOrderAmount</c> (cùng phạm vi target còn dương), tính lại <c>DiscountAmount</c>;
+    /// ngược lại xoá khuyến mãi khỏi đơn.
     /// </para>
     ///
     /// <para>
@@ -139,23 +139,131 @@ internal static class OrderItemMutations
     /// theo cấu hình quán.
     /// </para>
     /// </summary>
-    public static void RecalculateTotals(
+    public static async Task RecalculateTotalsAsync(
+        AppDbContext db,
         Order order,
         IEnumerable<OrderItem> items,
         DateTime now,
-        RestaurantSettings settings)
+        RestaurantSettings settings,
+        CancellationToken ct)
     {
         var active = items
             .Where(x => !KitchenStatuses.IsCancelled(x.Status))
             .ToList();
 
         order.Subtotal = active.Sum(x => x.UnitPrice * x.Quanlity);
-        order.DiscountAmount = 0m;
-        order.PromotionId = null;
-        order.PromotionDiscountType = null;
-        order.PromotionDiscountValue = null;
+
+        decimal? recalculatedDiscount = null;
+        Promotion? promotion = null;
+        if (order.PromotionId is int promotionId)
+        {
+            promotion = await db.Promotions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.Id == promotionId && x.IsActive && x.StartAt <= now && x.EndAt >= now,
+                    ct);
+
+            if (promotion is not null && order.Subtotal >= promotion.MinimumOrderAmount)
+            {
+                recalculatedDiscount = await ComputePromotionDiscountAsync(
+                    db,
+                    promotion,
+                    active,
+                    order.Subtotal,
+                    ct);
+            }
+        }
+
+        if (recalculatedDiscount is decimal discount && discount > 0m && promotion is not null)
+        {
+            order.DiscountAmount = discount;
+            order.PromotionDiscountType = promotion.DiscountType;
+            order.PromotionDiscountValue = promotion.DiscountValue;
+        }
+        else
+        {
+            order.DiscountAmount = 0m;
+            order.PromotionId = null;
+            order.PromotionDiscountType = null;
+            order.PromotionDiscountValue = null;
+        }
+
         OrderTotalsCalculator.Apply(order, settings);
         order.UpdatedAt = now;
+    }
+
+    public static async Task<decimal?> ComputePromotionDiscountAsync(
+        AppDbContext db,
+        Promotion promotion,
+        IReadOnlyCollection<OrderItem> activeItems,
+        decimal subtotal,
+        CancellationToken ct)
+    {
+        var discountType = promotion.DiscountType?.Trim() ?? string.Empty;
+        var isPercent = discountType.Equals("Percent", StringComparison.OrdinalIgnoreCase);
+        var isFixed = discountType.Equals("Fixed", StringComparison.OrdinalIgnoreCase);
+        if (!isPercent && !isFixed)
+        {
+            return null;
+        }
+
+        var targetSizeIds = await db.PromotionFoods
+            .AsNoTracking()
+            .Where(x => x.PromotionId == promotion.Id)
+            .Select(x => x.SizeId)
+            .ToListAsync(ct);
+        var targetCategoryIds = await db.PromotionCategories
+            .AsNoTracking()
+            .Where(x => x.PromotionId == promotion.Id)
+            .Select(x => x.CategoryId)
+            .ToListAsync(ct);
+
+        decimal discountBase;
+        if (targetSizeIds.Count == 0 && targetCategoryIds.Count == 0)
+        {
+            discountBase = subtotal;
+        }
+        else
+        {
+            var sizeIds = targetSizeIds.ToHashSet();
+            var categoryIds = targetCategoryIds.ToHashSet();
+            var activeSizeIds = activeItems.Select(x => x.SizeId).Distinct().ToList();
+            var categoryBySize = activeSizeIds.Count == 0
+                ? new Dictionary<int, int?>()
+                : await (
+                    from size in db.FoodSizes.AsNoTracking()
+                    join food in db.Foods.AsNoTracking() on size.FoodId equals food.FoodId into foodGroup
+                    from food in foodGroup.DefaultIfEmpty()
+                    where activeSizeIds.Contains(size.SizeId)
+                    select new { size.SizeId, CategoryId = food != null ? (int?)food.CategoryId : null })
+                    .ToDictionaryAsync(x => x.SizeId, x => x.CategoryId, ct);
+
+            discountBase = activeItems
+                .Where(x => sizeIds.Contains(x.SizeId)
+                         || (categoryBySize.TryGetValue(x.SizeId, out var catId)
+                             && catId.HasValue
+                             && categoryIds.Contains(catId.Value)))
+                .Sum(x => x.UnitPrice * x.Quanlity);
+        }
+
+        if (discountBase <= 0m)
+        {
+            return null;
+        }
+
+        var discount = isFixed
+            ? Math.Min(promotion.DiscountValue, discountBase)
+            : discountBase * promotion.DiscountValue / 100m;
+
+        if (promotion.MaxDiscountAmount > 0m)
+        {
+            discount = Math.Min(discount, promotion.MaxDiscountAmount);
+        }
+
+        return Math.Round(
+            Math.Clamp(discount, 0m, subtotal),
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
     public static Task<KitchenOrderItem?> FindKitchenItemAsync(
