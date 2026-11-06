@@ -78,6 +78,18 @@ public sealed class ApiErrorHandlingTests
     }
 
     [Fact]
+    public void ConcurrencyConflict_Becomes409_AndUnauthorized_Becomes403()
+    {
+        var (conflictStatus, conflictMsg) = Apply(new ConcurrencyConflictException("Row modified"));
+        Assert.Equal(StatusCodes.Status409Conflict, conflictStatus);
+        Assert.Equal("Row modified", conflictMsg);
+
+        var (unauthStatus, unauthMsg) = Apply(new UnauthorizedAccessException("Forbidden action"));
+        Assert.Equal(StatusCodes.Status403Forbidden, unauthStatus);
+        Assert.Equal("Forbidden action", unauthMsg);
+    }
+
+    [Fact]
     public void UnknownException_Becomes500_WithGenericMessage()
     {
         var (status, message) = Apply(new InvalidCastException("secret connection string"));

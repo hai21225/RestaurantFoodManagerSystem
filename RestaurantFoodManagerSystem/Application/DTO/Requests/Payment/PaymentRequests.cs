@@ -12,7 +12,7 @@ public sealed class CreateMomoPaymentRequest
     [Range(1, int.MaxValue)] public int OrderId { get; set; }
 
     /// <summary>Người tạo giao dịch (thu ngân).</summary>
-    [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
 }
 
 /// <summary>
@@ -26,7 +26,7 @@ public sealed class RefundPaymentRequest
     public string Reason { get; set; } = string.Empty;
 
     /// <summary>Người thực hiện hoàn tiền (thu ngân).</summary>
-    [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
 }
 
 /// <summary>

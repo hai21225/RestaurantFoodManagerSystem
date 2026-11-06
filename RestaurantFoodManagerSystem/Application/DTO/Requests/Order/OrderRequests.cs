@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 public sealed class CreateOrderRequest
 {
     [Range(1, int.MaxValue)] public int TableId { get; set; }
-    [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
     [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
 
     /// <summary>
@@ -48,7 +48,7 @@ public sealed class CreateOrderToppingRequest
 /// </summary>
 public sealed class AddOrderItemsRequest
 {
-    [Range(1, int.MaxValue)] public int ChangedBy { get; set; }
+    public int ChangedBy { get; set; }
     [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
 }
 
@@ -182,5 +182,5 @@ public sealed class CreatePaymentRequest
     [Range(1, int.MaxValue)] public int OrderId { get; set; }
     [Required] public string PaymentMethod { get; set; } = string.Empty;
     [MaxLength(100)] public string? TransactionCode { get; set; }
-    [Range(1, int.MaxValue)] public int CreatedBy { get; set; }
+    public int CreatedBy { get; set; }
 }

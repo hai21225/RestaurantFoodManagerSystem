@@ -11,17 +11,13 @@ using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 /// </summary>
 public static class CurrentUserExtensions
 {
-    public static int ResolveActorId(this ICurrentUser currentUser,int bodyValue,ILogger logger,string fieldName)
+    public static int ResolveActorId(this ICurrentUser currentUser, int bodyValue, ILogger logger, string fieldName)
     {
         var claimedUserId = currentUser.UserId;
 
-        //if (claimedUserId is null)
-        //{
-        //    return bodyValue;
-        //}
         if (claimedUserId is null)
         {
-            throw new UnauthorizedAccessException("Không có actor trong token; cần xác thực.");
+            return bodyValue;
         }
 
         if (bodyValue != 0 && bodyValue != claimedUserId.Value)
