@@ -157,9 +157,11 @@ public sealed class KitchenService
         if (!KitchenStatuses.AllowedTicket.Contains(status, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Invalid kitchen order status");
 
-        var reasonCode = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var isCancelling = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase);
+        var reasonCode = isCancelling
             ? OrderItemMutations.NormalizeReasonCode(request.ReasonCode)
             : null;
+        var settings = isCancelling ? await _settings.GetAsync(ct) : null;
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
@@ -176,11 +178,17 @@ public sealed class KitchenService
                 $"Cannot change kitchen order status from {kitchenOrder.Status} to {status}");
 
         // C-02: không đóng phiếu Ready/Completed khi còn món chưa xong.
-        var kitchenItemStatuses = await _db.KitchenOrderItems
+        var kitchenItems = await _db.KitchenOrderItems
             .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
-            .Select(x => x.Status)
             .ToListAsync(ct);
-        OrderLifecycleCoordinator.EnsureTicketCanClose(status, kitchenItemStatuses);
+        OrderLifecycleCoordinator.EnsureTicketCanClose(status, kitchenItems.Select(x => x.Status).ToList());
+
+        var ticketOrderItemIds = kitchenItems.Select(x => x.OrderItemId).Distinct().ToList();
+        var ticketOrderItems = ticketOrderItemIds.Count == 0
+            ? new List<OrderItem>()
+            : await _db.OrderItems
+                .Where(x => ticketOrderItemIds.Contains(x.Id))
+                .ToListAsync(ct);
 
         var mappedStatus = OrderLifecycleCoordinator.MapTicketStatusToOrder(status);
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
@@ -189,7 +197,7 @@ public sealed class KitchenService
         // bằng Completed, nhưng Cancelled sẽ làm báo cáo bếp lệch doanh thu.
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+            isCancelling)
         {
             throw new InvalidOperationException(
                 "Cannot cancel a kitchen ticket after the order is paid");
@@ -199,11 +207,8 @@ public sealed class KitchenService
             string.Equals(mappedStatus, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) &&
             !OrderStatuses.IsTerminal(order.Status))
         {
-            var orderItems = await _db.OrderItems
-                .Where(x => x.OrderId == order.OrderId)
-                .Select(x => x.Status)
-                .ToListAsync(ct);
-            var anyDone = orderItems.Any(KitchenStatuses.IsDone);
+            var anyDone = kitchenItems.Any(x => KitchenStatuses.IsDone(x.Status)) ||
+                          ticketOrderItems.Any(x => KitchenStatuses.IsDone(x.Status));
             if (!OrderCancellationPolicy.CanCancelOrder(_currentUser, anyDone))
                 throw new UnauthorizedAccessException(
                     "Only an administrator can cancel an order after a dish is ready");
@@ -219,11 +224,19 @@ public sealed class KitchenService
             status.Equals(KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             kitchenOrder.CompletedAt ??= now;
 
+        if (status.Equals(KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var ki in kitchenItems.Where(x => KitchenStatuses.IsPending(x.Status)))
+            {
+                ki.Status = KitchenStatuses.Preparing;
+            }
+        }
+
         // C-10: history order khi bếp huỷ phải giữ lý do thật, không chỉ "Updated from kitchen".
-        var historyNote = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var historyNote = isCancelling
             ? (string.IsNullOrWhiteSpace(request.Reason) ? "Cancelled from kitchen" : request.Reason.Trim())
             : "Updated from kitchen";
-        var cancelReason = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var cancelReason = isCancelling
             ? historyNote
             : request.Reason;
 
@@ -234,9 +247,87 @@ public sealed class KitchenService
             var changedBy = await _currentUser.ResolveExistingActorAsync(
                 _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
 
-            if (string.Equals(mappedStatus, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(status, KitchenStatuses.Accepted, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(status, KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+            if (status.Equals(KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var oi in ticketOrderItems.Where(x => KitchenStatuses.IsPending(x.Status)))
+                {
+                    var oldItemStatus = oi.Status;
+                    oi.Status = KitchenStatuses.Preparing;
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    OrderItemMutations.RecordItemHistory(
+                        _db, oi, linkedKi?.Id, oldItemStatus, KitchenStatuses.Preparing, changedBy, now, historyNote);
+                }
+            }
+
+            if (isCancelling)
+            {
+                var effectiveReasonCode = reasonCode ?? OrderItemMutations.CustomerChange;
+                var returnsStock = OrderItemMutations.ReturnsStock(effectiveReasonCode);
+                var remainingConsumption = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
+
+                foreach (var oi in ticketOrderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status)))
+                {
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    var kitchenStatus = linkedKi?.Status ?? oi.Status;
+
+                    if (KitchenStatuses.IsPending(kitchenStatus) && KitchenStatuses.IsPending(oi.Status))
+                    {
+                        if (returnsStock)
+                        {
+                            await OrderCancellation.ReturnStockForItemAsync(
+                                _db, order.OrderId, oi, remainingConsumption, changedBy, now, ct);
+                        }
+                        else
+                        {
+                            await OrderItemMutations.RecordWastageAsync(
+                                _db, order.OrderId, oi, oi.Quanlity, changedBy, now, effectiveReasonCode, cancelReason, ct);
+                        }
+                    }
+                    else if (KitchenStatuses.IsPreparing(kitchenStatus) || KitchenStatuses.IsPreparing(oi.Status))
+                    {
+                        await OrderItemMutations.RecordWastageAsync(
+                            _db, order.OrderId, oi, oi.Quanlity, changedBy, now, OrderItemMutations.KitchenError, cancelReason, ct);
+                    }
+
+                    OrderItemMutations.RecordItemHistory(
+                        _db, oi, linkedKi?.Id, oi.Status, KitchenStatuses.Cancelled, changedBy, now, cancelReason, effectiveReasonCode);
+                    OrderCancellation.MarkItemCancelled(oi, now, changedBy, cancelReason);
+                }
+
+                foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsTerminal(x.Status)))
+                {
+                    ki.Status = KitchenStatuses.Cancelled;
+                }
+
+                var allOrderItems = await _db.OrderItems
+                    .Where(x => x.OrderId == order.OrderId)
+                    .ToListAsync(ct);
+
+                if (allOrderItems.Count == 0)
+                {
+                    await _lifecycle.ApplyOrderStatusFromTicketAsync(
+                        order, status, changedBy, historyNote, cancelReason, ct, reasonCode);
+                }
+                else
+                {
+                    if (allOrderItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
+                    {
+                        OrderItemMutations.RecalculateTotals(order, allOrderItems, now, settings!);
+                    }
+
+                    await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
+                        order,
+                        changedBy,
+                        historyNote,
+                        allowReopen: false,
+                        cancelReason,
+                        ct,
+                        allOrderItems,
+                        reasonCode);
+                }
+            }
+            else if (string.Equals(status, KitchenStatuses.Accepted, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(status, KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
             {
                 await _lifecycle.ApplyOrderStatusFromTicketAsync(
                     order,
@@ -259,6 +350,13 @@ public sealed class KitchenService
                     cancelReason,
                     ct,
                     reasonCode: reasonCode);
+            }
+        }
+        else if (isCancelling)
+        {
+            foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsTerminal(x.Status)))
+            {
+                ki.Status = KitchenStatuses.Cancelled;
             }
         }
 
