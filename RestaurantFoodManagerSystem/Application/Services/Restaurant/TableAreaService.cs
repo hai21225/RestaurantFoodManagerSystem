@@ -115,18 +115,8 @@ public sealed class TableAreaService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
-    {
-        var area = await _db.TableAreas.FindAsync([id], ct);
-        if (area is null)
-        {
-            return false;
-        }
-
-        area.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
+        SetActiveAsync(id, false, ct);
 
     private Task<bool> ActiveNameExistsAsync(
         string name,

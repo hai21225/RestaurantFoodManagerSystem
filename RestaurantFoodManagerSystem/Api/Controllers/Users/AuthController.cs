@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/auth")]
@@ -68,23 +67,8 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Not authenticated" });
         }
 
-        try
-        {
-            await _authService.ChangePasswordAsync(userId, request, ct);
-            return Ok(new { message = "Password changed successfully" });
-        }
-        catch (KeyNotFoundException ex)
-        {
-            return NotFound(new { message = ex.Message });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        await _authService.ChangePasswordAsync(userId, request, ct);
+        return Ok(new { message = "Password changed successfully" });
     }
 
 
@@ -93,63 +77,29 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request,CancellationToken ct = default)
     {
-        if (request.Password != request.ConfirmPassword)
+        var userDto = new UserDto
+        {
+            UserName = request.UserName,
+            Email = request.Email,
+            Password = request.Password,
+            ConfirmPassword = request.ConfirmPassword,
+            FullName = request.FullName,
+            Phone = request.Phone
+        };
+
+        var result = await _authService.Register(userDto, ct);
+
+        if (!result)
         {
             return BadRequest(new
             {
-                message = "Password and confirm password do not match"
+                message = "Register failed"
             });
         }
 
-        try
+        return Ok(new
         {
-            var userDto = new UserDto
-            {
-                UserName = request.UserName,
-                Email = request.Email,
-                Password = request.Password,
-                ConfirmPassword = request.ConfirmPassword,
-                FullName = request.FullName,
-                Phone = request.Phone
-            };
-
-            var result = await _authService.Register(userDto, ct);
-
-            if (!result)
-            {
-                return BadRequest(new
-                {
-                    message = "Register failed"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Register successful"
-            });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (DbUpdateException)
-        {
-            // Race tạo trùng username/email: unique index của DB là chốt chặn cuối.
-            // Không trả message SQL cho client.
-            return Conflict(new
-            {
-                message = "Username or email already exists"
-            });
-        }
+            message = "Register successful"
+        });
     }
 }

@@ -129,9 +129,9 @@ internal static class OrderItemMutations
     /// Tính lại tiền của đơn sau khi dòng món thay đổi.
     ///
     /// <para>
-    /// Mọi thay đổi dòng món làm thay đổi cơ sở khuyến mãi ⇒ bỏ discount và bỏ tham chiếu
-    /// khuyến mãi (nếu giữ <c>PromotionId</c> mà <c>DiscountAmount = 0</c> thì đơn nói dối:
-    /// có khuyến mãi nhưng không giảm tiền).
+    /// Nếu đơn đang gắn <c>PromotionId</c> còn hiệu lực và <c>Subtotal</c> mới vẫn đạt
+    /// <c>MinimumOrderAmount</c> (cùng phạm vi target còn dương), tính lại <c>DiscountAmount</c>;
+    /// ngược lại xoá khuyến mãi khỏi đơn.
     /// </para>
     ///
     /// <para>
@@ -139,23 +139,131 @@ internal static class OrderItemMutations
     /// theo cấu hình quán.
     /// </para>
     /// </summary>
-    public static void RecalculateTotals(
+    public static async Task RecalculateTotalsAsync(
+        AppDbContext db,
         Order order,
         IEnumerable<OrderItem> items,
         DateTime now,
-        RestaurantSettings settings)
+        RestaurantSettings settings,
+        CancellationToken ct)
     {
         var active = items
             .Where(x => !KitchenStatuses.IsCancelled(x.Status))
             .ToList();
 
         order.Subtotal = active.Sum(x => x.UnitPrice * x.Quanlity);
-        order.DiscountAmount = 0m;
-        order.PromotionId = null;
-        order.PromotionDiscountType = null;
-        order.PromotionDiscountValue = null;
+
+        decimal? recalculatedDiscount = null;
+        Promotion? promotion = null;
+        if (order.PromotionId is int promotionId)
+        {
+            promotion = await db.Promotions
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    x => x.Id == promotionId && x.IsActive && x.StartAt <= now && x.EndAt >= now,
+                    ct);
+
+            if (promotion is not null && order.Subtotal >= promotion.MinimumOrderAmount)
+            {
+                recalculatedDiscount = await ComputePromotionDiscountAsync(
+                    db,
+                    promotion,
+                    active,
+                    order.Subtotal,
+                    ct);
+            }
+        }
+
+        if (recalculatedDiscount is decimal discount && discount > 0m && promotion is not null)
+        {
+            order.DiscountAmount = discount;
+            order.PromotionDiscountType = promotion.DiscountType;
+            order.PromotionDiscountValue = promotion.DiscountValue;
+        }
+        else
+        {
+            order.DiscountAmount = 0m;
+            order.PromotionId = null;
+            order.PromotionDiscountType = null;
+            order.PromotionDiscountValue = null;
+        }
+
         OrderTotalsCalculator.Apply(order, settings);
         order.UpdatedAt = now;
+    }
+
+    public static async Task<decimal?> ComputePromotionDiscountAsync(
+        AppDbContext db,
+        Promotion promotion,
+        IReadOnlyCollection<OrderItem> activeItems,
+        decimal subtotal,
+        CancellationToken ct)
+    {
+        var discountType = promotion.DiscountType?.Trim() ?? string.Empty;
+        var isPercent = discountType.Equals("Percent", StringComparison.OrdinalIgnoreCase);
+        var isFixed = discountType.Equals("Fixed", StringComparison.OrdinalIgnoreCase);
+        if (!isPercent && !isFixed)
+        {
+            return null;
+        }
+
+        var targetSizeIds = await db.PromotionFoods
+            .AsNoTracking()
+            .Where(x => x.PromotionId == promotion.Id)
+            .Select(x => x.SizeId)
+            .ToListAsync(ct);
+        var targetCategoryIds = await db.PromotionCategories
+            .AsNoTracking()
+            .Where(x => x.PromotionId == promotion.Id)
+            .Select(x => x.CategoryId)
+            .ToListAsync(ct);
+
+        decimal discountBase;
+        if (targetSizeIds.Count == 0 && targetCategoryIds.Count == 0)
+        {
+            discountBase = subtotal;
+        }
+        else
+        {
+            var sizeIds = targetSizeIds.ToHashSet();
+            var categoryIds = targetCategoryIds.ToHashSet();
+            var activeSizeIds = activeItems.Select(x => x.SizeId).Distinct().ToList();
+            var categoryBySize = activeSizeIds.Count == 0
+                ? new Dictionary<int, int?>()
+                : await (
+                    from size in db.FoodSizes.AsNoTracking()
+                    join food in db.Foods.AsNoTracking() on size.FoodId equals food.FoodId into foodGroup
+                    from food in foodGroup.DefaultIfEmpty()
+                    where activeSizeIds.Contains(size.SizeId)
+                    select new { size.SizeId, CategoryId = food != null ? (int?)food.CategoryId : null })
+                    .ToDictionaryAsync(x => x.SizeId, x => x.CategoryId, ct);
+
+            discountBase = activeItems
+                .Where(x => sizeIds.Contains(x.SizeId)
+                         || (categoryBySize.TryGetValue(x.SizeId, out var catId)
+                             && catId.HasValue
+                             && categoryIds.Contains(catId.Value)))
+                .Sum(x => x.UnitPrice * x.Quanlity);
+        }
+
+        if (discountBase <= 0m)
+        {
+            return null;
+        }
+
+        var discount = isFixed
+            ? Math.Min(promotion.DiscountValue, discountBase)
+            : discountBase * promotion.DiscountValue / 100m;
+
+        if (promotion.MaxDiscountAmount > 0m)
+        {
+            discount = Math.Min(discount, promotion.MaxDiscountAmount);
+        }
+
+        return Math.Round(
+            Math.Clamp(discount, 0m, subtotal),
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
     public static Task<KitchenOrderItem?> FindKitchenItemAsync(
@@ -364,7 +472,7 @@ internal static class OrderItemMutations
     /// Hoàn kho một phần số lượng của dòng món (chỉ dùng cho phần chưa nấu).
     /// Không gọi SaveChanges.
     /// </summary>
-    public static async Task ReturnStockForPartialItemAsync(
+    public static Task ReturnStockForPartialItemAsync(
         AppDbContext db,
         int orderId,
         OrderItem item,
@@ -376,86 +484,25 @@ internal static class OrderItemMutations
     {
         if (removedQuantity <= 0 || item.Quanlity <= 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (removedQuantity >= item.Quanlity)
         {
-            await OrderCancellation.ReturnStockForItemAsync(
+            return OrderCancellation.ReturnStockForItemAsync(
                 db, orderId, item, remainingConsumption, changedBy, now, ct);
-            return;
         }
 
-        var consumption = await OrderCancellation.ResolveItemConsumptionAsync(
-            db, orderId, item, ct);
-        if (consumption.Count == 0)
-        {
-            return;
-        }
-
-        var factor = (decimal)removedQuantity / item.Quanlity;
-        var returns = new List<(int IngredientId, decimal Quantity)>();
-
-        foreach (var (ingredientId, quantity) in consumption)
-        {
-            var requested = Math.Round(
-                quantity * factor, 3, MidpointRounding.AwayFromZero);
-            if (requested <= 0)
-            {
-                continue;
-            }
-
-            remainingConsumption.TryGetValue(ingredientId, out var remaining);
-            var returnQuantity = Math.Min(requested, Math.Max(0m, remaining));
-            if (returnQuantity <= 0)
-            {
-                continue;
-            }
-
-            remainingConsumption[ingredientId] = remaining - returnQuantity;
-            returns.Add((ingredientId, returnQuantity));
-        }
-
-        if (returns.Count == 0)
-        {
-            return;
-        }
-
-        var ingredientIds = returns.Select(x => x.IngredientId).ToList();
-        var stocks = await db.Inventories
-            .Where(x => ingredientIds.Contains(x.IngredientId))
-            .ToDictionaryAsync(x => x.IngredientId, ct);
-        // C-17: ledger ghi kèm đơn vị tính lúc hoàn kho.
-        var units = await IngredientUnits.LoadAsync(db, ingredientIds, ct);
-
-        foreach (var (ingredientId, quantity) in returns)
-        {
-            if (!stocks.TryGetValue(ingredientId, out var stock))
-            {
-                throw new InvalidOperationException(
-                    $"No inventory record exists for ingredient {ingredientId}");
-            }
-
-            var before = stock.Quanlity;
-            stock.Quanlity += quantity;
-            stock.UpdatedAt = now;
-
-            db.InventoryTransactions.Add(new InventoryTransaction
-            {
-                IngredientId = ingredientId,
-                Type = "AdjustmentIn",
-                Quanlity = quantity,
-                QuanlityBefore = before,
-                QuanlityAfter = stock.Quanlity,
-                Unit = units.GetValueOrDefault(ingredientId),
-                ReferenceType = "Order",
-                ReferenceId = orderId,
-                OrderItemId = item.Id,
-                CreatedAt = now,
-                CreatedBy = changedBy,
-                Note = "Returned stock when item quantity was reduced"
-            });
-        }
+        return OrderCancellation.ReturnStockForItemAsync(
+            db,
+            orderId,
+            item,
+            remainingConsumption,
+            changedBy,
+            now,
+            ct,
+            factor: (decimal)removedQuantity / item.Quanlity,
+            note: "Returned stock when item quantity was reduced");
     }
 
     /// <summary>
@@ -550,7 +597,7 @@ internal static class OrderItemMutations
         }
     }
 
-    private static Dictionary<int, decimal> ComputeNetConsumption(
+    internal static Dictionary<int, decimal> ComputeNetConsumption(
         IEnumerable<InventoryTransaction> transactions)
     {
         var consumption = new Dictionary<int, decimal>();

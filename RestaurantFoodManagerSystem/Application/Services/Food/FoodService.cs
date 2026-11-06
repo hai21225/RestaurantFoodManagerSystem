@@ -94,7 +94,7 @@ public class FoodService
         var category = await _db.Categories
             .FindAsync([request.CategoryId], ct);
 
-        if (category == null)
+        if (category == null || !category.IsActive)
         {
             throw new KeyNotFoundException("Category not found");
         }
@@ -156,7 +156,7 @@ public class FoodService
         var category = await _db.Categories
             .FindAsync([request.CategoryId], ct);
 
-        if (category == null)
+        if (category == null || !category.IsActive)
         {
             throw new KeyNotFoundException("Category not found");
         }
@@ -178,8 +178,6 @@ public class FoodService
         food.IsAvailable = request.IsAvailable;
 
         food.UpdatedAt = DateTime.UtcNow;
-
-        _db.Foods.Update(food);
 
         var result = await _db.SaveChangesAsync(ct);
 
@@ -208,10 +206,13 @@ public class FoodService
             return false;
         }
 
+        if (isAvailable && !food.IsActive)
+        {
+            throw new InvalidOperationException("Cannot make an inactive food available");
+        }
+
         food.IsAvailable = isAvailable;
         food.UpdatedAt = DateTime.UtcNow;
-
-        _db.Foods.Update(food);
 
         return await _db.SaveChangesAsync(ct) > 0;
     }
@@ -247,8 +248,6 @@ public class FoodService
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _db.Foods.Update(food);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
@@ -257,27 +256,8 @@ public class FoodService
     // DELETE - SOFT DELETE
     // =========================
 
-    public async Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default)
-    {
-        var food = await _db.Foods.FindAsync([id], ct);
-
-        if (food == null)
-        {
-            return false;
-        }
-
-        food.IsActive = false;
-
-        // Món đã bị disable thì cũng không nên order được
-        food.IsAvailable = false;
-        food.InactiveAt = DateTime.UtcNow;
-
-        food.UpdatedAt = DateTime.UtcNow;
-
-        _db.Foods.Update(food);
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
+    public Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default) =>
+        UpdateActiveAsync(id, false, ct);
 
 
     // =========================

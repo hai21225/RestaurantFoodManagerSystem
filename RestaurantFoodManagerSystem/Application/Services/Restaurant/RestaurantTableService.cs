@@ -113,7 +113,7 @@ public class RestaurantTableService
     {
         // Serializable để kiểm tra "bàn có đơn mở" và soft-delete là một khối, tránh
         // một đơn vừa được tạo chen giữa lúc kiểm tra và lúc xoá.
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var x = await _db.RestaurantTables.FirstOrDefaultAsync(t => t.TableId == id, ct);
         if (x is null) return false;
@@ -130,7 +130,7 @@ public class RestaurantTableService
 
     public async Task<bool> SetMaintenanceAsync(int id, bool enabled, CancellationToken ct = default)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var x = await _db.RestaurantTables.FirstOrDefaultAsync(t => t.TableId == id, ct);
         if (x is null) return false;

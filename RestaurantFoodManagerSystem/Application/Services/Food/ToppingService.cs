@@ -114,8 +114,6 @@ public class ToppingService
         topping.ToppingPrice = request.ToppingPrice;
         topping.IsAvailable = request.IsAvailable;
 
-        _db.Toppings.Update(topping);
-
         await _db.SaveChangesAsync(ct);
 
         return MapToDto(topping);
@@ -134,31 +132,19 @@ public class ToppingService
             return false;
         }
 
-        topping.IsAvailable = isAvailable;
-
-        _db.Toppings.Update(topping);
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
-
-
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
-    {
-        var topping = await _db.Toppings.FindAsync([id], ct);
-
-        if (topping == null)
+        if (isAvailable && !topping.IsActive)
         {
-            return false;
+            throw new InvalidOperationException("Cannot make an inactive topping available");
         }
 
-        // Soft delete
-        topping.IsActive = false;
-        topping.IsAvailable = false;
-
-        _db.Toppings.Update(topping);
+        topping.IsAvailable = isAvailable;
 
         return await _db.SaveChangesAsync(ct) > 0;
     }
+
+
+    public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
+        SetActiveAsync(id, false, ct);
 
 
     /// <summary>
@@ -192,7 +178,6 @@ public class ToppingService
             topping.IsAvailable = false;
         }
 
-        _db.Toppings.Update(topping);
         await _db.SaveChangesAsync(ct);
         return true;
     }

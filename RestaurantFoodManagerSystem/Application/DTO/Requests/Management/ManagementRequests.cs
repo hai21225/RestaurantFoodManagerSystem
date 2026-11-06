@@ -7,9 +7,9 @@ public sealed class IngredientRequest { [Required, MaxLength(150)] public string
 public sealed class SupplierRequest { [Required, MaxLength(150)] public string Name { get; set; } = ""; [Required, MaxLength(20)] public string Phone { get; set; } = ""; [Required, EmailAddress, MaxLength(150)] public string Email { get; set; } = ""; [Required, MaxLength(500)] public string Address { get; set; } = ""; }
 public sealed class RecipeRequest { [Range(1, int.MaxValue)] public int SizeId { get; set; } [Required, MaxLength(150)] public string Name { get; set; } = ""; [MaxLength(50)] public string Version { get; set; } = "1"; [MinLength(1)] public List<RecipeIngredientRequest> Ingredients { get; set; } = []; }
 public sealed class RecipeIngredientRequest { [Range(1, int.MaxValue)] public int IngredientId { get; set; } [Range(0.001, double.MaxValue)] [JsonPropertyName("quantity")] public decimal Quanlity { get; set; } }
-public sealed class PurchaseOrderRequest { [Range(1, int.MaxValue)] public int SupplierId { get; set; } [Range(1, int.MaxValue)] public int CreatedBy { get; set; } public List<PurchaseOrderItemRequest> Items { get; set; } = []; }
+public sealed class PurchaseOrderRequest { [Range(1, int.MaxValue)] public int SupplierId { get; set; } public int CreatedBy { get; set; } public List<PurchaseOrderItemRequest> Items { get; set; } = []; }
 public sealed class PurchaseOrderItemRequest { [Range(1, int.MaxValue)] public int IngredientId { get; set; } [Range(0.001, double.MaxValue)] [JsonPropertyName("quantity")] public decimal Quanlity { get; set; } [Range(0, double.MaxValue)] public decimal UnitPrice { get; set; } }
-public sealed class ReceivePurchaseRequest { [Range(1, int.MaxValue)] public int ReceivedBy { get; set; } }
+public sealed class ReceivePurchaseRequest { public int ReceivedBy { get; set; } }
 /// <summary>
 /// Tạo/sửa khuyến mãi (<c>POST</c>/<c>PUT /api/management/promotions</c>).
 ///
@@ -62,7 +62,7 @@ public sealed class IngredientStatusRequest
 
     [MaxLength(500)] public string? Note { get; set; }
 }
-public sealed class InventoryAdjustmentRequest { [Range(-1000000, 1000000)] [JsonPropertyName("quantity")] public decimal Quanlity { get; set; } [Range(1, int.MaxValue)] public int CreatedBy { get; set; } [MaxLength(500)] public string? Note { get; set; } }
+public sealed class InventoryAdjustmentRequest { [Range(-1000000, 1000000)] [JsonPropertyName("quantity")] public decimal Quanlity { get; set; } public int CreatedBy { get; set; } [MaxLength(500)] public string? Note { get; set; } }
 
 /// <summary>
 /// Tham số lọc/phân trang cho <c>GET /api/management/inventory-transactions</c> (P1). Tất cả tùy chọn.

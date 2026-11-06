@@ -192,9 +192,11 @@ public sealed class PurchaseOrderService
             .Select(s => s.Name)
             .FirstOrDefaultAsync(ct);
 
-        // C-17: ledger ghi kèm đơn vị tính của nguyên liệu lúc nhập kho.
-        var units = await IngredientUnits.LoadAsync(
-            _db, items.Select(x => x.IngredientId), ct);
+        var ingredientIds = items.Select(x => x.IngredientId).Distinct().ToList();
+        var units = await IngredientUnits.LoadAsync(_db, ingredientIds, ct);
+        var ingredients = await _db.Ingredients
+            .Where(x => ingredientIds.Contains(x.IngredientId))
+            .ToDictionaryAsync(x => x.IngredientId, ct);
 
         foreach (var item in items)
         {
@@ -205,6 +207,14 @@ public sealed class PurchaseOrderService
             var before = stock.Quanlity;
             stock.Quanlity += item.Quanlity;
             stock.UpdatedAt = DateTime.UtcNow;
+
+            if (stock.Quanlity > 0
+                && ingredients.TryGetValue(item.IngredientId, out var ingredient)
+                && ingredient.StockStatus != IngredientStockStatuses.Available)
+            {
+                ingredient.StockStatus = IngredientStockStatuses.Available;
+            }
+
             _db.InventoryTransactions.Add(new InventoryTransaction
             {
                 IngredientId = item.IngredientId,

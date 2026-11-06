@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-public sealed class KitchenService
+public sealed partial class KitchenService
 {
     private readonly AppDbContext _db;
     private readonly RestaurantTableService _tables;
@@ -28,128 +28,6 @@ public sealed class KitchenService
         _settings = settings;
     }
 
-    /// <summary>
-    /// Danh sách phiếu bếp cho màn hình bếp.
-    ///
-    /// <para>
-    /// <c>status=open</c> ⇒ chỉ trả phiếu đang mở (bếp poll 3–5s nên không cần phiếu đã
-    /// đóng, tránh danh sách phình vô hạn). Kèm số bàn, tên phục vụ và số món để bếp
-    /// nhìn 1 màn hình là đủ, không phải gọi thêm <c>GET /api/orders/{id}</c> (C-13).
-    /// </para>
-    ///
-    /// <para>
-    /// <b>Đợt 3 / B6 — <c>since</c>:</b> chỉ trả phiếu **có thay đổi** kể từ mốc đó
-    /// (gửi mới / bắt đầu nấu / hoàn thành) ⇒ bếp poll liên tục mà không phải tải lại
-    /// toàn bộ phiếu đang mở mỗi lần. Mẫu dùng đúng: **lần đầu** gọi **không** kèm
-    /// <c>since</c> (lấy hết), các lần sau kèm mốc của lần trước.
-    /// </para>
-    /// </summary>
-    public async Task<List<KitchenOrderResponse>> GetOrdersAsync(
-        CancellationToken ct = default,
-        string? status = null,
-        DateTime? since = null,
-        int? page = null,
-        int? pageSize = null)
-    {
-        var openOnly = string.Equals(status, "open", StringComparison.OrdinalIgnoreCase);
-
-        var rows = await (
-            from ko in _db.KitchenOrders.AsNoTracking()
-            join o in _db.Orders.AsNoTracking() on ko.OrderId equals o.OrderId
-            join t in _db.RestaurantTables.AsNoTracking() on o.TableId equals t.TableId into tableGroup
-            from t in tableGroup.DefaultIfEmpty()
-            join u in _db.Users.AsNoTracking() on o.CreatedBy equals u.Id into userGroup
-            from u in userGroup.DefaultIfEmpty()
-            where !openOnly ||
-                  (ko.Status != KitchenStatuses.Completed && ko.Status != KitchenStatuses.Cancelled)
-            orderby ko.Priority, ko.SentAt
-            select new { ko, TableNumber = t.TableNumber, WaiterName = u.UserFullName })
-            .ToListAsync(ct);
-
-        // B6: lọc theo mốc thời gian — chỉ giữ phiếu có thay đổi (gửi mới / bắt đầu / xong).
-        //
-        // C-21: `since` phải bắt được cả thay đổi trạng thái **MÓN**, không chỉ mốc của phiếu.
-        // Trước đây phiếu chỉ có 3 mốc (Sent/Started/Completed) và mỗi mốc chỉ set **một lần** ⇒
-        // món A chuyển `Ready` trong khi món B còn `Preparing` (phiếu vẫn `Preparing`, các mốc
-        // không đổi) ⇒ phiếu không lọt qua `since` ⇒ màn bếp không thấy món A vừa xong.
-        if (since.HasValue)
-        {
-            var mark = since.Value;
-
-            var byTicketMark = rows
-                .Where(r => r.ko.SentAt > mark
-                         || (r.ko.StartedAt.HasValue && r.ko.StartedAt.Value > mark)
-                         || (r.ko.CompletedAt.HasValue && r.ko.CompletedAt.Value > mark))
-                .Select(r => r.ko.KitchenOrderId)
-                .ToHashSet();
-
-            // Thay đổi ở cấp món: lịch sử trạng thái món (order_item_status_histories).
-            var ticketIds = rows.Select(r => r.ko.KitchenOrderId).ToList();
-            var byItemMark = new HashSet<int>();
-            if (ticketIds.Count > 0)
-            {
-                byItemMark = (await (
-                    from history in _db.OrderItemStatusHistories.AsNoTracking()
-                    join ki in _db.KitchenOrderItems.AsNoTracking() on history.OrderItemId equals ki.OrderItemId
-                    where history.CreatedAt > mark
-                      && ticketIds.Contains(ki.KitchenOrderId)
-                    select ki.KitchenOrderId)
-                    .Distinct()
-                    .ToListAsync(ct)).ToHashSet();
-            }
-
-            rows = rows
-                .Where(r => byTicketMark.Contains(r.ko.KitchenOrderId)
-                         || byItemMark.Contains(r.ko.KitchenOrderId))
-                .ToList();
-        }
-
-        // B6: phân trang tuỳ chọn. Không truyền page/pageSize ⇒ trả về toàn bộ (hành vi cũ,
-        // màn hình bếp cần thấy hết phiếu đang mở).
-        if (page.HasValue || pageSize.HasValue)
-        {
-            var skip = Paging.ResolveSkip(page ?? 1, pageSize ?? Paging.DefaultPageSize);
-            rows = rows.Skip(skip).Take(pageSize ?? Paging.DefaultPageSize).ToList();
-        }
-
-        var itemCounts = await _db.KitchenOrderItems.AsNoTracking()
-            .GroupBy(x => x.KitchenOrderId)
-            .Select(g => new { g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.Key, x => x.Count, ct);
-
-        return rows.Select(r =>
-        {
-            var dto = KitchenOrderResponse.From(r.ko);
-            dto.TableNumber = r.TableNumber ?? string.Empty;
-            dto.WaiterName = r.WaiterName;
-            dto.ItemCount = itemCounts.GetValueOrDefault(r.ko.KitchenOrderId);
-            return dto;
-        }).ToList();
-    }
-
-    /// <summary>
-    /// Danh sách món của phiếu bếp (Nhóm C/GĐ7). Bổ sung <c>foodName</c>/<c>sizeName</c>/<c>quantity</c>
-    /// (join từ order item) và giữ nguyên <c>quanlity</c> cũ.
-    /// </summary>
-    public Task<List<KitchenItemResponse>> GetItemsAsync(int kitchenOrderId, CancellationToken ct) =>
-        (from ki in _db.KitchenOrderItems.AsNoTracking()
-         join oi in _db.OrderItems on ki.OrderItemId equals oi.Id
-         join fs in _db.FoodSizes on oi.SizeId equals fs.SizeId
-         join f in _db.Foods on fs.FoodId equals f.FoodId
-         where ki.KitchenOrderId == kitchenOrderId
-         orderby ki.Id
-         select new KitchenItemResponse
-         {
-             Id = ki.Id,
-             KitchenOrderId = ki.KitchenOrderId,
-             OrderItemId = ki.OrderItemId,
-             Quanlity = ki.Quanlity,
-             Status = ki.Status,
-             Note = ki.Note,
-             FoodName = f.FoodName,
-             SizeName = fs.SizeName
-         }).ToListAsync(ct);
-
     public async Task<bool> UpdateOrderStatusAsync(int id, KitchenStatusRequest request, CancellationToken ct)
     {
         // Validate trước transaction để tránh giữ lock không cần thiết.
@@ -157,9 +35,11 @@ public sealed class KitchenService
         if (!KitchenStatuses.AllowedTicket.Contains(status, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Invalid kitchen order status");
 
-        var reasonCode = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var isCancelling = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase);
+        var reasonCode = isCancelling
             ? OrderItemMutations.NormalizeReasonCode(request.ReasonCode)
             : null;
+        var settings = isCancelling ? await _settings.GetAsync(ct) : null;
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
@@ -176,11 +56,17 @@ public sealed class KitchenService
                 $"Cannot change kitchen order status from {kitchenOrder.Status} to {status}");
 
         // C-02: không đóng phiếu Ready/Completed khi còn món chưa xong.
-        var kitchenItemStatuses = await _db.KitchenOrderItems
+        var kitchenItems = await _db.KitchenOrderItems
             .Where(x => x.KitchenOrderId == kitchenOrder.KitchenOrderId)
-            .Select(x => x.Status)
             .ToListAsync(ct);
-        OrderLifecycleCoordinator.EnsureTicketCanClose(status, kitchenItemStatuses);
+        OrderLifecycleCoordinator.EnsureTicketCanClose(status, kitchenItems.Select(x => x.Status).ToList());
+
+        var ticketOrderItemIds = kitchenItems.Select(x => x.OrderItemId).Distinct().ToList();
+        var ticketOrderItems = ticketOrderItemIds.Count == 0
+            ? new List<OrderItem>()
+            : await _db.OrderItems
+                .Where(x => ticketOrderItemIds.Contains(x.Id))
+                .ToListAsync(ct);
 
         var mappedStatus = OrderLifecycleCoordinator.MapTicketStatusToOrder(status);
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
@@ -189,7 +75,7 @@ public sealed class KitchenService
         // bằng Completed, nhưng Cancelled sẽ làm báo cáo bếp lệch doanh thu.
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase) &&
-            string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+            isCancelling)
         {
             throw new InvalidOperationException(
                 "Cannot cancel a kitchen ticket after the order is paid");
@@ -199,11 +85,8 @@ public sealed class KitchenService
             string.Equals(mappedStatus, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) &&
             !OrderStatuses.IsTerminal(order.Status))
         {
-            var orderItems = await _db.OrderItems
-                .Where(x => x.OrderId == order.OrderId)
-                .Select(x => x.Status)
-                .ToListAsync(ct);
-            var anyDone = orderItems.Any(KitchenStatuses.IsDone);
+            var anyDone = kitchenItems.Any(x => KitchenStatuses.IsDone(x.Status)) ||
+                          ticketOrderItems.Any(x => KitchenStatuses.IsDone(x.Status));
             if (!OrderCancellationPolicy.CanCancelOrder(_currentUser, anyDone))
                 throw new UnauthorizedAccessException(
                     "Only an administrator can cancel an order after a dish is ready");
@@ -219,11 +102,19 @@ public sealed class KitchenService
             status.Equals(KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             kitchenOrder.CompletedAt ??= now;
 
+        if (status.Equals(KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+        {
+            foreach (var ki in kitchenItems.Where(x => KitchenStatuses.IsPending(x.Status)))
+            {
+                ki.Status = KitchenStatuses.Preparing;
+            }
+        }
+
         // C-10: history order khi bếp huỷ phải giữ lý do thật, không chỉ "Updated from kitchen".
-        var historyNote = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var historyNote = isCancelling
             ? (string.IsNullOrWhiteSpace(request.Reason) ? "Cancelled from kitchen" : request.Reason.Trim())
             : "Updated from kitchen";
-        var cancelReason = string.Equals(status, KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase)
+        var cancelReason = isCancelling
             ? historyNote
             : request.Reason;
 
@@ -234,9 +125,73 @@ public sealed class KitchenService
             var changedBy = await _currentUser.ResolveExistingActorAsync(
                 _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
 
-            if (string.Equals(mappedStatus, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(status, KitchenStatuses.Accepted, StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(status, KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+            if (status.Equals(KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (var oi in ticketOrderItems.Where(x => KitchenStatuses.IsPending(x.Status)))
+                {
+                    var oldItemStatus = oi.Status;
+                    oi.Status = KitchenStatuses.Preparing;
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    OrderItemMutations.RecordItemHistory(
+                        _db, oi, linkedKi?.Id, oldItemStatus, KitchenStatuses.Preparing, changedBy, now, historyNote);
+                }
+            }
+
+            if (isCancelling)
+            {
+                var effectiveReasonCode = reasonCode ?? OrderItemMutations.CustomerChange;
+                var remainingConsumption = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
+
+                foreach (var oi in ticketOrderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status)))
+                {
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    await OrderCancellation.CancelSingleItemAsync(
+                        _db,
+                        order.OrderId,
+                        oi,
+                        linkedKi,
+                        effectiveReasonCode,
+                        cancelReason,
+                        changedBy,
+                        now,
+                        ct,
+                        remainingConsumption);
+                }
+
+                foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsTerminal(x.Status)))
+                {
+                    ki.Status = KitchenStatuses.Cancelled;
+                }
+
+                var allOrderItems = await _db.OrderItems
+                    .Where(x => x.OrderId == order.OrderId)
+                    .ToListAsync(ct);
+
+                if (allOrderItems.Count == 0)
+                {
+                    await _lifecycle.ApplyOrderStatusFromTicketAsync(
+                        order, status, changedBy, historyNote, cancelReason, ct, reasonCode);
+                }
+                else
+                {
+                    if (allOrderItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
+                    {
+                        await OrderItemMutations.RecalculateTotalsAsync(_db, order, allOrderItems, now, settings!, ct);
+                    }
+
+                    await _lifecycle.RefreshOrderStatusFromAllItemsAsync(
+                        order,
+                        changedBy,
+                        historyNote,
+                        allowReopen: false,
+                        cancelReason,
+                        ct,
+                        allOrderItems,
+                        reasonCode);
+                }
+            }
+            else if (string.Equals(status, KitchenStatuses.Accepted, StringComparison.OrdinalIgnoreCase) ||
+                     string.Equals(status, KitchenStatuses.Preparing, StringComparison.OrdinalIgnoreCase))
             {
                 await _lifecycle.ApplyOrderStatusFromTicketAsync(
                     order,
@@ -259,6 +214,13 @@ public sealed class KitchenService
                     cancelReason,
                     ct,
                     reasonCode: reasonCode);
+            }
+        }
+        else if (isCancelling)
+        {
+            foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsTerminal(x.Status)))
+            {
+                ki.Status = KitchenStatuses.Cancelled;
             }
         }
 
@@ -336,77 +298,32 @@ public sealed class KitchenService
 
             if (orderItem is not null && order is not null)
             {
-                if (KitchenStatuses.IsPending(item.Status) &&
-                    KitchenStatuses.IsPending(orderItem.Status))
-                {
-                    var effectiveReasonCode = reasonCode ?? OrderItemMutations.CustomerChange;
-                    if (OrderItemMutations.ReturnsStock(effectiveReasonCode))
-                    {
-                        var remaining = await OrderCancellation.LoadOrderRemainingAsync(_db, order.OrderId, ct);
-                        await OrderCancellation.ReturnStockForItemAsync(
-                            _db, order.OrderId, orderItem, remaining, changedBy, now, ct);
-                    }
-                    else
-                    {
-                        await OrderItemMutations.RecordWastageAsync(
-                            _db,
-                            order.OrderId,
-                            orderItem,
-                            orderItem.Quanlity,
-                            changedBy,
-                            now,
-                            effectiveReasonCode,
-                            string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
-                            ct);
-                    }
-                }
-                else if (KitchenStatuses.IsPreparing(item.Status) ||
-                         KitchenStatuses.IsPreparing(orderItem.Status))
-                {
-                    // C-13: món đã bắt đầu nấu ⇒ nguyên liệu đã tiêu thật ⇒ không hoàn kho,
-                    // ghi hao hụt. Lý do huỷ vẫn nằm ở item history + OrderItem.CancelReason.
-                    await OrderItemMutations.RecordWastageAsync(
-                        _db,
-                        order.OrderId,
-                        orderItem,
-                        orderItem.Quanlity,
-                        changedBy,
-                        now,
-                        OrderItemMutations.KitchenError,
-                        string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
-                        ct);
-                }
-
-                OrderCancellation.MarkItemCancelled(
+                await OrderCancellation.CancelSingleItemAsync(
+                    _db,
+                    order.OrderId,
                     orderItem,
-                    now,
+                    item,
+                    reasonCode,
+                    historyReason,
                     changedBy,
-                    string.IsNullOrWhiteSpace(request.Reason) ? "Cancelled from kitchen" : request.Reason.Trim());
+                    now,
+                    ct);
 
-                // Món còn lại vẫn phải được tính tiền; bỏ discount cũ vì cơ sở khuyến mãi đã đổi.
-                // Món cuối bị huỷ thì giữ nguyên tổng lịch sử (đơn chuyển Cancelled bên dưới),
-                // khớp quy tắc của OrderService.CancelItemAsync.
-                var siblingItems = await _db.OrderItems
-                    .Where(x => x.OrderId == order.OrderId && x.Id != orderItem.Id)
+                // Món còn lại vẫn phải được tính tiền; món cuối bị huỷ thì giữ nguyên tổng lịch sử
+                // (đơn chuyển Cancelled bên dưới), khớp quy tắc của OrderService.CancelItemAsync.
+                var orderItems = await _db.OrderItems
+                    .Where(x => x.OrderId == order.OrderId)
                     .ToListAsync(ct);
-                var activeSiblings = siblingItems
-                    .Where(x => !KitchenStatuses.IsCancelled(x.Status))
-                    .ToList();
-                if (activeSiblings.Count > 0)
+                if (orderItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
                 {
-                    order.Subtotal = activeSiblings.Sum(x => x.UnitPrice * x.Quanlity);
-                    order.DiscountAmount = 0m;
-                    order.PromotionId = null;
-                    order.PromotionDiscountType = null;
-                    order.PromotionDiscountValue = null;
-                    OrderTotalsCalculator.Apply(order, settings);
-                    order.UpdatedAt = now;
+                    await OrderItemMutations.RecalculateTotalsAsync(_db, order, orderItems, now, settings, ct);
                 }
             }
         }
 
         item.Status = status;
-        if (orderItem is not null)
+        if (orderItem is not null &&
+            !(status.Equals(KitchenStatuses.Cancelled, StringComparison.OrdinalIgnoreCase) && order is not null))
         {
             orderItem.Status = status;
             OrderItemMutations.RecordItemHistory(
@@ -476,35 +393,9 @@ public sealed class KitchenService
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        var kitchenItem = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (kitchenItem is null) return false;
-
-        var kitchenOrder = await _db.KitchenOrders
-            .FirstOrDefaultAsync(x => x.KitchenOrderId == kitchenItem.KitchenOrderId, ct);
-        if (kitchenOrder is null) return false;
-
-        var order = await _db.Orders
-            .FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
-        if (order is null) return false;
-
-        if (OrderStatuses.IsTerminal(order.Status))
-            throw new InvalidOperationException(
-                $"Order is {order.Status} and can no longer change status");
-
-        if (KitchenStatuses.IsTerminal(kitchenOrder.Status))
-            throw new InvalidOperationException(
-                $"Kitchen order is {kitchenOrder.Status} and can no longer change status");
-
-        if (!KitchenStatuses.IsDone(kitchenItem.Status))
-            throw new InvalidOperationException(
-                $"Only a Ready/Completed item can be reopened; current status is {kitchenItem.Status}");
-
-        var orderItem = await _db.OrderItems
-            .FirstOrDefaultAsync(x => x.Id == kitchenItem.OrderItemId, ct);
-        if (orderItem is null) return false;
-
-        if (KitchenStatuses.IsCancelled(orderItem.Status))
-            throw new InvalidOperationException("Order item is already cancelled");
+        var ctx = await LoadMutableItemContextAsync(id, requireDone: true, ct);
+        if (ctx is null) return false;
+        var (kitchenItem, kitchenOrder, order, orderItem) = ctx;
 
         var oldStatus = kitchenItem.Status;
         var changedBy = await _currentUser.ResolveExistingActorAsync(
@@ -571,37 +462,9 @@ public sealed class KitchenService
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        var kitchenItem = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (kitchenItem is null) return false;
-
-        var kitchenOrder = await _db.KitchenOrders
-            .FirstOrDefaultAsync(x => x.KitchenOrderId == kitchenItem.KitchenOrderId, ct);
-        if (kitchenOrder is null) return false;
-
-        if (KitchenStatuses.IsTerminal(kitchenOrder.Status))
-            throw new InvalidOperationException(
-                $"Kitchen order is {kitchenOrder.Status} and can no longer change status");
-
-        var order = await _db.Orders
-            .FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
-        if (order is null) return false;
-
-        if (OrderStatuses.IsTerminal(order.Status))
-            throw new InvalidOperationException(
-                $"Order is {order.Status} and can no longer change status");
-
-        var orderItem = await _db.OrderItems
-            .FirstOrDefaultAsync(x => x.Id == kitchenItem.OrderItemId, ct);
-        if (orderItem is null) return false;
-
-        if (KitchenStatuses.IsCancelled(orderItem.Status) ||
-            KitchenStatuses.IsCancelled(kitchenItem.Status))
-        {
-            throw new InvalidOperationException("Order item is already cancelled");
-        }
-
-        if (KitchenStatuses.IsDone(kitchenItem.Status))
-            throw new InvalidOperationException("Order item is already prepared");
+        var ctx = await LoadMutableItemContextAsync(id, requireDone: false, ct);
+        if (ctx is null) return false;
+        var (kitchenItem, kitchenOrder, order, orderItem) = ctx;
 
         if (request.PreparedQuantity > kitchenItem.Quanlity)
             throw new ArgumentException("Prepared quantity cannot exceed item quantity");
@@ -657,6 +520,7 @@ public sealed class KitchenService
         OrderItemMutations.EnsureGroupId(orderItem);
         var splitOldStatus = orderItem.Status;
         orderItem.Quanlity = remainingQuantity;
+        kitchenItem.Quanlity = remainingQuantity;
 
         OrderItemMutations.RecordItemHistory(
             _db,
@@ -671,41 +535,17 @@ public sealed class KitchenService
                 : $"Prepared {request.PreparedQuantity}; quantity {originalQuantity} -> {remainingQuantity}: {request.Reason.Trim()}",
             reasonCode: null);
 
-        var preparedLine = OrderItemMutations.CloneLine(
-            orderItem, request.PreparedQuantity, KitchenStatuses.Completed, now);
-        _db.OrderItems.Add(preparedLine);
-        await _db.SaveChangesAsync(ct);
-        await OrderItemMutations.CopyToppingsAsync(_db, orderItem.Id, preparedLine.Id, ct);
-
-        OrderItemMutations.RecordItemHistory(
-            _db,
-            preparedLine,
-            null,
-            KitchenStatuses.Pending,
+        var (_, preparedKitchenItem) = await SplitKitchenOrderItemLineAsync(
+            kitchenOrder,
+            orderItem,
+            request.PreparedQuantity,
             KitchenStatuses.Completed,
+            $"Prepared portion split from order item {orderItem.Id}",
+            splitReasonCode: null,
+            kitchenNote: orderItem.Note,
+            originalQuantity,
             changedBy,
             now,
-            $"Prepared portion split from order item {orderItem.Id}",
-            reasonCode: null);
-
-        var preparedKitchenItem = new KitchenOrderItem
-        {
-            KitchenOrderId = kitchenOrder.KitchenOrderId,
-            OrderItemId = preparedLine.Id,
-            Quanlity = request.PreparedQuantity,
-            Status = KitchenStatuses.Completed,
-            Note = orderItem.Note
-        };
-        _db.KitchenOrderItems.Add(preparedKitchenItem);
-        kitchenItem.Quanlity = remainingQuantity;
-
-        await OrderItemMutations.SplitItemLedgerAsync(
-            _db,
-            orderItem,
-            preparedLine,
-            originalQuantity,
-            request.PreparedQuantity,
-            changedBy,
             ct);
 
         var ticketItemsAfterSplit = await _db.KitchenOrderItems
@@ -756,37 +596,9 @@ public sealed class KitchenService
 
         await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
 
-        var kitchenItem = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (kitchenItem is null) return false;
-
-        var kitchenOrder = await _db.KitchenOrders
-            .FirstOrDefaultAsync(x => x.KitchenOrderId == kitchenItem.KitchenOrderId, ct);
-        if (kitchenOrder is null) return false;
-
-        if (KitchenStatuses.IsTerminal(kitchenOrder.Status))
-            throw new InvalidOperationException(
-                $"Kitchen order is {kitchenOrder.Status} and can no longer change status");
-
-        var order = await _db.Orders
-            .FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
-        if (order is null) return false;
-
-        if (OrderStatuses.IsTerminal(order.Status))
-            throw new InvalidOperationException(
-                $"Order is {order.Status} and can no longer change status");
-
-        var orderItem = await _db.OrderItems
-            .FirstOrDefaultAsync(x => x.Id == kitchenItem.OrderItemId, ct);
-        if (orderItem is null) return false;
-
-        if (KitchenStatuses.IsCancelled(orderItem.Status) ||
-            KitchenStatuses.IsCancelled(kitchenItem.Status))
-        {
-            throw new InvalidOperationException("Order item is already cancelled");
-        }
-
-        if (KitchenStatuses.IsDone(kitchenItem.Status))
-            throw new InvalidOperationException("Order item is already prepared");
+        var ctx = await LoadMutableItemContextAsync(id, requireDone: false, ct);
+        if (ctx is null) return false;
+        var (kitchenItem, kitchenOrder, order, orderItem) = ctx;
 
         if (request.PreparedQuantity < 0 ||
             request.PreparedQuantity >= kitchenItem.Quanlity)
@@ -873,44 +685,21 @@ public sealed class KitchenService
                     : $"Shortage ({reasonCode}); kept {request.PreparedQuantity} of {originalQuantity}: {detail}",
                 reasonCode);
 
-            var cancelledLine = OrderItemMutations.CloneLine(
-                orderItem, cancelledQuantity, KitchenStatuses.Cancelled, now);
-            _db.OrderItems.Add(cancelledLine);
-            await _db.SaveChangesAsync(ct);
-            await OrderItemMutations.CopyToppingsAsync(_db, orderItem.Id, cancelledLine.Id, ct);
-
-            OrderItemMutations.RecordItemHistory(
-                _db,
-                cancelledLine,
-                null,
-                KitchenStatuses.Pending,
+            var (cancelledLine, _) = await SplitKitchenOrderItemLineAsync(
+                kitchenOrder,
+                orderItem,
+                cancelledQuantity,
                 KitchenStatuses.Cancelled,
+                detail ?? $"Shortage ({reasonCode}); cancelled {cancelledQuantity} portion(s)",
+                reasonCode,
+                detail,
+                originalQuantity,
                 changedBy,
                 now,
-                detail ?? $"Shortage ({reasonCode}); cancelled {cancelledQuantity} portion(s)",
-                reasonCode);
+                ct);
 
             OrderCancellation.MarkItemCancelled(
                 cancelledLine, now, changedBy, detail ?? reasonCode);
-
-            var cancelledKitchenItem = new KitchenOrderItem
-            {
-                KitchenOrderId = kitchenOrder.KitchenOrderId,
-                OrderItemId = cancelledLine.Id,
-                Quanlity = cancelledQuantity,
-                Status = KitchenStatuses.Cancelled,
-                Note = detail
-            };
-            _db.KitchenOrderItems.Add(cancelledKitchenItem);
-
-            await OrderItemMutations.SplitItemLedgerAsync(
-                _db,
-                orderItem,
-                cancelledLine,
-                originalQuantity,
-                cancelledQuantity,
-                changedBy,
-                ct);
 
             await OrderItemMutations.RecordWastageAsync(
                 _db, order.OrderId, cancelledLine, cancelledQuantity,
@@ -958,7 +747,7 @@ public sealed class KitchenService
         // Nếu shortage huỷ luôn dòng cuối cùng, giữ tổng tiền lịch sử của đơn đã huỷ.
         if (allItems.Any(x => !KitchenStatuses.IsCancelled(x.Status)))
         {
-            OrderItemMutations.RecalculateTotals(order, allItems, now, settings);
+            await OrderItemMutations.RecalculateTotalsAsync(_db, order, allItems, now, settings, ct);
         }
 
         await _lifecycle.SyncTicketAndOrderAsync(
@@ -982,4 +771,104 @@ public sealed class KitchenService
         return true;
     }
 
+    private sealed record MutableKitchenItemContext(
+        KitchenOrderItem KitchenItem,
+        KitchenOrder KitchenOrder,
+        Order Order,
+        OrderItem OrderItem);
+
+    private async Task<MutableKitchenItemContext?> LoadMutableItemContextAsync(
+        int id,
+        bool requireDone,
+        CancellationToken ct)
+    {
+        var kitchenItem = await _db.KitchenOrderItems.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (kitchenItem is null) return null;
+
+        var kitchenOrder = await _db.KitchenOrders
+            .FirstOrDefaultAsync(x => x.KitchenOrderId == kitchenItem.KitchenOrderId, ct);
+        if (kitchenOrder is null) return null;
+
+        var order = await _db.Orders
+            .FirstOrDefaultAsync(x => x.OrderId == kitchenOrder.OrderId, ct);
+        if (order is null) return null;
+
+        if (KitchenStatuses.IsTerminal(kitchenOrder.Status))
+            throw new InvalidOperationException(
+                $"Kitchen order is {kitchenOrder.Status} and can no longer change status");
+
+        if (OrderStatuses.IsTerminal(order.Status))
+            throw new InvalidOperationException(
+                $"Order is {order.Status} and can no longer change status");
+
+        if (requireDone && !KitchenStatuses.IsDone(kitchenItem.Status))
+            throw new InvalidOperationException(
+                $"Only a Ready/Completed item can be reopened; current status is {kitchenItem.Status}");
+
+        var orderItem = await _db.OrderItems
+            .FirstOrDefaultAsync(x => x.Id == kitchenItem.OrderItemId, ct);
+        if (orderItem is null) return null;
+
+        if (KitchenStatuses.IsCancelled(orderItem.Status) ||
+            KitchenStatuses.IsCancelled(kitchenItem.Status))
+        {
+            throw new InvalidOperationException("Order item is already cancelled");
+        }
+
+        if (!requireDone && KitchenStatuses.IsDone(kitchenItem.Status))
+            throw new InvalidOperationException("Order item is already prepared");
+
+        return new MutableKitchenItemContext(kitchenItem, kitchenOrder, order, orderItem);
+    }
+
+    private async Task<(OrderItem SplitLine, KitchenOrderItem SplitKitchenItem)> SplitKitchenOrderItemLineAsync(
+        KitchenOrder kitchenOrder,
+        OrderItem orderItem,
+        int splitQuantity,
+        string splitStatus,
+        string splitHistoryReason,
+        string? splitReasonCode,
+        string? kitchenNote,
+        int originalQuantity,
+        int changedBy,
+        DateTime now,
+        CancellationToken ct)
+    {
+        var splitLine = OrderItemMutations.CloneLine(orderItem, splitQuantity, splitStatus, now);
+        _db.OrderItems.Add(splitLine);
+        await _db.SaveChangesAsync(ct);
+        await OrderItemMutations.CopyToppingsAsync(_db, orderItem.Id, splitLine.Id, ct);
+
+        OrderItemMutations.RecordItemHistory(
+            _db,
+            splitLine,
+            null,
+            KitchenStatuses.Pending,
+            splitStatus,
+            changedBy,
+            now,
+            splitHistoryReason,
+            splitReasonCode);
+
+        var splitKitchenItem = new KitchenOrderItem
+        {
+            KitchenOrderId = kitchenOrder.KitchenOrderId,
+            OrderItemId = splitLine.Id,
+            Quanlity = splitQuantity,
+            Status = splitStatus,
+            Note = kitchenNote
+        };
+        _db.KitchenOrderItems.Add(splitKitchenItem);
+
+        await OrderItemMutations.SplitItemLedgerAsync(
+            _db,
+            orderItem,
+            splitLine,
+            originalQuantity,
+            splitQuantity,
+            changedBy,
+            ct);
+
+        return (splitLine, splitKitchenItem);
+    }
 }

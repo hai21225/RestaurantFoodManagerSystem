@@ -61,6 +61,7 @@ public static class DatabaseInitializer
         {
             await SeedRolesAsync(db, cancellationToken);
             await SeedTableAreasAsync(db, cancellationToken);
+            await BasicDataSeeder.SeedAsync(db, cancellationToken);
         }
     }
 

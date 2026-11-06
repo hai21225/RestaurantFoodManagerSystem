@@ -16,14 +16,8 @@ public sealed class PaymentsController : ControllerBase
         [FromServices] PaymentService service,
         CancellationToken ct)
     {
-        try
-        {
-            var result = await service.CreateIdempotentAsync(request, idempotencyKey, ct);
-            return result is null ? NotFound() : Ok(PaymentResponse.From(result));
-        }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+        var result = await service.CreateIdempotentAsync(request, idempotencyKey, ct);
+        return result is null ? NotFound() : Ok(PaymentResponse.From(result));
     }
 
     /// <summary>
@@ -36,14 +30,8 @@ public sealed class PaymentsController : ControllerBase
         [FromServices] PaymentService service,
         CancellationToken ct)
     {
-        try
-        {
-            var result = await service.CreateMomoIntentAsync(request, ct);
-            return result is null ? NotFound() : Ok(result);
-        }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+        var result = await service.CreateMomoIntentAsync(request, ct);
+        return result is null ? NotFound() : Ok(result);
     }
 
     /// <summary>
@@ -87,23 +75,19 @@ public sealed class PaymentsController : ControllerBase
         [FromServices] PaymentService service,
         CancellationToken ct)
     {
-        try
+        var outcome = await service.SimulateMomoPaymentAsync(paymentId, success, ct);
+        if (!outcome.Accepted)
         {
-            var outcome = await service.SimulateMomoPaymentAsync(paymentId, success, ct);
-            if (!outcome.Accepted)
-            {
-                return BadRequest(new { message = outcome.Message });
-            }
-
-            return Ok(new
-            {
-                accepted = true,
-                applied = outcome.WasApplied,
-                paymentId = outcome.PaymentId,
-                message = outcome.Message
-            });
+            return BadRequest(new { message = outcome.Message });
         }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+
+        return Ok(new
+        {
+            accepted = true,
+            applied = outcome.WasApplied,
+            paymentId = outcome.PaymentId,
+            message = outcome.Message
+        });
     }
 
     /// <summary>Hoàn tiền một giao dịch đã thu (chỉ hoàn toàn bộ).</summary>
@@ -114,25 +98,13 @@ public sealed class PaymentsController : ControllerBase
         [FromServices] PaymentService service,
         CancellationToken ct)
     {
-        try
-        {
-            var result = await service.RefundAsync(paymentId, request, ct);
-            return result is null ? NotFound() : Ok(result);
-        }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+        var result = await service.RefundAsync(paymentId, request, ct);
+        return result is null ? NotFound() : Ok(result);
     }
 
     [HttpGet]
-    public async Task<IActionResult> List([FromQuery] PaymentListQuery query, [FromServices] PaymentService service, CancellationToken ct)
-    {
-        try
-        {
-            return Ok(await service.GetListAsync(query, ct));
-        }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> List([FromQuery] PaymentListQuery query, [FromServices] PaymentService service, CancellationToken ct) =>
+        Ok(await service.GetListAsync(query, ct));
 
     [HttpGet("order/{orderId:int}")]
     public async Task<IActionResult> GetByOrder(int orderId, [FromServices] PaymentService service, CancellationToken ct) => Ok((await service.GetByOrderAsync(orderId, ct)).Select(PaymentResponse.From).ToList());

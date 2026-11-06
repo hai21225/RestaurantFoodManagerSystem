@@ -1,6 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/restaurant-tables")]
@@ -51,12 +50,7 @@ public class RestaurantTablesController : ControllerBase
             });
         }
 
-        RestaurantTableDto created;
-        try { created = await _restaurantTableService.AddRestaurantTableAsync(dto, ct); }
-        catch (ConcurrencyConflictException ex) { return Conflict(new { message = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
-        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
-        catch (DbUpdateException) { return Conflict(new { message = "Restaurant table could not be saved due to a data conflict" }); }
+        var created = await _restaurantTableService.AddRestaurantTableAsync(dto, ct);
 
         return Ok(new
         {
@@ -72,52 +66,21 @@ public class RestaurantTablesController : ControllerBase
         [FromBody] RestaurantTableDto dto,
         CancellationToken ct = default)
     {
-        try
-        {
-            var result = await _restaurantTableService
-                .UpdateRestaurantTableAsync(id, dto, ct);
+        var result = await _restaurantTableService
+            .UpdateRestaurantTableAsync(id, dto, ct);
 
-            if (!result)
+        if (!result)
+        {
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "Restaurant table not found"
-                });
-            }
+                message = "Restaurant table not found"
+            });
+        }
 
-            return Ok(new
-            {
-                message = "Restaurant table updated successfully"
-            });
-        }
-        catch (ConcurrencyConflictException ex)
+        return Ok(new
         {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (DbUpdateException)
-        {
-            return Conflict(new
-            {
-                message = "Restaurant table could not be saved due to a data conflict"
-            });
-        }
+            message = "Restaurant table updated successfully"
+        });
     }
 
     // DELETE: /api/restaurant-tables/5
@@ -125,56 +88,26 @@ public class RestaurantTablesController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id, CancellationToken ct = default)
     {
-        try
-        {
-            var result = await _restaurantTableService
-                .DeleteRestaurantTableAsync(id, ct);
+        var result = await _restaurantTableService
+            .DeleteRestaurantTableAsync(id, ct);
 
-            if (!result)
+        if (!result)
+        {
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "Restaurant table not found"
-                });
-            }
+                message = "Restaurant table not found"
+            });
+        }
 
-            return Ok(new
-            {
-                message = "Restaurant table deleted successfully"
-            });
-        }
-        catch (ConcurrencyConflictException ex)
+        return Ok(new
         {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new
-            {
-                message = ex.Message
-            });
-        }
+            message = "Restaurant table deleted successfully"
+        });
     }
 
     // Status is calculated by the system. This endpoint only marks/unmarks maintenance.
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPatch("{id:int}/maintenance")]
-    public async Task<IActionResult> Maintenance(int id, [FromQuery] bool enabled, CancellationToken ct = default)
-    {
-        try
-        {
-            return await _restaurantTableService.SetMaintenanceAsync(id, enabled, ct) ? NoContent() : NotFound();
-        }
-        catch (ConcurrencyConflictException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-    }
+    public async Task<IActionResult> Maintenance(int id, [FromQuery] bool enabled, CancellationToken ct = default) =>
+        await _restaurantTableService.SetMaintenanceAsync(id, enabled, ct) ? NoContent() : NotFound();
 }

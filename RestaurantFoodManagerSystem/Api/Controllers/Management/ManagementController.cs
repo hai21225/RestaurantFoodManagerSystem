@@ -9,8 +9,11 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("ingredients")]
-    public async Task<List<IngredientResponse>> Ingredients([FromServices] IngredientService s, CancellationToken ct) =>
-        (await s.GetAllAsync(ct)).Select(IngredientResponse.From).ToList();
+    public async Task<List<IngredientResponse>> Ingredients(
+        [FromQuery] bool includeInactive,
+        [FromServices] IngredientService s,
+        CancellationToken ct) =>
+        (await s.GetAllAsync(includeInactive, ct)).Select(IngredientResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("ingredients/{id:int}")]
@@ -22,17 +25,8 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("ingredients")]
-    public async Task<IActionResult> CreateIngredient(IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct)
-    {
-        try
-        {
-            return Ok(IngredientResponse.From(await s.CreateAsync(r, ct)));
-        }
-        catch (InvalidOperationException e)
-        {
-            return Conflict(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> CreateIngredient(IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
+        Ok(IngredientResponse.From(await s.CreateAsync(r, ct)));
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("ingredients/{id:int}")]
@@ -41,31 +35,13 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("ingredients/{id:int}")]
-    public async Task<IActionResult> UpdateIngredient(int id, IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct)
-    {
-        try
-        {
-            return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
-        }
-        catch (InvalidOperationException e)
-        {
-            return Conflict(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> UpdateIngredient(int id, IngredientRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
+        await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("ingredients/{id:int}/active")]
-    public async Task<IActionResult> SetIngredientActive(int id, UpdateActiveRequest r, [FromServices] IngredientService s, CancellationToken ct)
-    {
-        try
-        {
-            return await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
-        }
-        catch (InvalidOperationException e)
-        {
-            return Conflict(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> SetIngredientActive(int id, UpdateActiveRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
+        await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
 
     /// <summary>
     /// C-13: kho đánh dấu trạng thái đáp ứng của nguyên liệu (bình thường / hết hàng / hư hỏng).
@@ -73,22 +49,16 @@ public sealed class ManagementController : ControllerBase
     /// </summary>
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("ingredients/{id:int}/status")]
-    public async Task<IActionResult> SetIngredientStatus(int id, IngredientStatusRequest r, [FromServices] IngredientService s, CancellationToken ct)
-    {
-        try
-        {
-            return await s.SetStockStatusAsync(id, r.StockStatus, ct) ? NoContent() : NotFound();
-        }
-        catch (ArgumentException e)
-        {
-            return BadRequest(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> SetIngredientStatus(int id, IngredientStatusRequest r, [FromServices] IngredientService s, CancellationToken ct) =>
+        await s.SetStockStatusAsync(id, r.StockStatus, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("suppliers")]
-    public async Task<List<SupplierResponse>> Suppliers([FromServices] SupplierService s, CancellationToken ct) =>
-        (await s.GetAllAsync(ct)).Select(SupplierResponse.From).ToList();
+    public async Task<List<SupplierResponse>> Suppliers(
+        [FromQuery] bool includeInactive,
+        [FromServices] SupplierService s,
+        CancellationToken ct) =>
+        (await s.GetAllAsync(includeInactive, ct)).Select(SupplierResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("suppliers/{id:int}")]
@@ -137,21 +107,13 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("inventory/{ingredientId:int}/adjust")]
-    public async Task<IActionResult> AdjustInventory(int ingredientId, InventoryAdjustmentRequest r, [FromServices] InventoryService s, CancellationToken ct)
-    {
-        try { return await s.AdjustAsync(ingredientId, r, ct) ? NoContent() : NotFound(); }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> AdjustInventory(int ingredientId, InventoryAdjustmentRequest r, [FromServices] InventoryService s, CancellationToken ct) =>
+        await s.AdjustAsync(ingredientId, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("inventory-transactions")]
-    public async Task<IActionResult> InventoryTransactions([FromQuery] InventoryTransactionQuery query, [FromServices] InventoryService s, CancellationToken ct)
-    {
-        try { return Ok(await s.GetTransactionsAsync(query, ct)); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> InventoryTransactions([FromQuery] InventoryTransactionQuery query, [FromServices] InventoryService s, CancellationToken ct) =>
+        Ok(await s.GetTransactionsAsync(query, ct));
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("purchase-orders")]
@@ -160,12 +122,8 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("purchase-orders")]
-    public async Task<IActionResult> CreatePurchase(PurchaseOrderRequest r, [FromServices] PurchaseOrderService s, CancellationToken ct)
-    {
-        try { return Ok(PurchaseOrderResponse.From(await s.CreateAsync(r, ct))); }
-        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> CreatePurchase(PurchaseOrderRequest r, [FromServices] PurchaseOrderService s, CancellationToken ct) =>
+        Ok(PurchaseOrderResponse.From(await s.CreateAsync(r, ct)));
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("purchase-orders/{id:int}")]
@@ -174,21 +132,13 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("purchase-orders/{id:int}/receive")]
-    public async Task<IActionResult> Receive(int id, ReceivePurchaseRequest r, [FromServices] PurchaseOrderService s, CancellationToken ct)
-    {
-        try { return await s.ReceiveAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> Receive(int id, ReceivePurchaseRequest r, [FromServices] PurchaseOrderService s, CancellationToken ct) =>
+        await s.ReceiveAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPost("purchase-orders/{id:int}/cancel")]
-    public async Task<IActionResult> CancelPurchase(int id, [FromServices] PurchaseOrderService s, CancellationToken ct)
-    {
-        try { return await s.CancelAsync(id, ct) ? NoContent() : NotFound(); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> CancelPurchase(int id, [FromServices] PurchaseOrderService s, CancellationToken ct) =>
+        await s.CancelAsync(id, ct) ? NoContent() : NotFound();
 
     // --- Cấu hình quán (Đợt 2 / A1) => AdminOnly ---
 
@@ -203,25 +153,19 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPut("settings")]
-    public async Task<IActionResult> UpdateSettings(RestaurantSettingsRequest r, [FromServices] RestaurantSettingsService s, CancellationToken ct)
-    {
-        try
-        {
-            return Ok(RestaurantSettingsResponse.From(await s.UpdateAsync(r, ct)));
-        }
-        catch (ArgumentException e)
-        {
-            return BadRequest(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> UpdateSettings(RestaurantSettingsRequest r, [FromServices] RestaurantSettingsService s, CancellationToken ct) =>
+        Ok(RestaurantSettingsResponse.From(await s.UpdateAsync(r, ct)));
 
     // --- Khuyến mãi => AdminOnly ---
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpGet("promotions")]
-    public async Task<List<PromotionResponse>> Promotions([FromServices] PromotionService s, CancellationToken ct)
+    public async Task<List<PromotionResponse>> Promotions(
+        [FromQuery] bool includeInactive,
+        [FromServices] PromotionService s,
+        CancellationToken ct)
     {
-        var promotions = await s.GetAllAsync(ct);
+        var promotions = await s.GetAllAsync(includeInactive, ct);
 
         // C-18: target của khuyến mãi (món/danh mục được áp giảm). Đọc 1 lần cho cả danh sách.
         var targets = await s.GetTargetsAsync(
@@ -247,11 +191,8 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPost("promotions")]
-    public async Task<IActionResult> CreatePromotion(PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct)
-    {
-        try { return Ok(PromotionResponse.From(await s.CreateAsync(r, ct))); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> CreatePromotion(PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct) =>
+        Ok(PromotionResponse.From(await s.CreateAsync(r, ct)));
 
     /// <summary>
     /// C-18: **thay toàn bộ** target của khuyến mãi (món theo size + danh mục).
@@ -289,11 +230,8 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPut("promotions/{id:int}")]
-    public async Task<IActionResult> UpdatePromotion(int id, PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct)
-    {
-        try { return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> UpdatePromotion(int id, PromotionRequest r, [FromServices] PromotionService s, CancellationToken ct) =>
+        await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpDelete("promotions/{id:int}")]
@@ -319,25 +257,14 @@ public sealed class ManagementController : ControllerBase
     [HttpPost("recipes")]
     public async Task<IActionResult> CreateRecipe(RecipeRequest r, [FromServices] RecipeService s, CancellationToken ct)
     {
-        try
-        {
-            var recipe = await s.CreateAsync(r, ct);
-            return Ok(RecipeSummaryResponse.From(recipe, r.Ingredients.Count));
-        }
-        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
+        var recipe = await s.CreateAsync(r, ct);
+        return Ok(RecipeSummaryResponse.From(recipe, r.Ingredients.Count));
     }
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPut("recipes/{id:int}")]
-    public async Task<IActionResult> UpdateRecipe(int id, RecipeRequest r, [FromServices] RecipeService s, CancellationToken ct)
-    {
-        try { return await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (KeyNotFoundException e) { return NotFound(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> UpdateRecipe(int id, RecipeRequest r, [FromServices] RecipeService s, CancellationToken ct) =>
+        await s.UpdateAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpDelete("recipes/{id:int}")]
@@ -346,17 +273,8 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpPatch("recipes/{id:int}/active")]
-    public async Task<IActionResult> SetRecipeActive(int id, UpdateActiveRequest r, [FromServices] RecipeService s, CancellationToken ct)
-    {
-        try
-        {
-            return await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
-        }
-        catch (InvalidOperationException e)
-        {
-            return Conflict(new { message = e.Message });
-        }
-    }
+    public async Task<IActionResult> SetRecipeActive(int id, UpdateActiveRequest r, [FromServices] RecipeService s, CancellationToken ct) =>
+        await s.SetActiveAsync(id, r.IsActive, ct) ? NoContent() : NotFound();
 
     // --- Bếp => KitchenDesk ---
 
@@ -378,53 +296,26 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPatch("kitchen/orders/{id:int}/status")]
-    public async Task<IActionResult> KitchenStatus(int id, KitchenStatusRequest r, [FromServices] KitchenService s, CancellationToken ct)
-    {
-        try { return await s.UpdateOrderStatusAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> KitchenStatus(int id, KitchenStatusRequest r, [FromServices] KitchenService s, CancellationToken ct) =>
+        await s.UpdateOrderStatusAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPatch("kitchen/items/{id:int}/status")]
-    public async Task<IActionResult> KitchenItemStatus(int id, KitchenItemStatusRequest r, [FromServices] KitchenService s, CancellationToken ct)
-    {
-        try { return await s.UpdateItemStatusAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (ConcurrencyConflictException e) { return Conflict(new { message = e.Message }); }
-        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> KitchenItemStatus(int id, KitchenItemStatusRequest r, [FromServices] KitchenService s, CancellationToken ct) =>
+        await s.UpdateItemStatusAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPost("kitchen/items/{id:int}/reopen")]
-    public async Task<IActionResult> KitchenItemReopen(int id, ReopenKitchenItemRequest r, [FromServices] KitchenService s, CancellationToken ct)
-    {
-        try { return await s.ReopenItemAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> KitchenItemReopen(int id, ReopenKitchenItemRequest r, [FromServices] KitchenService s, CancellationToken ct) =>
+        await s.ReopenItemAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPatch("kitchen/items/{id:int}/prepared-quantity")]
-    public async Task<IActionResult> KitchenPreparedQuantity(int id, PreparedQuantityRequest r, [FromServices] KitchenService s, CancellationToken ct)
-    {
-        try { return await s.UpdatePreparedQuantityAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> KitchenPreparedQuantity(int id, PreparedQuantityRequest r, [FromServices] KitchenService s, CancellationToken ct) =>
+        await s.UpdatePreparedQuantityAsync(id, r, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.KitchenDesk)]
     [HttpPost("kitchen/items/{id:int}/shortage")]
-    public async Task<IActionResult> KitchenShortage(int id, ReportShortageRequest r, [FromServices] KitchenService s, CancellationToken ct)
-    {
-        try { return await s.ReportShortageAsync(id, r, ct) ? NoContent() : NotFound(); }
-        catch (UnauthorizedAccessException e) { return StatusCode(StatusCodes.Status403Forbidden, new { message = e.Message }); }
-        catch (InvalidOperationException e) { return Conflict(new { message = e.Message }); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> KitchenShortage(int id, ReportShortageRequest r, [FromServices] KitchenService s, CancellationToken ct) =>
+        await s.ReportShortageAsync(id, r, ct) ? NoContent() : NotFound();
 }

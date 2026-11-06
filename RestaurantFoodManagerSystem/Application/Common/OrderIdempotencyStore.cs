@@ -1,4 +1,6 @@
-using System.Collections.Concurrent;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 
 /// <summary>
 /// Lưu kết quả của các lệnh ghi theo <c>Idempotency-Key</c> để client retry
@@ -22,6 +24,45 @@ public interface IOrderIdempotencyStore
         CancellationToken ct);
 }
 
+public static class OrderIdempotencyStore
+{
+    /// <summary>
+    /// Fingerprint của payload: SHA-256 của <c>scope + JSON payload</c>. Cùng key nhưng
+    /// payload khác ⇒ báo lỗi (409) thay vì âm thầm trả kết quả cũ.
+    /// </summary>
+    public static string BuildFingerprint(string scope, object payload)
+    {
+        var json = JsonSerializer.Serialize(payload);
+        var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
+        return Convert.ToHexString(SHA256.HashData(bytes));
+    }
+
+    public static Task<TResponse> RunIfKeyedAsync<TResponse>(
+        this IOrderIdempotencyStore store,
+        string? idempotencyKey,
+        int? actorId,
+        string fingerprintScope,
+        string cacheKeyPrefix,
+        object payload,
+        Func<CancellationToken, Task<TResponse>> action,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return action(ct);
+        }
+
+        var key = idempotencyKey.Trim();
+        if (key.Length > 128)
+        {
+            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
+        }
+
+        var fingerprint = BuildFingerprint(fingerprintScope, payload);
+        return store.ExecuteAsync($"{actorId}:{cacheKeyPrefix}{key}", fingerprint, action, ct);
+    }
+}
+
 /// <summary>
 /// Bản lưu in-memory, TTL 24 giờ. Phù hợp cho một instance backend nội bộ.
 ///
@@ -34,13 +75,9 @@ public interface IOrderIdempotencyStore
 public sealed class InMemoryOrderIdempotencyStore : IOrderIdempotencyStore
 {
     private static readonly TimeSpan Ttl = TimeSpan.FromHours(24);
-    private const int LockStripeCount = 64;
 
-    private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
-    private readonly SemaphoreSlim[] _locks =
-        Enumerable.Range(0, LockStripeCount)
-            .Select(_ => new SemaphoreSlim(1, 1))
-            .ToArray();
+    private readonly Dictionary<string, Entry> _entries = new(StringComparer.Ordinal);
+    private readonly SemaphoreSlim _gate = new(1, 1);
 
     public async Task<TResponse> ExecuteAsync<TResponse>(
         string key,
@@ -48,14 +85,13 @@ public sealed class InMemoryOrderIdempotencyStore : IOrderIdempotencyStore
         Func<CancellationToken, Task<TResponse>> create,
         CancellationToken ct)
     {
-        var gate = _locks[(key.GetHashCode() & int.MaxValue) % _locks.Length];
-        await gate.WaitAsync(ct);
-
+        await _gate.WaitAsync(ct);
         try
         {
+            var now = DateTimeOffset.UtcNow;
             if (_entries.TryGetValue(key, out var existing))
             {
-                if (existing.ExpiresAt > DateTimeOffset.UtcNow)
+                if (existing.ExpiresAt > now)
                 {
                     if (!string.Equals(existing.Fingerprint, requestFingerprint, StringComparison.Ordinal))
                     {
@@ -63,42 +99,32 @@ public sealed class InMemoryOrderIdempotencyStore : IOrderIdempotencyStore
                             "Idempotency key was already used with a different request payload");
                     }
 
-                    if (existing.Response is TResponse cached)
-                    {
-                        return cached;
-                    }
-
-                    return default!;
+                    return existing.Response is TResponse cached ? cached : default!;
                 }
 
-                _entries.TryRemove(key, out _);
+                _entries.Remove(key);
             }
 
             var response = await create(ct);
-            _entries[key] = new Entry(requestFingerprint, response!, DateTimeOffset.UtcNow.Add(Ttl));
+            if (response is not null)
+            {
+                _entries[key] = new Entry(requestFingerprint, response, DateTimeOffset.UtcNow.Add(Ttl));
+            }
 
             if (_entries.Count > 2048)
             {
-                RemoveExpired();
+                var cutoff = DateTimeOffset.UtcNow;
+                foreach (var expiredKey in _entries.Where(p => p.Value.ExpiresAt <= cutoff).Select(p => p.Key).ToList())
+                {
+                    _entries.Remove(expiredKey);
+                }
             }
 
             return response;
         }
         finally
         {
-            gate.Release();
-        }
-    }
-
-    private void RemoveExpired()
-    {
-        var now = DateTimeOffset.UtcNow;
-        foreach (var pair in _entries)
-        {
-            if (pair.Value.ExpiresAt <= now)
-            {
-                _entries.TryRemove(pair.Key, out _);
-            }
+            _gate.Release();
         }
     }
 

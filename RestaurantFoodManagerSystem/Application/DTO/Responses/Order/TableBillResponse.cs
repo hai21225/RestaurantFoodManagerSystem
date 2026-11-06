@@ -68,6 +68,9 @@ public sealed class TableBillLineResponse
 
     /// <summary>Ghi chú của dòng món (bỏ hành, ít đá…).</summary>
     public string? Note { get; set; }
+
+    /// <summary>Topping của dòng món (trên 1 phần) — rỗng nếu không có topping.</summary>
+    public List<OrderItemToppingDetailResponse> Toppings { get; set; } = [];
 }
 
 /// <summary>Tóm tắt 1 đơn trong hoá đơn gộp theo bàn.</summary>

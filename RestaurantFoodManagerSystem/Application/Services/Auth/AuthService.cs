@@ -1,4 +1,3 @@
-﻿using System.Net.Mail;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -52,7 +51,7 @@ public class AuthService
 
         ValidatePassword(userDto.Password, "Password must be between 6 and 72 bytes (UTF-8)");
 
-        if (!IsValidEmail(userDto.Email))
+        if (!UserService.IsValidEmail(userDto.Email))
         {
             throw new ArgumentException("Email format is invalid");
         }
@@ -134,21 +133,13 @@ public class AuthService
         CancellationToken ct = default)
     {
         var currentPassword = request.CurrentPassword ?? string.Empty;
-        var newPassword = request.NewPassword ?? string.Empty;
-        var confirmPassword = request.ConfirmNewPassword ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(currentPassword))
         {
             throw new ArgumentException("Current password is required");
         }
 
-        // BCrypt chỉ dùng tối đa 72 byte đầu; chặn sớm để không âm thầm cắt mật khẩu.
-        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
-
-        if (newPassword != confirmPassword)
-        {
-            throw new ArgumentException("New password and confirm password do not match");
-        }
+        var newPassword = ValidateConfirmedNewPassword(request.NewPassword, request.ConfirmNewPassword);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new KeyNotFoundException("User not found");
@@ -181,15 +172,7 @@ public class AuthService
         ResetUserPasswordRequest request,
         CancellationToken ct = default)
     {
-        var newPassword = request.NewPassword ?? string.Empty;
-        var confirmPassword = request.ConfirmPassword ?? string.Empty;
-
-        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
-
-        if (newPassword != confirmPassword)
-        {
-            throw new ArgumentException("New password and confirm password do not match");
-        }
+        var newPassword = ValidateConfirmedNewPassword(request.NewPassword, request.ConfirmPassword);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new KeyNotFoundException("User not found");
@@ -200,19 +183,20 @@ public class AuthService
         await _db.SaveChangesAsync(ct);
     }
 
-    private static bool IsValidEmail(string? email)
+    private static string ValidateConfirmedNewPassword(string? rawNewPassword, string? rawConfirmPassword)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        var newPassword = rawNewPassword ?? string.Empty;
+        var confirmPassword = rawConfirmPassword ?? string.Empty;
+
+        // BCrypt chỉ dùng tối đa 72 byte đầu; chặn sớm để không âm thầm cắt mật khẩu.
+        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
+
+        if (newPassword != confirmPassword)
         {
-            return false;
+            throw new ArgumentException("New password and confirm password do not match");
         }
 
-        var trimmed = email.Trim();
-
-        // Chỉ nhận địa chỉ trần (không nhận dạng "Tên <email>") để tránh lưu
-        // giá trị không phải email thật vào trường UserEmail.
-        return MailAddress.TryCreate(trimmed, out var address)
-               && string.Equals(address.Address, trimmed, StringComparison.OrdinalIgnoreCase);
+        return newPassword;
     }
 
     /// <summary>
@@ -288,24 +272,10 @@ public class AuthService
             .FirstOrDefaultAsync(x => x.UserId == userId && x.RoleId == role.RoleId, ct)
             ?? throw new KeyNotFoundException("Role is not assigned to this user");
 
-        if (role.RoleName == AuthPolicies.Roles.Admin)
+        if (role.RoleName == AuthPolicies.Roles.Admin
+            && !await _userService.HasAnotherActiveAdminAsync(userId, ct))
         {
-            // Chỉ tính Admin còn ACTIVE: nếu tính cả tài khoản đã khoá thì có thể gỡ role
-            // của Admin cuối cùng đang hoạt động ⇒ hệ thống mất người quản trị vĩnh viễn.
-            var anotherAdminExists = await (
-                from ur in _db.UserRoles
-                join r in _db.Roles on ur.RoleId equals r.RoleId
-                join u in _db.Users on ur.UserId equals u.Id
-                where r.RoleName == AuthPolicies.Roles.Admin
-                   && ur.UserId != userId
-                   && u.IsActive
-                select ur.UserId)
-                .AnyAsync(ct);
-
-            if (!anotherAdminExists)
-            {
-                throw new InvalidOperationException("Cannot remove the last Admin role");
-            }
+            throw new InvalidOperationException("Cannot remove the last Admin role");
         }
 
         _db.UserRoles.Remove(link);

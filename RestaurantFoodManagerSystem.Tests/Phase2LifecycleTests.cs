@@ -923,4 +923,41 @@ public sealed class Phase2LifecycleTests : TestBase
         Assert.Equal(RestaurantTableStatuses.Available, check.RestaurantTables
             .Single(x => x.TableId == created.Scenario.Table.TableId).Status);
     }
+
+    [Fact]
+    public async Task TicketPreparingSyncsItems_AndCancellingSecondTicket_ScopesToThatTicketOnly()
+    {
+        var created = await CreateOrderAsync(quantity: 1);
+        await CompleteOrderAsync(created);
+        await Orders.AddItemsAsync(created.Order.OrderId, AddOne(created), CancellationToken.None);
+
+        var secondTicket = await Db.KitchenOrders
+            .Where(x => x.OrderId == created.Order.OrderId && x.KitchenOrderId != created.Ticket.KitchenOrderId)
+            .SingleAsync();
+
+        CurrentUser.UserId = created.Scenario.Staff.Id;
+        CurrentUser.RoleList.Add(AuthPolicies.Roles.Chef);
+
+        Assert.True(await Kitchen.UpdateOrderStatusAsync(
+            secondTicket.KitchenOrderId,
+            new KitchenStatusRequest { Status = KitchenStatuses.Preparing },
+            CancellationToken.None));
+
+        var secondKi = await Db.KitchenOrderItems.SingleAsync(x => x.KitchenOrderId == secondTicket.KitchenOrderId);
+        var secondOi = await Db.OrderItems.SingleAsync(x => x.Id == secondKi.OrderItemId);
+        Assert.Equal(KitchenStatuses.Preparing, secondKi.Status);
+        Assert.Equal(KitchenStatuses.Preparing, secondOi.Status);
+
+        Assert.True(await Kitchen.UpdateOrderStatusAsync(
+            secondTicket.KitchenOrderId,
+            new KitchenStatusRequest { Status = KitchenStatuses.Cancelled, Reason = "Bếp huỷ lượt 2" },
+            CancellationToken.None));
+
+        using var check = NewContext();
+        var order = check.Orders.Single(x => x.OrderId == created.Order.OrderId);
+        Assert.Equal(OrderStatuses.Ready, order.Status);
+        Assert.Equal(50m, order.Subtotal);
+        Assert.Equal(KitchenStatuses.Completed, check.OrderItems.Single(x => x.Id == created.Item.Id).Status);
+        Assert.Equal(KitchenStatuses.Cancelled, check.OrderItems.Single(x => x.Id == secondOi.Id).Status);
+    }
 }

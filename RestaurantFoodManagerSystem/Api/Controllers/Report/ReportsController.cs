@@ -15,23 +15,16 @@ public sealed class ReportsController : ControllerBase
         Ok(await s.GetDashboardAsync(ct));
 
     [HttpGet("revenue")]
-    public async Task<IActionResult> Revenue([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct)
-    {
-        try { return Ok(await s.GetRevenueAsync(query, ct)); }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
-    }
+    public async Task<IActionResult> Revenue([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        Ok(await s.GetRevenueAsync(query, ct));
 
     [HttpGet("revenue/export.csv")]
     public async Task<IActionResult> ExportRevenueCsv([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct)
     {
-        try
-        {
-            var bytes = await s.ExportRevenueCsvAsync(query, ct);
-            // Tên file dùng giờ VN cho khớp với nội dung CSV (giờ VN).
-            var stamp = (DateTime.UtcNow + VietnamTime.Offset).ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
-            var fileName = $"revenue-{VietnamTime.NormalizePeriod(query.Period)}-{stamp}.csv";
-            return File(bytes, "text/csv; charset=utf-8", fileName);
-        }
-        catch (ArgumentException e) { return BadRequest(new { message = e.Message }); }
+        var bytes = await s.ExportRevenueCsvAsync(query, ct);
+        // Tên file dùng giờ VN cho khớp với nội dung CSV (giờ VN).
+        var stamp = (DateTime.UtcNow + VietnamTime.Offset).ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
+        var fileName = $"revenue-{VietnamTime.NormalizePeriod(query.Period)}-{stamp}.csv";
+        return File(bytes, "text/csv; charset=utf-8", fileName);
     }
 }

@@ -43,6 +43,8 @@ public sealed class ApiExceptionFilter : IExceptionFilter
         {
             KeyNotFoundException ex => (StatusCodes.Status404NotFound, ex.Message),
             ArgumentException ex => (StatusCodes.Status400BadRequest, ex.Message),
+            UnauthorizedAccessException ex => (StatusCodes.Status403Forbidden, ex.Message),
+            ConcurrencyConflictException ex => (StatusCodes.Status409Conflict, ex.Message),
             InvalidOperationException ex => (StatusCodes.Status409Conflict, ex.Message),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred. Please try again.")
         };

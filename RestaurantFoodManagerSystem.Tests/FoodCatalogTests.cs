@@ -209,6 +209,44 @@ public sealed class FoodCatalogTests : TestBase
         await Assert.ThrowsAsync<KeyNotFoundException>(() => Categories.DeleteCategoryAsync(999999));
     }
 
+    [Fact]
+    public async Task Category_TrimsAndRejectsBlankOrDuplicateActiveName()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => Categories.CreateCategoryAsync(new CategoryDTO { Name = "   " }));
+
+        Assert.True(await Categories.CreateCategoryAsync(new CategoryDTO
+        {
+            Name = "  Drinks  ",
+            Description = "  cold  "
+        }));
+
+        var created = Assert.Single(await Categories.GetAllCategoriesAsync());
+        Assert.Equal("Drinks", created.Name);
+        Assert.Equal("cold", created.Description);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Categories.CreateCategoryAsync(new CategoryDTO
+        {
+            Name = "Drinks"
+        }));
+
+        Assert.True(await Categories.CreateCategoryAsync(new CategoryDTO { Name = "Snacks" }));
+        var second = (await Categories.GetAllCategoriesAsync()).Single(x => x.Name == "Snacks");
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Categories.UpdateCategoryAsync(new CategoryDTO
+        {
+            Id = second.Id,
+            Name = "  Drinks ",
+            IsActive = true
+        }));
+
+        Assert.True(await Categories.DeleteCategoryAsync(second.Id));
+        var rawSecond = Db.Categories.Single(x => x.CategoryId == second.Id);
+        rawSecond.CategoryName = "Drinks";
+        Db.SaveChanges();
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => Categories.SetActiveAsync(second.Id, true));
+    }
+
     // ============================ FOOD SIZE ============================
 
     [Fact]

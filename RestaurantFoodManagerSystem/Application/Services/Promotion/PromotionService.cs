@@ -7,8 +7,14 @@ public sealed class PromotionService
 
     public PromotionService(AppDbContext db) => _db = db;
 
-    public Task<List<Promotion>> GetAllAsync(CancellationToken ct) =>
-        _db.Promotions.AsNoTracking().OrderByDescending(x => x.StartAt).ToListAsync(ct);
+    public Task<List<Promotion>> GetAllAsync(CancellationToken ct = default) =>
+        GetAllAsync(includeInactive: false, ct);
+
+    public Task<List<Promotion>> GetAllAsync(bool includeInactive, CancellationToken ct = default) =>
+        _db.Promotions.AsNoTracking()
+            .Where(x => includeInactive || x.IsActive)
+            .OrderByDescending(x => x.StartAt)
+            .ToListAsync(ct);
 
     public Task<Promotion?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Promotions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
@@ -93,15 +99,8 @@ public sealed class PromotionService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
-    {
-        var x = await _db.Promotions.FindAsync([id], ct);
-        if (x is null) return false;
-
-        x.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct) =>
+        SetActiveAsync(id, false, ct);
 
     // ==========================================================
     // C-18: TARGET (món / danh mục) của khuyến mãi
@@ -165,8 +164,7 @@ public sealed class PromotionService
         PromotionTargetsRequest r,
         CancellationToken ct)
     {
-        await using var tx = await _db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable, ct);
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
         var promotion = await _db.Promotions.FindAsync([promotionId], ct);
         if (promotion is null) return false;
@@ -179,7 +177,7 @@ public sealed class PromotionService
         {
             var existing = await _db.FoodSizes
                 .AsNoTracking()
-                .Where(x => sizeIds.Contains(x.SizeId))
+                .Where(x => x.IsActive && sizeIds.Contains(x.SizeId))
                 .Select(x => x.SizeId)
                 .ToListAsync(ct);
 
@@ -195,7 +193,7 @@ public sealed class PromotionService
         {
             var existing = await _db.Categories
                 .AsNoTracking()
-                .Where(x => categoryIds.Contains(x.CategoryId))
+                .Where(x => x.IsActive && categoryIds.Contains(x.CategoryId))
                 .Select(x => x.CategoryId)
                 .ToListAsync(ct);
 
