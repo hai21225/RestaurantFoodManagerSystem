@@ -147,29 +147,15 @@ public class CategoryService
         category.IsActive = categoryDTO.IsActive;
         category.UpdatedAt = DateTime.UtcNow;
 
-        _db.Categories.Update(category);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
     // DELETE - SOFT DELETE
-    public async Task<bool> DeleteCategoryAsync(int id, CancellationToken ct = default)
-    {
-        var category = await _db.Categories.FindAsync([id], ct);
-
-        if (category == null)
-        {
-            throw new KeyNotFoundException("Category not found");
-        }
-
-        category.IsActive = false;
-        category.UpdatedAt = DateTime.UtcNow;
-
-        _db.Categories.Update(category);
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
+    public async Task<bool> DeleteCategoryAsync(int id, CancellationToken ct = default) =>
+        await SetActiveAsync(id, false, ct)
+            ? true
+            : throw new KeyNotFoundException("Category not found");
 
 
     /// <summary>
@@ -193,7 +179,6 @@ public class CategoryService
         category.IsActive = active;
         category.UpdatedAt = DateTime.UtcNow;
 
-        _db.Categories.Update(category);
         await _db.SaveChangesAsync(ct);
         return true;
     }

@@ -115,7 +115,6 @@ public class FoodToppingService
         CancellationToken ct = default)
     {
         var foodTopping = await _db.FoodToppings
-            .AsNoTracking()
             .FirstOrDefaultAsync(x =>
                 x.FoodId == foodId &&
                 x.ToppingId == toppingId, ct);

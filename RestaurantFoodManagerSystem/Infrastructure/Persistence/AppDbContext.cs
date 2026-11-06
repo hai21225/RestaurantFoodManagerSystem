@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
@@ -1382,15 +1382,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         /// </summary>
         public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
         {
-            if (!Database.IsSqlServer())
-            {
-                foreach (var entry in ChangeTracker.Entries()
-                             .Where(e => e.State == EntityState.Modified &&
-                                         e.Metadata.FindProperty(nameof(Order.RowVersion)) is not null))
-                {
-                    entry.Property(nameof(Order.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
-                }
-            }
+            StampRowVersionsForNonSqlServer();
 
             try
             {
@@ -1405,15 +1397,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
         public override int SaveChanges(bool acceptAllChangesOnSuccess)
         {
-            if (!Database.IsSqlServer())
-            {
-                foreach (var entry in ChangeTracker.Entries()
-                             .Where(e => e.State == EntityState.Modified &&
-                                         e.Metadata.FindProperty(nameof(Order.RowVersion)) is not null))
-                {
-                    entry.Property(nameof(Order.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
-                }
-            }
+            StampRowVersionsForNonSqlServer();
 
             try
             {
@@ -1423,6 +1407,18 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
             {
                 throw new ConcurrencyConflictException(
                     "Dữ liệu vừa bị thay đổi bởi thao tác khác. Vui lòng tải lại và thử lại.", ex);
+            }
+        }
+
+        private void StampRowVersionsForNonSqlServer()
+        {
+            if (Database.IsSqlServer()) return;
+
+            foreach (var entry in ChangeTracker.Entries()
+                         .Where(e => e.State == EntityState.Modified &&
+                                     e.Metadata.FindProperty(nameof(Order.RowVersion)) is not null))
+            {
+                entry.Property(nameof(Order.RowVersion)).CurrentValue = Guid.NewGuid().ToByteArray();
             }
         }
     }

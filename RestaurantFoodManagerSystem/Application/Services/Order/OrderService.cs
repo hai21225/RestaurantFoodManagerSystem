@@ -380,31 +380,18 @@ public sealed class OrderService
     /// Tạo đơn có hỗ trợ header <c>Idempotency-Key</c>. Nếu key rỗng, giữ nguyên hành vi cũ.
     /// Cùng key + cùng payload trả lại đúng response cũ; cùng key + payload khác trả 409.
     /// </summary>
-    public async Task<OrderCreatedResponse> CreateIdempotentAsync(
+    public Task<OrderCreatedResponse> CreateIdempotentAsync(
         CreateOrderRequest request,
         string? idempotencyKey,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return OrderCreatedResponse.From(await CreateCoreAsync(request, ct));
-        }
-
-        var key = idempotencyKey.Trim();
-        if (key.Length > 128)
-        {
-            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
-        }
-
-        var scope = (_currentUser.UserId ?? request.CreatedBy).ToString();
-        var fingerprint = OrderIdempotencyStore.BuildFingerprint("orders", request);
-
-        return await _idempotency.ExecuteAsync(
-            $"{scope}:{key}",
-            fingerprint,
+        CancellationToken ct) =>
+        _idempotency.RunIfKeyedAsync(
+            idempotencyKey,
+            _currentUser.UserId ?? request.CreatedBy,
+            "orders",
+            string.Empty,
+            request,
             async token => OrderCreatedResponse.From(await CreateCoreAsync(request, token)),
             ct);
-    }
 
     private async Task<Order> CreateCoreAsync(CreateOrderRequest request, CancellationToken ct)
     {
@@ -592,86 +579,37 @@ public sealed class OrderService
     /// **một** lần. Không có header thì hành vi cũ (không chống trùng).
     /// </para>
     /// </summary>
-    public async Task<OrderDetailResponse?> AddItemsIdempotentAsync(
+    public Task<OrderDetailResponse?> AddItemsIdempotentAsync(
         int orderId,
         AddOrderItemsRequest request,
         string? idempotencyKey,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            if (!await AddItemsAsync(orderId, request, ct)) return null;
-            return await GetAsync(orderId, ct);
-        }
-
-        var key = idempotencyKey.Trim();
-        if (key.Length > 128)
-        {
-            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
-        }
-
-        var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
-        var fingerprint = OrderIdempotencyStore.BuildFingerprint($"orders/{orderId}/items", request);
-
-        return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
-            $"{scope}:orders:{orderId}:items:{key}",
-            fingerprint,
-            async token =>
-            {
-                if (!await AddItemsAsync(orderId, request, token)) return null!;
-                return await GetAsync(orderId, token);
-            },
+        CancellationToken ct) =>
+        _idempotency.RunIfKeyedAsync(
+            idempotencyKey,
+            _currentUser.UserId ?? request.ChangedBy,
+            $"orders/{orderId}/items",
+            $"orders:{orderId}:items:",
+            request,
+            async token => await AddItemsAsync(orderId, request, token) ? await GetAsync(orderId, token) : null,
             ct);
-    }
 
-    /// <summary>
-    /// Giảm/tăng số lượng của một món, kể cả sau khi bếp đã nhận.
-    ///
-    /// <para>
-    /// Cách A: các dòng đã tách (prepared/pending) được cộng dồn theo <c>OrderItemGroupId</c>.
-    /// Giảm chỉ tác động phần chưa nấu; giảm xuống dưới số đã nấu bị chặn (409) trừ khi
-    /// Admin bật <c>AllowWastage</c>. Tăng sau ticket <c>Completed</c> tạo round/ticket mới.
-    /// </para>
-    /// </summary>
     /// <summary>
     /// Đổi số lượng món, hỗ trợ header <c>Idempotency-Key</c> (Đợt 2 / A5).
-    ///
-    /// <para>
-    /// Bấm "giảm số lượng" 2 lần chỉ áp dụng **một** lần ⇒ không trừ/trả kho 2 lần.
-    /// </para>
     /// </summary>
-    public async Task<OrderDetailResponse?> AdjustItemQuantityIdempotentAsync(
+    public Task<OrderDetailResponse?> AdjustItemQuantityIdempotentAsync(
         int orderId,
         int itemId,
         AdjustOrderItemQuantityRequest request,
         string? idempotencyKey,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            if (!await AdjustItemQuantityAsync(orderId, itemId, request, ct)) return null;
-            return await GetAsync(orderId, ct);
-        }
-
-        var key = idempotencyKey.Trim();
-        if (key.Length > 128)
-        {
-            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
-        }
-
-        var scope = (_currentUser.UserId ?? request.ChangedBy).ToString();
-        var fingerprint = OrderIdempotencyStore.BuildFingerprint($"orders/{orderId}/items/{itemId}/quantity", request);
-
-        return await _idempotency.ExecuteAsync<OrderDetailResponse?>(
-            $"{scope}:orders:{orderId}:items:{itemId}:quantity:{key}",
-            fingerprint,
-            async token =>
-            {
-                if (!await AdjustItemQuantityAsync(orderId, itemId, request, token)) return null!;
-                return await GetAsync(orderId, token);
-            },
+        CancellationToken ct) =>
+        _idempotency.RunIfKeyedAsync(
+            idempotencyKey,
+            _currentUser.UserId ?? request.ChangedBy,
+            $"orders/{orderId}/items/{itemId}/quantity",
+            $"orders:{orderId}:items:{itemId}:quantity:",
+            request,
+            async token => await AdjustItemQuantityAsync(orderId, itemId, request, token) ? await GetAsync(orderId, token) : null,
             ct);
-    }
 
     public async Task<bool> AdjustItemQuantityAsync(
         int orderId,
@@ -970,8 +908,11 @@ public sealed class OrderService
             //                          khách đổi (CustomerChange).
             //   allowReturn = false → món đã bắt đầu (Preparing) hoặc đã ra đĩa: nguyên liệu
             //                          đã tiêu thật ⇒ ghi hao hụt, không hoàn kho.
-            async Task ReduceAsync(List<OrderItem> lines, bool allowReturn)
+            async Task ReduceAsync(List<OrderItem> lines, bool allowReturn, bool zeroOnFullCancel = false)
             {
+                var effReason = allowReturn ? reasonCode : OrderItemMutations.KitchenError;
+                var wastageDetail = zeroOnFullCancel ? (detail ?? "Reduced below prepared quantity") : detail;
+
                 foreach (var line in lines.OrderByDescending(x => x.Id))
                 {
                     if (toRemove <= 0)
@@ -981,6 +922,7 @@ public sealed class OrderService
 
                     var take = Math.Min(line.Quanlity, toRemove);
                     kitchenByOrderItem.TryGetValue(line.Id, out var kitchenItem);
+                    var oldQuantity = line.Quanlity;
 
                     if (take >= line.Quanlity)
                     {
@@ -993,8 +935,12 @@ public sealed class OrderService
                         {
                             await OrderItemMutations.RecordWastageAsync(
                                 _db, order.OrderId, line, line.Quanlity, changedBy, now,
-                                allowReturn ? reasonCode : OrderItemMutations.KitchenError,
-                                detail, ct);
+                                effReason, wastageDetail, ct);
+                        }
+
+                        if (zeroOnFullCancel)
+                        {
+                            line.Quanlity = 0;
                         }
 
                         OrderItemMutations.RecordItemHistory(
@@ -1005,14 +951,20 @@ public sealed class OrderService
                             KitchenStatuses.Cancelled,
                             changedBy,
                             now,
-                            detail ?? $"Cancelled whole line (quantity {line.Quanlity})",
-                            reasonCode);
+                            detail ?? (zeroOnFullCancel
+                                ? $"Reduced below prepared quantity (quantity {oldQuantity} -> 0)"
+                                : $"Cancelled whole line (quantity {oldQuantity})"),
+                            effReason);
 
                         OrderCancellation.MarkItemCancelled(
-                            line, now, changedBy, detail ?? reasonCode);
+                            line, now, changedBy, detail ?? (zeroOnFullCancel ? "Wastage override" : reasonCode));
 
                         if (kitchenItem is not null)
                         {
+                            if (zeroOnFullCancel)
+                            {
+                                kitchenItem.Quanlity = 0;
+                            }
                             kitchenItem.Status = KitchenStatuses.Cancelled;
                             affectedTicketIds.Add(kitchenItem.KitchenOrderId);
                         }
@@ -1028,11 +980,9 @@ public sealed class OrderService
                         {
                             await OrderItemMutations.RecordWastageAsync(
                                 _db, order.OrderId, line, take, changedBy, now,
-                                allowReturn ? reasonCode : OrderItemMutations.KitchenError,
-                                detail, ct);
+                                effReason, wastageDetail, ct);
                         }
 
-                        var oldQuantity = line.Quanlity;
                         line.Quanlity -= take;
                         if (kitchenItem is not null)
                         {
@@ -1049,9 +999,11 @@ public sealed class OrderService
                             changedBy,
                             now,
                             detail is null
-                                ? $"Quantity {oldQuantity} -> {line.Quanlity}"
+                                ? (zeroOnFullCancel
+                                    ? $"Reduced below prepared quantity: {oldQuantity} -> {line.Quanlity}"
+                                    : $"Quantity {oldQuantity} -> {line.Quanlity}")
                                 : $"Quantity {oldQuantity} -> {line.Quanlity}: {detail}",
-                            reasonCode);
+                            effReason);
                     }
 
                     toRemove -= take;
@@ -1064,74 +1016,8 @@ public sealed class OrderService
             // 2) Giảm phần ĐANG NẤU: nguyên liệu đã tiêu thật ⇒ chỉ ghi hao hụt.
             await ReduceAsync(inProgressItems, allowReturn: false);
 
-            // 2) Nếu vẫn còn phải giảm (target < prepared) thì đây là Admin override:
-            // phần đã nấu bị giảm, ghi wastage, tuyệt đối không hoàn kho.
-            foreach (var line in preparedItems.OrderByDescending(x => x.Id))
-            {
-                if (toRemove <= 0)
-                {
-                    break;
-                }
-
-                var take = Math.Min(line.Quanlity, toRemove);
-                kitchenByOrderItem.TryGetValue(line.Id, out var kitchenItem);
-
-                await OrderItemMutations.RecordWastageAsync(
-                    _db, order.OrderId, line, take, changedBy, now,
-                    OrderItemMutations.KitchenError,
-                    detail ?? "Reduced below prepared quantity",
-                    ct);
-
-                var oldQuantity = line.Quanlity;
-                if (take >= line.Quanlity)
-                {
-                    line.Quanlity = 0;
-
-                    OrderItemMutations.RecordItemHistory(
-                        _db,
-                        line,
-                        kitchenItem?.Id,
-                        line.Status,
-                        KitchenStatuses.Cancelled,
-                        changedBy,
-                        now,
-                        detail ?? $"Reduced below prepared quantity (quantity {oldQuantity} -> 0)",
-                        OrderItemMutations.KitchenError);
-
-                    OrderCancellation.MarkItemCancelled(
-                        line, now, changedBy, detail ?? "Wastage override");
-                    if (kitchenItem is not null)
-                    {
-                        kitchenItem.Quanlity = 0;
-                        kitchenItem.Status = KitchenStatuses.Cancelled;
-                        affectedTicketIds.Add(kitchenItem.KitchenOrderId);
-                    }
-                }
-                else
-                {
-                    line.Quanlity -= take;
-                    if (kitchenItem is not null)
-                    {
-                        kitchenItem.Quanlity = Math.Max(0, kitchenItem.Quanlity - take);
-                        affectedTicketIds.Add(kitchenItem.KitchenOrderId);
-                    }
-
-                    OrderItemMutations.RecordItemHistory(
-                        _db,
-                        line,
-                        kitchenItem?.Id,
-                        line.Status,
-                        line.Status,
-                        changedBy,
-                        now,
-                        detail is null
-                            ? $"Reduced below prepared quantity: {oldQuantity} -> {line.Quanlity}"
-                            : $"Quantity {oldQuantity} -> {line.Quanlity}: {detail}",
-                        OrderItemMutations.KitchenError);
-                }
-
-                toRemove -= take;
-            }
+            // 3) Admin override giảm xuống dưới số đã nấu: ghi wastage, không hoàn kho.
+            await ReduceAsync(preparedItems, allowReturn: false, zeroOnFullCancel: true);
         }
 
         foreach (var ticketId in affectedTicketIds)

@@ -15,8 +15,8 @@
 | **Baseline** | Mốc sau đợt refactor 1 | Mốc an toàn | `[x] Done` | `7bc197d` |
 | **Phase 1** | Tạo file Seed dữ liệu cơ bản & áp trực tiếp lên DB | **Must Do First** | `[x] Done` | `b12382b` |
 | **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | **Must Fix** | `[x] Done` | `218300b` |
-| **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | **Should Fix** | `[x] Done` | `pending` |
-| **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | **Should Fix / Clean** | `[ ] Todo` | - |
+| **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | **Should Fix** | `[x] Done` | `cb2e6b6` |
+| **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | **Should Fix / Clean** | `[x] Done` | `pending` |
 
 ---
 
@@ -78,15 +78,15 @@
 ### Phase 4: Gom Code Trùng Lặp & Thu Gọn God Class (~350 dòng)
 **Mục đích:** Xóa các đoạn code copy-paste trong `OrderService`, `OrderCancellation`, `OrderItemMutations` và 9 Service CRUD.
 
-- [ ] **4.1. Thu gọn `OrderService.AdjustItemQuantityAsync` & gom validate `IdempotencyKey`**
+- [x] **4.1. Thu gọn `OrderService.AdjustItemQuantityAsync` & gom validate `IdempotencyKey`**
   - **File:** `Application/Services/Order/OrderService.cs`, `Application/Services/Payment/PaymentService.cs`, `Application/Common/OrderIdempotencyStore.cs`
   - **Việc cần làm:**
-    - Tái sử dụng hàm nội bộ `ReduceAsync(lines, allowReturn: false)` cho nhóm `preparedItems` trong `AdjustItemQuantityAsync` (xóa ~65 dòng lặp).
-    - Chuyển hàm kiểm tra độ dài & chuẩn hóa `idempotencyKey` vào `OrderIdempotencyStore` (xóa ~60 dòng lặp ở 4 hàm `*IdempotentAsync`).
-- [ ] **4.2. Hợp nhất hàm tính `NetConsumption` & hoàn kho nguyên liệu**
+    - Tái sử dụng hàm nội bộ `ReduceAsync(lines, allowReturn: false, zeroOnFullCancel: true)` cho nhóm `preparedItems` trong `AdjustItemQuantityAsync` (xóa ~65 dòng lặp).
+    - Chuyển hàm kiểm tra độ dài & chuẩn hóa `idempotencyKey` vào `OrderIdempotencyStore.RunIfKeyedAsync` (xóa ~60 dòng lặp ở 4 hàm `*IdempotentAsync`).
+- [x] **4.2. Hợp nhất hàm tính `NetConsumption` & hoàn kho nguyên liệu**
   - **File:** `Application/Common/OrderCancellation.cs`, `Application/Common/OrderItemMutations.cs`
   - **Việc cần làm:** Dùng chung `OrderItemMutations.ComputeNetConsumption` tại `OrderCancellation` và gộp logic hoàn kho giữa `ReturnStockForPartialItemAsync` và `ReturnStockForItemAsync`.
-- [ ] **4.3. Gom `DeleteAsync` $\rightarrow$ `SetActiveAsync(id, false)` và các helper trùng lặp**
+- [x] **4.3. Gom `DeleteAsync` $\rightarrow$ `SetActiveAsync(id, false)` và các helper trùng lặp**
   - **File:** 9 Service (`Food`, `FoodSize`, `Category`, `Topping`, `Ingredient`, `Supplier`, `Recipe`, `Promotion`, `TableArea`), `UserService.cs`, `AuthService.cs`, `AppDbContext.cs`, `FoodToppingService.cs`
   - **Việc cần làm:**
     - Cho `DeleteAsync(id)` gọi `SetActiveAsync(id, false)` ở 9 Service.

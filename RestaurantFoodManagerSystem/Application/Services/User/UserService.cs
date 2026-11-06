@@ -189,22 +189,10 @@ public class UserService
                     throw new InvalidOperationException("You cannot lock your own account");
                 }
 
-                if (await HasRoleAsync(userId, AuthPolicies.Roles.Admin, ct))
+                if (await HasRoleAsync(userId, AuthPolicies.Roles.Admin, ct)
+                    && !await HasAnotherActiveAdminAsync(userId, ct))
                 {
-                    var anotherActiveAdmin = await (
-                        from ur in _db.UserRoles
-                        join r in _db.Roles on ur.RoleId equals r.RoleId
-                        join u in _db.Users on ur.UserId equals u.Id
-                        where r.RoleName == AuthPolicies.Roles.Admin
-                           && ur.UserId != userId
-                           && u.IsActive
-                        select ur.UserId)
-                        .AnyAsync(ct);
-
-                    if (!anotherActiveAdmin)
-                    {
-                        throw new InvalidOperationException("Cannot lock the last active Admin account");
-                    }
+                    throw new InvalidOperationException("Cannot lock the last active Admin account");
                 }
             }
 
@@ -291,6 +279,16 @@ public class UserService
         (from ur in _db.UserRoles
          join r in _db.Roles on ur.RoleId equals r.RoleId
          where ur.UserId == userId && r.RoleName == roleName
+         select ur.UserId)
+        .AnyAsync(ct);
+
+    public Task<bool> HasAnotherActiveAdminAsync(int excludeUserId, CancellationToken ct = default) =>
+        (from ur in _db.UserRoles
+         join r in _db.Roles on ur.RoleId equals r.RoleId
+         join u in _db.Users on ur.UserId equals u.Id
+         where r.RoleName == AuthPolicies.Roles.Admin
+            && ur.UserId != excludeUserId
+            && u.IsActive
          select ur.UserId)
         .AnyAsync(ct);
 

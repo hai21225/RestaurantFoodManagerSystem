@@ -224,28 +224,11 @@ public class FoodSizeService
     }
 
 
-    public async Task<bool> DeleteAsync(
+    public Task<bool> DeleteAsync(
         int foodId,
         int sizeId,
-        CancellationToken ct = default)
-    {
-        var size = await _db.FoodSizes
-            .FirstOrDefaultAsync(x =>
-                x.SizeId == sizeId &&
-                x.FoodId == foodId &&
-                x.IsActive, ct);
-
-        if (size == null)
-        {
-            return false;
-        }
-
-        size.IsActive = false;
-        size.IsDefault = false;
-        size.UpdatedAt = DateTime.UtcNow;
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
+        CancellationToken ct = default) =>
+        SetActiveAsync(foodId, sizeId, false, ct);
 
 
     /// <summary>

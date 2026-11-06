@@ -179,8 +179,6 @@ public class FoodService
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _db.Foods.Update(food);
-
         var result = await _db.SaveChangesAsync(ct);
 
         if (result <= 0)
@@ -216,8 +214,6 @@ public class FoodService
         food.IsAvailable = isAvailable;
         food.UpdatedAt = DateTime.UtcNow;
 
-        _db.Foods.Update(food);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
@@ -252,8 +248,6 @@ public class FoodService
 
         food.UpdatedAt = DateTime.UtcNow;
 
-        _db.Foods.Update(food);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
@@ -262,27 +256,8 @@ public class FoodService
     // DELETE - SOFT DELETE
     // =========================
 
-    public async Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default)
-    {
-        var food = await _db.Foods.FindAsync([id], ct);
-
-        if (food == null)
-        {
-            return false;
-        }
-
-        food.IsActive = false;
-
-        // Món đã bị disable thì cũng không nên order được
-        food.IsAvailable = false;
-        food.InactiveAt = DateTime.UtcNow;
-
-        food.UpdatedAt = DateTime.UtcNow;
-
-        _db.Foods.Update(food);
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
+    public Task<bool> DeleteFoodAsync(int id, CancellationToken ct = default) =>
+        UpdateActiveAsync(id, false, ct);
 
 
     // =========================

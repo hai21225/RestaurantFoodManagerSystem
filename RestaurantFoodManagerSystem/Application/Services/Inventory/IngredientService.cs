@@ -159,15 +159,8 @@ public sealed class IngredientService
         }
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
-    {
-        var x = await _db.Ingredients.FindAsync([id], ct);
-        if (x is null) return false;
-
-        x.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct) =>
+        SetActiveAsync(id, false, ct);
 
     /// <summary>
     /// Khôi phục/tắt nguyên liệu bằng soft-delete. Giữ nguyên dòng tồn kho và lịch sử

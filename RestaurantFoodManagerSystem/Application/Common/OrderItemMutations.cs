@@ -472,7 +472,7 @@ internal static class OrderItemMutations
     /// Hoàn kho một phần số lượng của dòng món (chỉ dùng cho phần chưa nấu).
     /// Không gọi SaveChanges.
     /// </summary>
-    public static async Task ReturnStockForPartialItemAsync(
+    public static Task ReturnStockForPartialItemAsync(
         AppDbContext db,
         int orderId,
         OrderItem item,
@@ -484,86 +484,25 @@ internal static class OrderItemMutations
     {
         if (removedQuantity <= 0 || item.Quanlity <= 0)
         {
-            return;
+            return Task.CompletedTask;
         }
 
         if (removedQuantity >= item.Quanlity)
         {
-            await OrderCancellation.ReturnStockForItemAsync(
+            return OrderCancellation.ReturnStockForItemAsync(
                 db, orderId, item, remainingConsumption, changedBy, now, ct);
-            return;
         }
 
-        var consumption = await OrderCancellation.ResolveItemConsumptionAsync(
-            db, orderId, item, ct);
-        if (consumption.Count == 0)
-        {
-            return;
-        }
-
-        var factor = (decimal)removedQuantity / item.Quanlity;
-        var returns = new List<(int IngredientId, decimal Quantity)>();
-
-        foreach (var (ingredientId, quantity) in consumption)
-        {
-            var requested = Math.Round(
-                quantity * factor, 3, MidpointRounding.AwayFromZero);
-            if (requested <= 0)
-            {
-                continue;
-            }
-
-            remainingConsumption.TryGetValue(ingredientId, out var remaining);
-            var returnQuantity = Math.Min(requested, Math.Max(0m, remaining));
-            if (returnQuantity <= 0)
-            {
-                continue;
-            }
-
-            remainingConsumption[ingredientId] = remaining - returnQuantity;
-            returns.Add((ingredientId, returnQuantity));
-        }
-
-        if (returns.Count == 0)
-        {
-            return;
-        }
-
-        var ingredientIds = returns.Select(x => x.IngredientId).ToList();
-        var stocks = await db.Inventories
-            .Where(x => ingredientIds.Contains(x.IngredientId))
-            .ToDictionaryAsync(x => x.IngredientId, ct);
-        // C-17: ledger ghi kèm đơn vị tính lúc hoàn kho.
-        var units = await IngredientUnits.LoadAsync(db, ingredientIds, ct);
-
-        foreach (var (ingredientId, quantity) in returns)
-        {
-            if (!stocks.TryGetValue(ingredientId, out var stock))
-            {
-                throw new InvalidOperationException(
-                    $"No inventory record exists for ingredient {ingredientId}");
-            }
-
-            var before = stock.Quanlity;
-            stock.Quanlity += quantity;
-            stock.UpdatedAt = now;
-
-            db.InventoryTransactions.Add(new InventoryTransaction
-            {
-                IngredientId = ingredientId,
-                Type = "AdjustmentIn",
-                Quanlity = quantity,
-                QuanlityBefore = before,
-                QuanlityAfter = stock.Quanlity,
-                Unit = units.GetValueOrDefault(ingredientId),
-                ReferenceType = "Order",
-                ReferenceId = orderId,
-                OrderItemId = item.Id,
-                CreatedAt = now,
-                CreatedBy = changedBy,
-                Note = "Returned stock when item quantity was reduced"
-            });
-        }
+        return OrderCancellation.ReturnStockForItemAsync(
+            db,
+            orderId,
+            item,
+            remainingConsumption,
+            changedBy,
+            now,
+            ct,
+            factor: (decimal)removedQuantity / item.Quanlity,
+            note: "Returned stock when item quantity was reduced");
     }
 
     /// <summary>
@@ -658,7 +597,7 @@ internal static class OrderItemMutations
         }
     }
 
-    private static Dictionary<int, decimal> ComputeNetConsumption(
+    internal static Dictionary<int, decimal> ComputeNetConsumption(
         IEnumerable<InventoryTransaction> transactions)
     {
         var consumption = new Dictionary<int, decimal>();

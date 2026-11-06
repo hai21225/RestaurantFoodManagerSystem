@@ -31,24 +31,7 @@ public sealed class RecipeService
 
     public async Task<Recipe> CreateAsync(RecipeRequest r, CancellationToken ct)
     {
-        if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
-            throw new KeyNotFoundException("Food size not found");
-        if (r.Ingredients is null || r.Ingredients.Count == 0)
-            throw new ArgumentException("Recipe must contain at least one ingredient");
-
-        var ids = r.Ingredients.Select(i => i.IngredientId).ToList();
-        if (ids.Count != ids.Distinct().Count())
-            throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
-
-        if (r.Ingredients.Any(i => i.Quanlity <= 0))
-            throw new ArgumentException("Ingredient quantity must be greater than zero");
-
-        var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
-        if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
-
-        // Nhóm B5: mỗi size chỉ có một công thức đang hoạt động.
-        if (await _db.Recipes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
-            throw new InvalidOperationException("This size already has an active recipe");
+        await ValidateRecipeRequestAsync(r, excludeRecipeId: null, ct);
 
         await using var tx = await _db.Database.BeginTransactionAsync(ct);
 
@@ -129,15 +112,8 @@ public sealed class RecipeService
         };
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
-    {
-        var x = await _db.Recipes.FindAsync([id], ct);
-        if (x is null) return false;
-
-        x.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct) =>
+        SetActiveAsync(id, false, ct);
 
     /// <summary>
     /// Khôi phục/tắt công thức bằng soft-delete; định lượng nguyên liệu vẫn được giữ
@@ -162,23 +138,6 @@ public sealed class RecipeService
         return true;
     }
 
-    /// <summary>
-    /// Cập nhật công thức (GĐ6/A3) cho <c>PUT /api/management/recipes/{id}</c>.
-    ///
-    /// <para>
-    /// <b>C-19 (gap-review C3): sửa công thức = tạo phiên bản mới, không ghi đè bản cũ.</b>
-    /// Bản cũ được chuyển sang <c>IsActive = false</c> (giữ nguyên định lượng để làm
-    /// minh chứng lịch sử) và một bản mới <c>IsActive = true</c> được tạo. Unique index
-    /// <c>(SizeId) WHERE IsActive = 1</c> đã có sẵn nên không cần đổi schema, và luôn
-    /// bảo đảm chỉ có đúng một bản đang chạy cho mỗi size.
-    /// </para>
-    ///
-    /// <para>
-    /// Phiên bản: nếu client gửi <b>đúng** version đang chạy thì server **tự tăng**
-    /// (1 → 2) — tránh tạo hai bản trùng tên phiên bản. Nếu client gửi version khác
-    /// thì giữ nguyên version đó.
-    /// </para>
-    /// </summary>
     public async Task<bool> UpdateAsync(int id, RecipeRequest r, CancellationToken ct)
     {
         var recipe = await _db.Recipes.FirstOrDefaultAsync(x => x.RecipeId == id, ct);
@@ -194,24 +153,7 @@ public sealed class RecipeService
                 "This recipe version is no longer active; update the current version instead");
         }
 
-        if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
-            throw new KeyNotFoundException("Food size not found");
-        if (r.Ingredients is null || r.Ingredients.Count == 0)
-            throw new ArgumentException("Recipe must contain at least one ingredient");
-
-        var ids = r.Ingredients.Select(i => i.IngredientId).ToList();
-        if (ids.Count != ids.Distinct().Count())
-            throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
-
-        if (r.Ingredients.Any(i => i.Quanlity <= 0))
-            throw new ArgumentException("Ingredient quantity must be greater than zero");
-
-        var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
-        if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
-
-        // Nhóm B5: không cho chuyển sang size đã có công thức đang hoạt động khác.
-        if (await _db.Recipes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive && x.RecipeId != id, ct))
-            throw new InvalidOperationException("This size already has an active recipe");
+        await ValidateRecipeRequestAsync(r, excludeRecipeId: id, ct);
 
         // Serializable: đọc–ghi–ghi phải nguyên tử, nếu không sẽ có lúc size không còn
         // công thức đang chạy (⇒ trừ kho sai) hoặc hai bản cùng active.
@@ -255,6 +197,32 @@ public sealed class RecipeService
     /// Client gửi version rỗng hoặc **đúng bằng** version đang chạy ⇒ server tự tăng
     /// (1 → 2) để không có hai bản cùng tên phiên bản. Ngược lại giữ nguyên version client gửi.
     /// </summary>
+    private async Task ValidateRecipeRequestAsync(RecipeRequest r, int? excludeRecipeId, CancellationToken ct)
+    {
+        if (!await _db.FoodSizes.AnyAsync(x => x.SizeId == r.SizeId && x.IsActive, ct))
+            throw new KeyNotFoundException("Food size not found");
+        if (r.Ingredients is null || r.Ingredients.Count == 0)
+            throw new ArgumentException("Recipe must contain at least one ingredient");
+
+        var ids = r.Ingredients.Select(i => i.IngredientId).ToList();
+        if (ids.Count != ids.Distinct().Count())
+            throw new ArgumentException("An ingredient cannot be repeated in the same recipe");
+
+        if (r.Ingredients.Any(i => i.Quanlity <= 0))
+            throw new ArgumentException("Ingredient quantity must be greater than zero");
+
+        var valid = await _db.Ingredients.CountAsync(i => ids.Contains(i.IngredientId) && i.IsActive, ct);
+        if (valid != ids.Count) throw new KeyNotFoundException("One or more ingredients not found");
+
+        if (await _db.Recipes.AnyAsync(
+                x => x.SizeId == r.SizeId
+                  && x.IsActive
+                  && (!excludeRecipeId.HasValue || x.RecipeId != excludeRecipeId.Value), ct))
+        {
+            throw new InvalidOperationException("This size already has an active recipe");
+        }
+    }
+
     private static string ResolveVersion(string? requested, string currentVersion)
     {
         var trimmed = (requested ?? string.Empty).Trim();

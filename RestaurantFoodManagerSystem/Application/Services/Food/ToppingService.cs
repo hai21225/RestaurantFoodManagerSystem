@@ -136,29 +136,12 @@ public class ToppingService
 
         topping.IsAvailable = isAvailable;
 
-        _db.Toppings.Update(topping);
-
         return await _db.SaveChangesAsync(ct) > 0;
     }
 
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
-    {
-        var topping = await _db.Toppings.FindAsync([id], ct);
-
-        if (topping == null)
-        {
-            return false;
-        }
-
-        // Soft delete
-        topping.IsActive = false;
-        topping.IsAvailable = false;
-
-        _db.Toppings.Update(topping);
-
-        return await _db.SaveChangesAsync(ct) > 0;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct = default) =>
+        SetActiveAsync(id, false, ct);
 
 
     /// <summary>
@@ -192,7 +175,6 @@ public class ToppingService
             topping.IsAvailable = false;
         }
 
-        _db.Toppings.Update(topping);
         await _db.SaveChangesAsync(ct);
         return true;
     }

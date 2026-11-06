@@ -272,24 +272,10 @@ public class AuthService
             .FirstOrDefaultAsync(x => x.UserId == userId && x.RoleId == role.RoleId, ct)
             ?? throw new KeyNotFoundException("Role is not assigned to this user");
 
-        if (role.RoleName == AuthPolicies.Roles.Admin)
+        if (role.RoleName == AuthPolicies.Roles.Admin
+            && !await _userService.HasAnotherActiveAdminAsync(userId, ct))
         {
-            // Chỉ tính Admin còn ACTIVE: nếu tính cả tài khoản đã khoá thì có thể gỡ role
-            // của Admin cuối cùng đang hoạt động ⇒ hệ thống mất người quản trị vĩnh viễn.
-            var anotherAdminExists = await (
-                from ur in _db.UserRoles
-                join r in _db.Roles on ur.RoleId equals r.RoleId
-                join u in _db.Users on ur.UserId equals u.Id
-                where r.RoleName == AuthPolicies.Roles.Admin
-                   && ur.UserId != userId
-                   && u.IsActive
-                select ur.UserId)
-                .AnyAsync(ct);
-
-            if (!anotherAdminExists)
-            {
-                throw new InvalidOperationException("Cannot remove the last Admin role");
-            }
+            throw new InvalidOperationException("Cannot remove the last Admin role");
         }
 
         _db.UserRoles.Remove(link);

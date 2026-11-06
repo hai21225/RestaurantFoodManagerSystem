@@ -37,6 +37,31 @@ public static class OrderIdempotencyStore
         var bytes = Encoding.UTF8.GetBytes($"{scope}|{json}");
         return Convert.ToHexString(SHA256.HashData(bytes));
     }
+
+    public static Task<TResponse> RunIfKeyedAsync<TResponse>(
+        this IOrderIdempotencyStore store,
+        string? idempotencyKey,
+        int? actorId,
+        string fingerprintScope,
+        string cacheKeyPrefix,
+        object payload,
+        Func<CancellationToken, Task<TResponse>> action,
+        CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return action(ct);
+        }
+
+        var key = idempotencyKey.Trim();
+        if (key.Length > 128)
+        {
+            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
+        }
+
+        var fingerprint = BuildFingerprint(fingerprintScope, payload);
+        return store.ExecuteAsync($"{actorId}:{cacheKeyPrefix}{key}", fingerprint, action, ct);
+    }
 }
 
 /// <summary>

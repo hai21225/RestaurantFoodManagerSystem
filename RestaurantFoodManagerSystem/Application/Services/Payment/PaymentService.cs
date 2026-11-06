@@ -67,31 +67,18 @@ public sealed class PaymentService
     /// và đánh dấu đơn là <c>Paid</c> **một** lần.
     /// </para>
     /// </summary>
-    public async Task<Payment?> CreateIdempotentAsync(
+    public Task<Payment?> CreateIdempotentAsync(
         CreatePaymentRequest request,
         string? idempotencyKey,
-        CancellationToken ct)
-    {
-        if (string.IsNullOrWhiteSpace(idempotencyKey))
-        {
-            return await CreateAsync(request, ct);
-        }
-
-        var key = idempotencyKey.Trim();
-        if (key.Length > 128)
-        {
-            throw new ArgumentException("Idempotency-Key must be at most 128 characters");
-        }
-
-        var scope = (_currentUser.UserId ?? request.CreatedBy).ToString();
-        var fingerprint = OrderIdempotencyStore.BuildFingerprint("payments", request);
-
-        return await _idempotency.ExecuteAsync<Payment?>(
-            $"{scope}:payments:{key}",
-            fingerprint,
+        CancellationToken ct) =>
+        _idempotency.RunIfKeyedAsync(
+            idempotencyKey,
+            _currentUser.UserId ?? request.CreatedBy,
+            "payments",
+            "payments:",
+            request,
             token => CreateAsync(request, token),
             ct);
-    }
 
     public async Task<Payment?> CreateAsync(CreatePaymentRequest request, CancellationToken ct)
     {

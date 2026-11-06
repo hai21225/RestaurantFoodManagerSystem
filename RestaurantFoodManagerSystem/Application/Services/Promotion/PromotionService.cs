@@ -93,15 +93,8 @@ public sealed class PromotionService
         return true;
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
-    {
-        var x = await _db.Promotions.FindAsync([id], ct);
-        if (x is null) return false;
-
-        x.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct) =>
+        SetActiveAsync(id, false, ct);
 
     // ==========================================================
     // C-18: TARGET (món / danh mục) của khuyến mãi

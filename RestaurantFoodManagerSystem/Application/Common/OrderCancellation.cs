@@ -190,7 +190,9 @@ internal static class OrderCancellation
         IDictionary<int, decimal> remainingConsumption,
         int changedBy,
         DateTime now,
-        CancellationToken ct)
+        CancellationToken ct,
+        decimal factor = 1m,
+        string note = "Returned stock when order was cancelled")
     {
         var consumption = await ResolveItemConsumptionAsync(db, orderId, orderItem, ct);
         if (consumption.Count == 0)
@@ -201,8 +203,16 @@ internal static class OrderCancellation
         var returns = new List<(int IngredientId, decimal Quantity)>();
         foreach (var (ingredientId, quantity) in consumption)
         {
+            var requested = factor >= 1m
+                ? quantity
+                : Math.Round(quantity * factor, 3, MidpointRounding.AwayFromZero);
+            if (requested <= 0)
+            {
+                continue;
+            }
+
             remainingConsumption.TryGetValue(ingredientId, out var remaining);
-            var returnQuantity = Math.Min(quantity, Math.Max(0m, remaining));
+            var returnQuantity = Math.Min(requested, Math.Max(0m, remaining));
             if (returnQuantity <= 0)
             {
                 continue;
@@ -249,7 +259,7 @@ internal static class OrderCancellation
                 OrderItemId = orderItem.Id,
                 CreatedAt = now,
                 CreatedBy = changedBy,
-                Note = "Returned stock when order was cancelled"
+                Note = note
             });
         }
     }
@@ -279,28 +289,9 @@ internal static class OrderCancellation
         var transactions = await db.InventoryTransactions
             .AsNoTracking()
             .Where(x => x.ReferenceType == "Order" && x.ReferenceId == orderId)
-            .Select(x => new { x.IngredientId, x.Type, x.Quanlity })
             .ToListAsync(ct);
 
-        var consumption = new Dictionary<int, decimal>();
-        foreach (var transaction in transactions)
-        {
-            var delta = transaction.Type switch
-            {
-                "Sale" => transaction.Quanlity,
-                "AdjustmentOut" => transaction.Quanlity,
-                "AdjustmentIn" => -transaction.Quanlity,
-                // Wastage không đổi tồn kho nhưng làm giảm phần tiêu hao còn có thể
-                // hoàn/đối chiếu. Nhờ vậy giảm số lượng nhiều lần không hoàn vượt.
-                "Wastage" => -transaction.Quanlity,
-                _ => 0m
-            };
-
-            consumption[transaction.IngredientId] =
-                consumption.GetValueOrDefault(transaction.IngredientId) + delta;
-        }
-
-        return consumption
+        return OrderItemMutations.ComputeNetConsumption(transactions)
             .Where(x => x.Value > 0)
             .ToDictionary(x => x.Key, x => x.Value);
     }
@@ -329,24 +320,9 @@ internal static class OrderCancellation
         var itemTransactions = await db.InventoryTransactions
             .AsNoTracking()
             .Where(x => x.OrderItemId == orderItem.Id)
-            .Select(x => new { x.IngredientId, x.Type, x.Quanlity })
             .ToListAsync(ct);
 
-        var consumption = new Dictionary<int, decimal>();
-        foreach (var transaction in itemTransactions)
-        {
-            var delta = transaction.Type switch
-            {
-                "Sale" => transaction.Quanlity,
-                "AdjustmentOut" => transaction.Quanlity,
-                "AdjustmentIn" => -transaction.Quanlity,
-                "Wastage" => -transaction.Quanlity,
-                _ => 0m
-            };
-
-            consumption[transaction.IngredientId] =
-                consumption.GetValueOrDefault(transaction.IngredientId) + delta;
-        }
+        var consumption = OrderItemMutations.ComputeNetConsumption(itemTransactions);
 
         // Có ledger riêng của dòng thì luôn tin ledger, kể cả khi net <= 0
         // (đã hoàn/wastage hết). Chỉ fallback công thức cho dữ liệu cũ chưa có

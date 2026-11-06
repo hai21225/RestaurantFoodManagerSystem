@@ -59,15 +59,8 @@ public sealed class SupplierService
         }
     }
 
-    public async Task<bool> DeleteAsync(int id, CancellationToken ct)
-    {
-        var x = await _db.Suppliers.FindAsync([id], ct);
-        if (x is null) return false;
-
-        x.IsActive = false;
-        await _db.SaveChangesAsync(ct);
-        return true;
-    }
+    public Task<bool> DeleteAsync(int id, CancellationToken ct) =>
+        SetActiveAsync(id, false, ct);
 
     /// <summary>
     /// Khôi phục/tắt nhà cung cấp bằng soft-delete. Phiếu nhập cũ vẫn giữ SupplierId
