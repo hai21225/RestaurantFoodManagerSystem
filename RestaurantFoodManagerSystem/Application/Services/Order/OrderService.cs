@@ -430,10 +430,7 @@ public sealed class OrderService
         var preparedItems = await PrepareItemsAsync(request.Items, ct);
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
-        var stockDeltas = await PrepareStockDeltasAsync(
-            new Dictionary<int, decimal>(),
-            requirements,
-            ct);
+        var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
 
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
@@ -524,10 +521,7 @@ public sealed class OrderService
         var preparedItems = await PrepareItemsAsync(request.Items, ct);
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
-        var stockDeltas = await PrepareStockDeltasAsync(
-            new Dictionary<int, decimal>(),
-            requirements,
-            ct);
+        var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
 
         var changedBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
@@ -786,8 +780,7 @@ public sealed class OrderService
 
                 var extraRequirements = await OrderItemMutations.CalculateRequirementsForQuantityAsync(
                     _db, pendingCandidate.SizeId, added, ct);
-                var extraDeltas = await PrepareStockDeltasAsync(
-                    new Dictionary<int, decimal>(), extraRequirements, ct);
+                var extraDeltas = await PrepareStockDeltasAsync(extraRequirements, ct);
                 ApplyItemStock(
                     [extraRequirements], [pendingCandidate], extraDeltas, order.OrderId, changedBy);
             }
@@ -862,8 +855,7 @@ public sealed class OrderService
 
                 var extraRequirements = await OrderItemMutations.CalculateRequirementsForQuantityAsync(
                     _db, newItem.SizeId, added, ct);
-                var extraDeltas = await PrepareStockDeltasAsync(
-                    new Dictionary<int, decimal>(), extraRequirements, ct);
+                var extraDeltas = await PrepareStockDeltasAsync(extraRequirements, ct);
                 ApplyItemStock(
                     [extraRequirements], [newItem], extraDeltas, order.OrderId, changedBy);
 
@@ -1076,30 +1068,55 @@ public sealed class OrderService
         IReadOnlyList<CreateOrderItemRequest> itemRequests,
         CancellationToken ct)
     {
-        var prepared = new List<PreparedOrderItem>(itemRequests.Count);
-
         foreach (var itemRequest in itemRequests)
         {
             if (itemRequest.Toppings is null)
                 throw new ArgumentException("Order item toppings cannot be null");
+        }
 
-            // P1: chỉ kiểm FoodSize.IsActive là chưa đủ — món đã ngừng bán/soft-delete
-            // vẫn có size active, nên phải join Foods và kiểm cả IsActive/IsAvailable.
-            var size = await (
-                from fs in _db.FoodSizes.AsNoTracking()
-                join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId
-                where fs.SizeId == itemRequest.SizeId
-                select new
-                {
-                    fs.SizeId,
-                    fs.FoodId,
-                    fs.SizePrice,
-                    SizeIsActive = fs.IsActive,
-                    FoodIsActive = f.IsActive,
-                    FoodIsAvailable = f.IsAvailable
-                }).FirstOrDefaultAsync(ct);
+        var sizeIds = itemRequests.Select(x => x.SizeId).Distinct().ToList();
+        // P1: chỉ kiểm FoodSize.IsActive là chưa đủ — món đã ngừng bán/soft-delete
+        // vẫn có size active, nên phải join Foods và kiểm cả IsActive/IsAvailable.
+        var sizesById = await (
+            from fs in _db.FoodSizes.AsNoTracking()
+            join f in _db.Foods.AsNoTracking() on fs.FoodId equals f.FoodId
+            where sizeIds.Contains(fs.SizeId)
+            select new
+            {
+                fs.SizeId,
+                fs.FoodId,
+                fs.SizePrice,
+                SizeIsActive = fs.IsActive,
+                FoodIsActive = f.IsActive,
+                FoodIsAvailable = f.IsAvailable
+            }).ToDictionaryAsync(x => x.SizeId, ct);
 
-            if (size is null || !size.SizeIsActive)
+        var toppingIds = itemRequests
+            .SelectMany(x => x.Toppings)
+            .Select(x => x.ToppingId)
+            .Distinct()
+            .ToList();
+        var foodIds = sizesById.Values.Select(x => x.FoodId).Distinct().ToList();
+
+        // Defect #19: topping phải được gán cho đúng món qua FoodToppings.
+        var toppingsByFoodAndId = toppingIds.Count == 0 || foodIds.Count == 0
+            ? new Dictionary<(int FoodId, int ToppingId), decimal>()
+            : (await (
+                from t in _db.Toppings.AsNoTracking()
+                join ft in _db.FoodToppings.AsNoTracking() on t.ToppingId equals ft.ToppingId
+                where toppingIds.Contains(t.ToppingId)
+                   && t.IsActive
+                   && t.IsAvailable
+                   && foodIds.Contains(ft.FoodId)
+                select new { ft.FoodId, t.ToppingId, t.ToppingPrice }).ToListAsync(ct))
+                .GroupBy(x => (x.FoodId, x.ToppingId))
+                .ToDictionary(g => g.Key, g => g.First().ToppingPrice);
+
+        var prepared = new List<PreparedOrderItem>(itemRequests.Count);
+
+        foreach (var itemRequest in itemRequests)
+        {
+            if (!sizesById.TryGetValue(itemRequest.SizeId, out var size) || !size.SizeIsActive)
                 throw new KeyNotFoundException($"Food size {itemRequest.SizeId} not found");
 
             if (!size.FoodIsActive || !size.FoodIsAvailable)
@@ -1111,24 +1128,14 @@ public sealed class OrderService
 
             foreach (var toppingRequest in itemRequest.Toppings)
             {
-                // Defect #19: topping phải được gán cho đúng món qua FoodToppings.
-                var topping = await (
-                    from t in _db.Toppings.AsNoTracking()
-                    join ft in _db.FoodToppings.AsNoTracking() on t.ToppingId equals ft.ToppingId
-                    where t.ToppingId == toppingRequest.ToppingId
-                       && t.IsActive
-                       && t.IsAvailable
-                       && ft.FoodId == size.FoodId
-                    select new { t.ToppingId, t.ToppingPrice }).FirstOrDefaultAsync(ct);
-
-                if (topping is null)
+                if (!toppingsByFoodAndId.TryGetValue((size.FoodId, toppingRequest.ToppingId), out var toppingPrice))
                     throw new KeyNotFoundException($"Topping {toppingRequest.ToppingId} is not available for this food");
 
-                unitPrice += topping.ToppingPrice * toppingRequest.Quanlity;
+                unitPrice += toppingPrice * toppingRequest.Quanlity;
                 toppings.Add(new PreparedTopping(
-                    topping.ToppingId,
+                    toppingRequest.ToppingId,
                     toppingRequest.Quanlity,
-                    topping.ToppingPrice));
+                    toppingPrice));
             }
 
             prepared.Add(new PreparedOrderItem(
@@ -1150,12 +1157,40 @@ public sealed class OrderService
         IReadOnlyList<PreparedOrderItem> items,
         CancellationToken ct)
     {
+        var sizeIds = items.Select(x => x.SizeId).Distinct().ToList();
+        var recipeRows = sizeIds.Count == 0
+            ? []
+            : await (
+                from recipe in _db.Recipes.AsNoTracking()
+                join ri in _db.RecipeIngredients.AsNoTracking()
+                    on recipe.RecipeId equals ri.RecipeId
+                where recipe.IsActive && sizeIds.Contains(recipe.SizeId)
+                select new { recipe.SizeId, ri.IngredientId, ri.Quanlity })
+                .ToListAsync(ct);
+
+        var ingredientsBySize = recipeRows
+            .GroupBy(x => x.SizeId)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
         var result = new List<Dictionary<int, decimal>>(items.Count);
 
         foreach (var item in items)
         {
-            result.Add(await OrderItemMutations.CalculateRequirementsForQuantityAsync(
-                _db, item.SizeId, item.Quanlity, ct));
+            if (!ingredientsBySize.TryGetValue(item.SizeId, out var rows) || rows.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Food size {item.SizeId} does not have an active recipe");
+            }
+
+            var requirements = new Dictionary<int, decimal>();
+            foreach (var row in rows)
+            {
+                requirements[row.IngredientId] =
+                    requirements.GetValueOrDefault(row.IngredientId)
+                    + row.Quanlity * item.Quanlity;
+            }
+
+            result.Add(requirements);
         }
 
         return result;
@@ -1177,13 +1212,10 @@ public sealed class OrderService
     }
 
     private async Task<List<StockDelta>> PrepareStockDeltasAsync(
-        IReadOnlyDictionary<int, decimal> oldRequirements,
         IReadOnlyDictionary<int, decimal> newRequirements,
         CancellationToken ct)
     {
-        var ingredientIds = oldRequirements.Keys
-            .Union(newRequirements.Keys)
-            .ToList();
+        var ingredientIds = newRequirements.Keys.ToList();
 
         if (ingredientIds.Count == 0)
         {
@@ -1202,8 +1234,7 @@ public sealed class OrderService
 
         foreach (var ingredientId in ingredientIds)
         {
-            var delta = newRequirements.GetValueOrDefault(ingredientId)
-                        - oldRequirements.GetValueOrDefault(ingredientId);
+            var delta = newRequirements.GetValueOrDefault(ingredientId);
             if (delta == 0)
             {
                 continue;

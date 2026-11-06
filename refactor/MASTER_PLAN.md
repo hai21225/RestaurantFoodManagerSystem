@@ -17,8 +17,8 @@
 | **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | Mục 5–6 | `[x] Done` | `cb2e6b6` |
 | **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | Mục 8–9 | `[x] Done` | `1a83b36` |
 | **Phase 5** | Đồng bộ `includeInactive` danh mục & gom logic User/Auth trùng lặp | Mục 6, 8, 9 | `[x] Done` | `6788af8` |
-| **Phase 6** | Giảm Over-engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`) | Mục 10 | `[x] Done` | `phase-6` |
-| **Phase 7** | Khử truy vấn N+1 trong `OrderService` & xóa `.Update()` thừa | Mục 11 | `[ ] Pending` | — |
+| **Phase 6** | Giảm Over-engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`) | Mục 10 | `[x] Done` | `9d5ba46` |
+| **Phase 7** | Khử truy vấn N+1 trong `OrderService` & xóa `.Update()` thừa | Mục 11 | `[x] Done` | `phase-7` |
 | **Phase 8** | Thu gọn & tách nhỏ 3 God Class (`OrderService`, `KitchenService`, `AppDbContext`) | Mục 7, 8 | `[ ] Pending` | — |
 
 ---
@@ -68,13 +68,13 @@
 ### Phase 7 (Mục 11): Khử Truy Vấn N+1 Trong `OrderService` & Xóa `.Update()` Thừa
 **Mục đích:** Giảm số câu lệnh SQL trong transaction tạo đơn / gọi thêm món từ $4 \times N$ về 3 truy vấn batch cố định, xóa lệnh `.Update()` thừa cuối cùng.
 
-- [ ] **7.1. Batch query cho `PrepareItemsAsync` và `CalculateItemRequirementsAsync`**
+- [x] **7.1. Batch query cho `PrepareItemsAsync` và `CalculateItemRequirementsAsync`**
   - **File:** `Application/Services/Order/OrderService.cs`, `Application/Common/OrderItemMutations.cs`
   - **Việc cần làm:**
     - `PrepareItemsAsync`: nạp 1 lần tất cả `FoodSizes` + `Foods` theo danh sách `SizeId` và nạp 1 lần tất cả `Toppings` + `FoodToppings` theo danh sách `ToppingId` trước vòng lặp `foreach`.
     - `CalculateItemRequirementsAsync`: nạp 1 lần tất cả `Recipes` active + `RecipeIngredients` cho mọi `SizeId` trong đơn thay vì gọi DB từng món.
     - Bỏ tham số `oldRequirements` luôn rỗng ở `PrepareStockDeltasAsync`.
-- [ ] **7.2. Xóa `_db.Toppings.Update(topping)` thừa**
+- [x] **7.2. Xóa `_db.Toppings.Update(topping)` thừa**
   - **File:** `Application/Services/Food/ToppingService.cs`
   - **Việc cần làm:** Xóa lệnh `_db.Toppings.Update(topping)` trên entity đã được `FindAsync` theo dõi.
 - **Kiểm tra & Commit:** Build + kiểm tra đặt món/trừ kho trực tiếp trên DB $\rightarrow$ `git commit -m "perf(phase-7): batch order item preparation queries to eliminate N+1 and remove redundant update"`

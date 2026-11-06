@@ -114,8 +114,6 @@ public class ToppingService
         topping.ToppingPrice = request.ToppingPrice;
         topping.IsAvailable = request.IsAvailable;
 
-        _db.Toppings.Update(topping);
-
         await _db.SaveChangesAsync(ct);
 
         return MapToDto(topping);
