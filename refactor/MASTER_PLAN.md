@@ -18,8 +18,8 @@
 | **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | Mục 8–9 | `[x] Done` | `1a83b36` |
 | **Phase 5** | Đồng bộ `includeInactive` danh mục & gom logic User/Auth trùng lặp | Mục 6, 8, 9 | `[x] Done` | `6788af8` |
 | **Phase 6** | Giảm Over-engineering (`IsolationLevel.Serializable` & `OrderIdempotencyStore`) | Mục 10 | `[x] Done` | `9d5ba46` |
-| **Phase 7** | Khử truy vấn N+1 trong `OrderService` & xóa `.Update()` thừa | Mục 11 | `[x] Done` | `phase-7` |
-| **Phase 8** | Thu gọn & tách nhỏ 3 God Class (`OrderService`, `KitchenService`, `AppDbContext`) | Mục 7, 8 | `[ ] Pending` | — |
+| **Phase 7** | Khử truy vấn N+1 trong `OrderService` & xóa `.Update()` thừa | Mục 11 | `[x] Done` | `f79120a` |
+| **Phase 8** | Thu gọn & tách nhỏ 3 God Class (`OrderService`, `KitchenService`, `AppDbContext`) | Mục 7, 8 | `[x] Done` | `c2e9cd7` |
 
 ---
 
@@ -84,16 +84,16 @@
 ### Phase 8 (Mục 7, 8): Thu Gọn & Tách Nhỏ 3 God Class (`OrderService`, `KitchenService`, `AppDbContext`)
 **Mục đích:** Xóa đoạn code tách dòng lặp lại trong `KitchenService` và tách 3 file > 1.000 dòng thành các file `partial` đúng chức năng (dưới 900 dòng/file) mà không đổi DI hay API.
 
-- [ ] **8.1. Gom helper trong `KitchenService` & tách `KitchenService.Queries.cs`**
+- [x] **8.1. Gom helper trong `KitchenService` & tách `KitchenService.Queries.cs`**
   - **File:** `Application/Services/Kitchen/KitchenService.cs`, `Application/Services/Kitchen/KitchenService.Queries.cs` (mới)
   - **Việc cần làm:**
     - Gom bước nạp & kiểm tra bộ tứ `(KitchenOrderItem, KitchenOrder, Order, OrderItem)` đang lặp ở `ReopenItemAsync`, `UpdatePreparedQuantityAsync`, `ReportShortageAsync` vào helper chung `LoadMutableItemContextAsync`.
     - Gom bước tách dòng món (`CloneLine` + `CopyToppingsAsync` + `RecordItemHistory` + `KitchenOrderItem` + `SplitItemLedgerAsync`) lặp giữa `UpdatePreparedQuantityAsync` và `ReportShortageAsync` vào helper `SplitKitchenOrderItemLineAsync`.
     - Tách các hàm đọc (`GetOrdersAsync`, `GetItemsAsync`) sang `KitchenService.Queries.cs` (`public sealed partial class KitchenService`).
-- [ ] **8.2. Tách `OrderService.Queries.cs` & gom truy vấn lịch sử đơn**
+- [x] **8.2. Tách `OrderService.Queries.cs` & gom truy vấn lịch sử đơn**
   - **File:** `Application/Services/Order/OrderService.cs`, `Application/Services/Order/OrderService.Queries.cs` (mới)
   - **Việc cần làm:** Chuyển các hàm đọc (`GetAsync`, `GetTableBillAsync`, `GetListAsync`, `GetHistoryAsync`, `GetItemHistoryAsync`) sang `OrderService.Queries.cs` (`public sealed partial class OrderService`).
-- [ ] **8.3. Tách `AppDbContext.ModelConfiguration.cs`**
+- [x] **8.3. Tách `AppDbContext.ModelConfiguration.cs`**
   - **File:** `Infrastructure/Persistence/AppDbContext.cs`, `Infrastructure/Persistence/AppDbContext.ModelConfiguration.cs` (mới)
   - **Việc cần làm:** Tách hàm `OnModelCreating` (~1.250 dòng cấu hình bảng) sang `AppDbContext.ModelConfiguration.cs` (`public partial class AppDbContext`), giữ `AppDbContext.cs` chỉ còn khai báo `DbSet` và `SaveChanges`/`RowVersion` (~180 dòng).
 - **Kiểm tra & Commit:** Build + chạy kiểm tra toàn trình trên DB $\rightarrow$ `git commit -m "refactor(phase-8): deduplicate kitchen item splitting and split god classes into focused partial files"`
