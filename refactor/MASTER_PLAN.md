@@ -13,8 +13,8 @@
 | Phase | Nội dung chính | Mức ưu tiên | Trạng thái | Commit |
 | :--- | :--- | :--- | :--- | :--- |
 | **Baseline** | Mốc sau đợt refactor 1 | Mốc an toàn | `[x] Done` | `7bc197d` |
-| **Phase 1** | Tạo file Seed dữ liệu cơ bản & áp trực tiếp lên DB | **Must Do First** | `[x] Done` | `pending` |
-| **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | **Must Fix** | `[ ] Todo` | - |
+| **Phase 1** | Tạo file Seed dữ liệu cơ bản & áp trực tiếp lên DB | **Must Do First** | `[x] Done` | `b12382b` |
+| **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | **Must Fix** | `[x] Done` | `pending` |
 | **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | **Should Fix** | `[ ] Todo` | - |
 | **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | **Should Fix / Clean** | `[ ] Todo` | - |
 
@@ -41,19 +41,19 @@
 ### Phase 2: Sửa 4 Lỗi Nghiệp Vụ Cốt Lõi (Must Fix)
 **Mục đích:** Khóa chặt các lỗ hổng thanh toán MoMo, cảnh báo tồn kho sau nhập hàng, hoàn tiền đè bàn, và lọc thực đơn POS.
 
-- [ ] **2.1. Đồng bộ điều kiện & Transaction cho MoMo**
+- [x] **2.1. Đồng bộ điều kiện & Transaction cho MoMo**
   - **File:** `Application/Services/Payment/PaymentService.cs`
   - **Việc cần làm:**
     - `CreateMomoIntentAsync`: kiểm tra mọi món active phải `Ready`/`Completed` và `order.TotalAmount > 0` (giống `CreateAsync`).
     - `ApplyMomoNotificationAsync`: bọc `BeginTransactionAsync`, chuyển các `Payment` `Pending` khác của đơn sang `Cancelled`, bắt `DbUpdateException` (unique index `[Status] = 'Paid'`) để trả kết quả idempotent.
-- [ ] **2.2. Reset `Ingredient.StockStatus` khi nhận hàng nhập kho**
-  - **File:** `Application/Services/Inventory/PurchaseOrderService.cs` (`ReceiveAsync`)
-  - **Việc cần làm:** Khi cộng tồn kho mà `stock.Quanlity > 0` và `ingredient.StockStatus` đang là `OutOfStock` hoặc `Spoiled`, tự động cập nhật về `Normal`.
-- [ ] **2.3. Chặn hoàn tiền (`RefundAsync`) mở lại đơn vào bàn đang có khách mới**
+- [x] **2.2. Reset `Ingredient.StockStatus` khi nhận hàng nhập kho**
+  - **File:** `Application/Services/Suplier/PurchaseOrderService.cs` (`ReceiveAsync`)
+  - **Việc cần làm:** Khi cộng tồn kho mà `stock.Quanlity > 0` và `ingredient.StockStatus` đang là `OutOfStock` hoặc `Spoiled`, tự động cập nhật về `Available`.
+- [x] **2.3. Chặn hoàn tiền (`RefundAsync`) mở lại đơn vào bàn đang có khách mới**
   - **File:** `Application/Services/Payment/PaymentService.cs` (`RefundAsync`)
   - **Việc cần làm:** Nếu `order.TableId != null` đã có đơn mở khác (`Status != Paid && Status != Cancelled`), ném `InvalidOperationException` (409) không cho mở lại đơn cũ đè lên bàn.
-- [ ] **2.4. Chỉ hiển thị món & size có công thức active trên Menu POS**
-  - **File:** `Application/Services/Menu/MenuService.cs` (`GetMenuAsync`)
+- [x] **2.4. Chỉ hiển thị món & size có công thức active trên Menu POS**
+  - **File:** `Application/Services/Food/MenuService.cs` (`GetMenuAsync`)
   - **Việc cần làm:** Chỉ trả về `FoodSize` đang `IsActive` và có `Recipe` active; ẩn `Food` nếu không có `FoodSize` nào hợp lệ.
 - **Kiểm tra & Commit:** Build + chạy kiểm tra trực tiếp trên DB $\rightarrow$ `git commit -m "fix(phase-2): fix momo transaction, stock status reset, refund table check, and pos menu filter"`
 

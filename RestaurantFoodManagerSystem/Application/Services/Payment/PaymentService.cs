@@ -108,44 +108,10 @@ public sealed class PaymentService
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == request.OrderId, ct);
         if (order is null) return null;
 
-        // Nhóm B: không thanh toán đơn đã huỷ; không thanh toán trùng.
-        if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Cannot pay a cancelled order");
-        if (string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Order is already paid");
-        if (await _db.Payments.AnyAsync(
-                x => x.OrderId == request.OrderId && x.Status == PaymentStatuses.Paid, ct))
-            throw new InvalidOperationException("Order is already paid");
-
-        // P1e: không thu tiền khi bếp chưa xong — tránh trả bàn sớm trong lúc món còn Preparing.
-        // Đơn không có dòng món (dữ liệu legacy) giữ nguyên hành vi cũ.
-        var itemStatuses = await _db.OrderItems.AsNoTracking()
-            .Where(x => x.OrderId == request.OrderId)
-            .Select(x => x.Status)
-            .ToListAsync(ct);
-
-        if (itemStatuses.Count > 0)
-        {
-            var activeItems = itemStatuses
-                .Where(x => !KitchenStatuses.IsCancelled(x))
-                .ToList();
-
-            if (activeItems.Count == 0)
-                throw new InvalidOperationException("Order has no payable items");
-
-            if (activeItems.Any(x => !KitchenStatuses.IsDone(x)) ||
-                !OrderStatuses.IsPayable(order.Status))
-            {
-                throw new InvalidOperationException("Order is not ready for payment");
-            }
-        }
+        await EnsureOrderPayableAsync(order, ct);
 
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
-
-        // Nhóm B3: đơn tổng 0đ không phải là một khoản thu; tránh tạo payment "Paid" vô nghĩa.
-        if (order.TotalAmount <= 0)
-            throw new InvalidOperationException("Order total must be greater than zero");
 
         var now = DateTime.UtcNow;
 
@@ -238,6 +204,45 @@ public sealed class PaymentService
             ?? throw new ArgumentException($"Invalid payment method: {method}");
     }
 
+    private async Task EnsureOrderPayableAsync(Order order, CancellationToken ct)
+    {
+        if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Cannot pay a cancelled order");
+        if (string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Order is already paid");
+        if (await _db.Payments.AnyAsync(
+                x => x.OrderId == order.OrderId && x.Status == PaymentStatuses.Paid, ct))
+            throw new InvalidOperationException("Order is already paid");
+
+        var itemStatuses = await _db.OrderItems.AsNoTracking()
+            .Where(x => x.OrderId == order.OrderId)
+            .Select(x => x.Status)
+            .ToListAsync(ct);
+
+        if (itemStatuses.Count > 0)
+        {
+            var activeItems = itemStatuses
+                .Where(x => !KitchenStatuses.IsCancelled(x))
+                .ToList();
+
+            if (activeItems.Count == 0)
+                throw new InvalidOperationException("Order has no payable items");
+
+            if (activeItems.Any(x => !KitchenStatuses.IsDone(x)) ||
+                !OrderStatuses.IsPayable(order.Status))
+            {
+                throw new InvalidOperationException("Order is not ready for payment");
+            }
+        }
+        else if (!OrderStatuses.IsPayable(order.Status))
+        {
+            throw new InvalidOperationException("Order is not ready for payment");
+        }
+
+        if (order.TotalAmount <= 0)
+            throw new InvalidOperationException("Order total must be greater than zero");
+    }
+
     // ==========================================================
     // Luồng provider: MoMo (intent → QR → IPN)
     // ==========================================================
@@ -265,12 +270,7 @@ public sealed class PaymentService
         var order = await _db.Orders.FirstOrDefaultAsync(x => x.OrderId == request.OrderId, ct);
         if (order is null) return null;
 
-        if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Cannot pay a cancelled order");
-        if (string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Order is already paid");
-        if (!OrderStatuses.IsPayable(order.Status))
-            throw new InvalidOperationException("Order is not ready for payment");
+        await EnsureOrderPayableAsync(order, ct);
 
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
@@ -387,6 +387,8 @@ public sealed class PaymentService
             return MomoNotificationOutcome.Rejected("Invalid signature");
         }
 
+        await using var tx = await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+
         var payment = await _db.Payments.FirstOrDefaultAsync(
             x => x.RequestId == request.RequestId, ct);
 
@@ -417,6 +419,7 @@ public sealed class PaymentService
             payment.Status = PaymentStatuses.Failed;
             payment.Note = request.Message;
             await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
             return MomoNotificationOutcome.Failed(payment.PaymentId, request.Message ?? "Payment failed");
         }
 
@@ -447,6 +450,14 @@ public sealed class PaymentService
             return MomoNotificationOutcome.Rejected("Amount mismatch");
         }
 
+        var otherPendings = await _db.Payments
+            .Where(x => x.OrderId == order.OrderId && x.PaymentId != payment.PaymentId && x.Status == PaymentStatuses.Pending)
+            .ToListAsync(ct);
+        foreach (var pending in otherPendings)
+        {
+            pending.Status = PaymentStatuses.Cancelled;
+        }
+
         payment.Status = PaymentStatuses.Paid;
         payment.PaidAt = DateTime.UtcNow;
         payment.ProviderTransactionId = request.TransId;
@@ -457,7 +468,28 @@ public sealed class PaymentService
 
         _lifecycle.ApplyPaid(order, payment.CreatedBy, $"Payment via MoMo ({request.TransId})");
 
-        await _db.SaveChangesAsync(ct);
+        try
+        {
+            await _db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
+        }
+        catch (DbUpdateException)
+        {
+            try { await tx.RollbackAsync(ct); } catch (InvalidOperationException) { }
+            _db.ChangeTracker.Clear();
+
+            var reloaded = await _db.Payments.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.PaymentId == payment.PaymentId, ct);
+            if (reloaded?.Status == PaymentStatuses.Paid)
+                return MomoNotificationOutcome.AlreadyApplied(payment.PaymentId);
+
+            if (await _db.Payments.AsNoTracking().AnyAsync(
+                    x => x.OrderId == order.OrderId && x.Status == PaymentStatuses.Paid, ct))
+                return MomoNotificationOutcome.Rejected("Order is already paid");
+
+            throw;
+        }
+
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
 
         return MomoNotificationOutcome.Applied(payment.PaymentId);
@@ -563,6 +595,16 @@ public sealed class PaymentService
 
         if (!string.Equals(order.Status, OrderStatuses.Paid, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Order is not in Paid state");
+
+        if (order.TableId is int tableId && await _db.Orders.AnyAsync(
+                x => x.TableId == tableId
+                  && x.OrderId != order.OrderId
+                  && x.Status != OrderStatuses.Paid
+                  && x.Status != OrderStatuses.Cancelled, ct))
+        {
+            throw new InvalidOperationException(
+                $"Cannot refund and reopen order #{order.OrderId} because table #{tableId} already has another active order");
+        }
 
         var changedBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
