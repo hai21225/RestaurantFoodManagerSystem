@@ -30,61 +30,26 @@ public sealed class TableAreasController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(
         [FromBody] TableAreaRequest request,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            return Ok(await _service.CreateAsync(request, ct));
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-    }
+        CancellationToken ct = default) =>
+        Ok(await _service.CreateAsync(request, ct));
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
         [FromBody] TableAreaRequest request,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            return await _service.UpdateAsync(id, request, ct) ? NoContent() : NotFound();
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-    }
+        CancellationToken ct = default) =>
+        await _service.UpdateAsync(id, request, ct) ? NoContent() : NotFound();
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpPatch("{id:int}/active")]
     public async Task<IActionResult> SetActive(
         int id,
         [FromBody] UpdateActiveRequest request,
-        CancellationToken ct = default)
-    {
-        try
-        {
-            return await _service.SetActiveAsync(id, request.IsActive, ct)
-                ? NoContent()
-                : NotFound();
-        }
-        catch (InvalidOperationException ex)
-        {
-            return Conflict(new { message = ex.Message });
-        }
-    }
+        CancellationToken ct = default) =>
+        await _service.SetActiveAsync(id, request.IsActive, ct)
+            ? NoContent()
+            : NotFound();
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpDelete("{id:int}")]

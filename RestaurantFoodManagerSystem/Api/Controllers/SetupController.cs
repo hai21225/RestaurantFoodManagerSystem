@@ -33,30 +33,19 @@ public sealed class SetupController : ControllerBase
         [FromBody] RegisterRequest request,
         CancellationToken ct)
     {
-        try
+        var created = await _setupService.CreateFirstAdminAsync(request, ct);
+
+        if (!created)
         {
-            var created = await _setupService.CreateFirstAdminAsync(request, ct);
-
-            if (!created)
+            return Conflict(new
             {
-                return Conflict(new
-                {
-                    message = "System is already initialized"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "First admin created successfully"
+                message = "System is already initialized"
             });
         }
-        catch (ArgumentException ex)
+
+        return Ok(new
         {
-            return BadRequest(new { message = ex.Message });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+            message = "First admin created successfully"
+        });
     }
 }

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+using System.Net.Mail;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class UserService
@@ -147,37 +148,21 @@ public class UserService
     /// <exception cref="KeyNotFoundException">Không tìm thấy user.</exception>
     /// <exception cref="ArgumentException">Dữ liệu không hợp lệ.</exception>
     /// <exception cref="InvalidOperationException">Email đã thuộc user khác.</exception>
-    public async Task<UserProfileResponse> UpdateProfileAsync(
+    public Task<UserProfileResponse> UpdateProfileAsync(
         int userId,
         UpdateProfileRequest request,
-        CancellationToken ct = default)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
-            ?? throw new KeyNotFoundException("User not found");
-
-        await ApplyContactUpdateAsync(user, request.FullName, request.Email, request.Phone, ct);
-
-        return await GetProfileAsync(userId, ct)
-            ?? throw new InvalidOperationException("User not found after update");
-    }
+        CancellationToken ct = default) =>
+        UpdateContactAsync(userId, request.FullName, request.Email, request.Phone, ct);
 
     /// <summary>
     /// Admin sửa hồ sơ nhân viên (Batch A) — cùng phạm vi field với hồ sơ tự phục vụ,
     /// không đổi được username/role/trạng thái qua endpoint này.
     /// </summary>
-    public async Task<UserProfileResponse> UpdateUserAsync(
+    public Task<UserProfileResponse> UpdateUserAsync(
         int userId,
         UpdateUserRequest request,
-        CancellationToken ct = default)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
-            ?? throw new KeyNotFoundException("User not found");
-
-        await ApplyContactUpdateAsync(user, request.FullName, request.Email, request.Phone, ct);
-
-        return await GetProfileAsync(userId, ct)
-            ?? throw new InvalidOperationException("User not found after update");
-    }
+        CancellationToken ct = default) =>
+        UpdateContactAsync(userId, request.FullName, request.Email, request.Phone, ct);
 
     /// <summary>
     /// Admin khoá/mở tài khoản nhân viên (Batch A). Chặn tự khoá chính mình và chặn khoá
@@ -233,15 +218,18 @@ public class UserService
     }
 
     /// <summary>
-    /// Phần validate + ghi dùng chung cho tự sửa hồ sơ và Admin sửa hồ sơ nhân viên.
+    /// Phần tải user + validate + ghi dùng chung cho tự sửa hồ sơ và Admin sửa hồ sơ nhân viên.
     /// </summary>
-    private async Task ApplyContactUpdateAsync(
-        Users user,
+    private async Task<UserProfileResponse> UpdateContactAsync(
+        int userId,
         string? rawFullName,
         string? rawEmail,
         string? rawPhone,
         CancellationToken ct)
     {
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new KeyNotFoundException("User not found");
+
         var fullName = rawFullName?.Trim() ?? string.Empty;
         var email = rawEmail?.Trim() ?? string.Empty;
         var phone = rawPhone?.Trim() ?? string.Empty;
@@ -266,7 +254,7 @@ public class UserService
             throw new ArgumentException("Email must be at most 150 characters");
         }
 
-        if (!IsPlausibleEmail(email))
+        if (!IsValidEmail(email))
         {
             throw new ArgumentException("Email format is invalid");
         }
@@ -294,6 +282,9 @@ public class UserService
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+
+        return await GetProfileAsync(userId, ct)
+            ?? throw new InvalidOperationException("User not found after update");
     }
 
     private Task<bool> HasRoleAsync(int userId, string roleName, CancellationToken ct) =>
@@ -303,12 +294,19 @@ public class UserService
          select ur.UserId)
         .AnyAsync(ct);
 
-    private static bool IsPlausibleEmail(string email)
+    public static bool IsValidEmail(string? email)
     {
-        var at = email.IndexOf('@');
-        return at > 0
-            && at < email.Length - 1
-            && !email.Any(char.IsWhiteSpace);
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return false;
+        }
+
+        var trimmed = email.Trim();
+
+        // Chỉ nhận địa chỉ trần (không nhận dạng "Tên <email>") và không chứa khoảng trắng.
+        return MailAddress.TryCreate(trimmed, out var address)
+               && string.Equals(address.Address, trimmed, StringComparison.OrdinalIgnoreCase)
+               && !trimmed.Any(char.IsWhiteSpace);
     }
 
     public async Task<bool> AddUserAsync(UserDto userdto, CancellationToken ct = default)
@@ -332,6 +330,11 @@ public class UserService
         if (email.Length > 150)
         {
             throw new ArgumentException("Email must be at most 150 characters");
+        }
+
+        if (!IsValidEmail(email))
+        {
+            throw new ArgumentException("Email format is invalid");
         }
 
         if (fullName.Length > 150)

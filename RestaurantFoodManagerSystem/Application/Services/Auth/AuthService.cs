@@ -1,4 +1,3 @@
-﻿using System.Net.Mail;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -52,7 +51,7 @@ public class AuthService
 
         ValidatePassword(userDto.Password, "Password must be between 6 and 72 bytes (UTF-8)");
 
-        if (!IsValidEmail(userDto.Email))
+        if (!UserService.IsValidEmail(userDto.Email))
         {
             throw new ArgumentException("Email format is invalid");
         }
@@ -198,21 +197,6 @@ public class AuthService
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
-    }
-
-    private static bool IsValidEmail(string? email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-        {
-            return false;
-        }
-
-        var trimmed = email.Trim();
-
-        // Chỉ nhận địa chỉ trần (không nhận dạng "Tên <email>") để tránh lưu
-        // giá trị không phải email thật vào trường UserEmail.
-        return MailAddress.TryCreate(trimmed, out var address)
-               && string.Equals(address.Address, trimmed, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>

@@ -79,10 +79,23 @@ public class CategoryService
             throw new ArgumentNullException(nameof(categoryDTO));
         }
 
+        var name = categoryDTO.Name?.Trim() ?? string.Empty;
+        var description = categoryDTO.Description?.Trim() ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Category name is required");
+        }
+
+        if (await _db.Categories.AnyAsync(x => x.CategoryName == name && x.IsActive, ct))
+        {
+            throw new InvalidOperationException("Category name already exists");
+        }
+
         var category = new Category
         {
-            CategoryName = categoryDTO.Name ?? "",
-            CategoryDescription = categoryDTO.Description ?? "",
+            CategoryName = name,
+            CategoryDescription = description,
             DisplayOrder = categoryDTO.DisplayOrder,
 
             // Khi tạo category nên active mặc định
@@ -114,15 +127,24 @@ public class CategoryService
             throw new KeyNotFoundException("Category not found");
         }
 
-        category.CategoryName = categoryDTO.Name ?? "";
+        var name = categoryDTO.Name?.Trim() ?? string.Empty;
+        var description = categoryDTO.Description?.Trim() ?? string.Empty;
 
-        category.CategoryDescription =
-            categoryDTO.Description ?? "";
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Category name is required");
+        }
 
+        if (categoryDTO.IsActive
+            && await _db.Categories.AnyAsync(x => x.CategoryId != categoryDTO.Id && x.CategoryName == name && x.IsActive, ct))
+        {
+            throw new InvalidOperationException("Category name already exists");
+        }
+
+        category.CategoryName = name;
+        category.CategoryDescription = description;
         category.DisplayOrder = categoryDTO.DisplayOrder;
-
         category.IsActive = categoryDTO.IsActive;
-
         category.UpdatedAt = DateTime.UtcNow;
 
         _db.Categories.Update(category);
@@ -160,6 +182,12 @@ public class CategoryService
         if (category == null)
         {
             return false;
+        }
+
+        if (active
+            && await _db.Categories.AnyAsync(x => x.CategoryId != id && x.CategoryName == category.CategoryName && x.IsActive, ct))
+        {
+            throw new InvalidOperationException("Category name already exists");
         }
 
         category.IsActive = active;
