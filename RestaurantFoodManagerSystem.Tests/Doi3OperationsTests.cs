@@ -180,6 +180,56 @@ public sealed class Doi3OperationsTests : TestBase
     }
 
     [Fact]
+    public async Task GetTableBill_IncludesToppings_AndSeparatesDifferentToppingsWithSamePrice()
+    {
+        var scenario = SeedOrderScenario(sizePrice: 100m, toppingPrice: 10m, stock: 100m);
+        var staff = SeedUser();
+        var secondTopping = new Topping { ToppingName = "Phô mai", ToppingPrice = 10m, IsAvailable = true, IsActive = true };
+        Db.Toppings.Add(secondTopping);
+        Db.SaveChanges();
+
+        var order = await SeedOrderWithItemsAsync(scenario.Table.TableId, staff.Id, scenario.Size.SizeId, 1);
+        var firstItem = Db.OrderItems.Single(x => x.OrderId == order.OrderId);
+        firstItem.UnitPrice = 110m;
+        Db.OrderItemToppings.Add(new OrderItemTopping
+        {
+            OrderItemId = firstItem.Id,
+            ToppingId = scenario.Topping.ToppingId,
+            Quanlity = 1,
+            UnitPrice = 10m
+        });
+
+        var secondItem = new OrderItem
+        {
+            OrderId = order.OrderId,
+            SizeId = scenario.Size.SizeId,
+            Quanlity = 1,
+            UnitPrice = 110m,
+            Status = "Ready",
+            CreatedAt = DateTime.UtcNow,
+            OrderItemGroupId = Guid.NewGuid()
+        };
+        Db.OrderItems.Add(secondItem);
+        Db.SaveChanges();
+        Db.OrderItemToppings.Add(new OrderItemTopping
+        {
+            OrderItemId = secondItem.Id,
+            ToppingId = secondTopping.ToppingId,
+            Quanlity = 1,
+            UnitPrice = 10m
+        });
+        Db.SaveChanges();
+
+        var bill = await Orders.GetTableBillAsync(scenario.Table.TableId, CancellationToken.None);
+
+        Assert.NotNull(bill);
+        Assert.Equal(2, bill!.Items.Count);
+        Assert.All(bill.Items, x => Assert.Single(x.Toppings));
+        Assert.Contains(bill.Items, x => x.Toppings[0].ToppingName == scenario.Topping.ToppingName);
+        Assert.Contains(bill.Items, x => x.Toppings[0].ToppingName == "Phô mai");
+    }
+
+    [Fact]
     public async Task GetTableBill_CollectsOrderNotes()
     {
         var scenario = SeedOrderScenario(sizePrice: 100m, stock: 100m);

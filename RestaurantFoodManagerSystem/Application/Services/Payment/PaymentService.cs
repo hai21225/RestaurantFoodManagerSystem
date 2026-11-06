@@ -172,6 +172,14 @@ public sealed class PaymentService
                 $"Transaction code '{transactionCode}' already exists");
         }
 
+        var pendingPayments = await _db.Payments
+            .Where(x => x.OrderId == order.OrderId && x.Status == PaymentStatuses.Pending)
+            .ToListAsync(ct);
+        foreach (var pending in pendingPayments)
+        {
+            pending.Status = PaymentStatuses.Cancelled;
+        }
+
         var payment = new Payment
         {
             OrderId = order.OrderId,
@@ -288,9 +296,14 @@ public sealed class PaymentService
 
         if (pending is not null)
         {
-            var reused = ToIntentResponse(pending);
-            await tx.CommitAsync(ct);
-            return reused;
+            if (pending.Amount == order.TotalAmount)
+            {
+                var reused = ToIntentResponse(pending);
+                await tx.CommitAsync(ct);
+                return reused;
+            }
+
+            pending.Status = PaymentStatuses.Cancelled;
         }
 
         var now = DateTime.UtcNow;
@@ -405,6 +418,11 @@ public sealed class PaymentService
         if (payment.Status == PaymentStatuses.Refunded)
         {
             return MomoNotificationOutcome.Rejected("Payment was refunded");
+        }
+
+        if (payment.Status == PaymentStatuses.Cancelled)
+        {
+            return MomoNotificationOutcome.Rejected("Payment was cancelled");
         }
 
         if (!request.IsSuccess)

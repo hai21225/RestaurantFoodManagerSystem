@@ -68,6 +68,32 @@ public sealed class Phase3MomoPaymentTests : TestBase
     }
 
     [Fact]
+    public async Task CreateIntent_WhenOrderTotalChanged_CancelsOldPending_AndDirectPayCancelsPending()
+    {
+        var s = SeedOrderScenario();
+        var order = SeedPayableOrder(s.Staff.Id, total: 100m);
+
+        var first = await CreateIntentAsync(order.OrderId, s.Staff.Id);
+        order.TotalAmount = 80m;
+        await Db.SaveChangesAsync();
+
+        var second = await CreateIntentAsync(order.OrderId, s.Staff.Id);
+        Assert.NotEqual(first.PaymentId, second.PaymentId);
+        Assert.Equal(80m, second.Amount);
+        Assert.Equal(PaymentStatuses.Cancelled, Db.Payments.Single(x => x.PaymentId == first.PaymentId).Status);
+
+        await Payments.CreateAsync(new CreatePaymentRequest
+        {
+            OrderId = order.OrderId,
+            PaymentMethod = "Cash",
+            CreatedBy = s.Staff.Id
+        }, CancellationToken.None);
+
+        using var check = NewContext();
+        Assert.Equal(PaymentStatuses.Cancelled, check.Payments.Single(x => x.PaymentId == second.PaymentId).Status);
+    }
+
+    [Fact]
     public async Task CreateIntent_OrderNotPayable_IsRejected()
     {
         var s = SeedOrderScenario();

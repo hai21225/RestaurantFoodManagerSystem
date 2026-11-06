@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -173,6 +173,7 @@ public sealed class OrderService
                                 && oi.Status != KitchenStatuses.Cancelled
                               select new
                               {
+                                  oi.Id,
                                   oi.OrderId,
                                   oi.SizeId,
                                   FoodName = f.FoodName ?? string.Empty,
@@ -182,10 +183,51 @@ public sealed class OrderService
                                   oi.Note
                               }).ToListAsync(ct);
 
-        // Gộp dòng: cùng món + cùng đơn giá + cùng ghi chú thì gộp làm một dòng.
-        // Tách theo ghi chú vì "bỏ hành" và "bỏ hành, ít cay" là 2 yêu cầu khác nhau.
+        var toppingsByItem = new Dictionary<int, List<OrderItemToppingDetailResponse>>();
+        if (itemRows.Count > 0)
+        {
+            var itemIds = itemRows.Select(x => x.Id).ToList();
+            var toppingRows = await (
+                from ot in _db.OrderItemToppings.AsNoTracking()
+                join t in _db.Toppings.AsNoTracking() on ot.ToppingId equals t.ToppingId into toppingGroup
+                from t in toppingGroup.DefaultIfEmpty()
+                where itemIds.Contains(ot.OrderItemId)
+                orderby ot.ToppingId, ot.Id
+                select new
+                {
+                    ot.OrderItemId,
+                    Dto = new OrderItemToppingDetailResponse
+                    {
+                        Id = ot.Id,
+                        ToppingId = ot.ToppingId,
+                        ToppingName = t.ToppingName ?? string.Empty,
+                        Quanlity = ot.Quanlity,
+                        UnitPrice = ot.UnitPrice
+                    }
+                }).ToListAsync(ct);
+
+            toppingsByItem = toppingRows
+                .GroupBy(x => x.OrderItemId)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Dto).ToList());
+        }
+
+        static string BuildToppingKey(List<OrderItemToppingDetailResponse>? toppings) =>
+            toppings is null || toppings.Count == 0
+                ? string.Empty
+                : string.Join("|", toppings
+                    .OrderBy(t => t.ToppingId)
+                    .ThenBy(t => t.UnitPrice)
+                    .Select(t => $"{t.ToppingId}:{t.Quanlity}:{t.UnitPrice}"));
+
+        // Gộp dòng: cùng món + cùng đơn giá + cùng ghi chú + cùng bộ topping thì gộp làm một dòng.
         var lines = itemRows
-            .GroupBy(x => new { x.SizeId, x.UnitPrice, x.Note })
+            .GroupBy(x => new
+            {
+                x.SizeId,
+                x.UnitPrice,
+                x.Note,
+                ToppingKey = BuildToppingKey(toppingsByItem.GetValueOrDefault(x.Id))
+            })
             .Select(g => new TableBillLineResponse
             {
                 SizeId = g.Key.SizeId,
@@ -194,7 +236,8 @@ public sealed class OrderService
                 Quanlity = g.Sum(x => x.Quanlity),
                 UnitPrice = g.Key.UnitPrice,
                 LineTotal = g.Sum(x => x.UnitPrice * x.Quanlity),
-                Note = g.Key.Note
+                Note = g.Key.Note,
+                Toppings = toppingsByItem.GetValueOrDefault(g.First().Id) ?? []
             })
             .OrderBy(x => x.FoodName)
             .ThenBy(x => x.SizeName)
