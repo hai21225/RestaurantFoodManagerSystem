@@ -179,7 +179,7 @@ public sealed class PromotionService
         {
             var existing = await _db.FoodSizes
                 .AsNoTracking()
-                .Where(x => sizeIds.Contains(x.SizeId))
+                .Where(x => x.IsActive && sizeIds.Contains(x.SizeId))
                 .Select(x => x.SizeId)
                 .ToListAsync(ct);
 
@@ -195,7 +195,7 @@ public sealed class PromotionService
         {
             var existing = await _db.Categories
                 .AsNoTracking()
-                .Where(x => categoryIds.Contains(x.CategoryId))
+                .Where(x => x.IsActive && categoryIds.Contains(x.CategoryId))
                 .Select(x => x.CategoryId)
                 .ToListAsync(ct);
 

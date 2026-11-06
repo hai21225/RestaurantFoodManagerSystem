@@ -94,7 +94,7 @@ public class FoodService
         var category = await _db.Categories
             .FindAsync([request.CategoryId], ct);
 
-        if (category == null)
+        if (category == null || !category.IsActive)
         {
             throw new KeyNotFoundException("Category not found");
         }
@@ -156,7 +156,7 @@ public class FoodService
         var category = await _db.Categories
             .FindAsync([request.CategoryId], ct);
 
-        if (category == null)
+        if (category == null || !category.IsActive)
         {
             throw new KeyNotFoundException("Category not found");
         }
@@ -206,6 +206,11 @@ public class FoodService
         if (food == null)
         {
             return false;
+        }
+
+        if (isAvailable && !food.IsActive)
+        {
+            throw new InvalidOperationException("Cannot make an inactive food available");
         }
 
         food.IsAvailable = isAvailable;

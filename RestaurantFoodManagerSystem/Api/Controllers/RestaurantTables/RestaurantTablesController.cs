@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/restaurant-tables")]
@@ -51,9 +50,7 @@ public class RestaurantTablesController : ControllerBase
             });
         }
 
-        RestaurantTableDto created;
-        try { created = await _restaurantTableService.AddRestaurantTableAsync(dto, ct); }
-        catch (DbUpdateException) { return Conflict(new { message = "Restaurant table could not be saved due to a data conflict" }); }
+        var created = await _restaurantTableService.AddRestaurantTableAsync(dto, ct);
 
         return Ok(new
         {
@@ -69,31 +66,21 @@ public class RestaurantTablesController : ControllerBase
         [FromBody] RestaurantTableDto dto,
         CancellationToken ct = default)
     {
-        try
+        var result = await _restaurantTableService
+            .UpdateRestaurantTableAsync(id, dto, ct);
+
+        if (!result)
         {
-            var result = await _restaurantTableService
-                .UpdateRestaurantTableAsync(id, dto, ct);
-
-            if (!result)
+            return NotFound(new
             {
-                return NotFound(new
-                {
-                    message = "Restaurant table not found"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Restaurant table updated successfully"
+                message = "Restaurant table not found"
             });
         }
-        catch (DbUpdateException)
+
+        return Ok(new
         {
-            return Conflict(new
-            {
-                message = "Restaurant table could not be saved due to a data conflict"
-            });
-        }
+            message = "Restaurant table updated successfully"
+        });
     }
 
     // DELETE: /api/restaurant-tables/5

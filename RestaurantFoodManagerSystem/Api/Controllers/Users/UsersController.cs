@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 [ApiController]
 [Route("api/users")]
@@ -47,15 +46,8 @@ public class UsersController : ControllerBase
             return Unauthenticated();
         }
 
-        try
-        {
-            var profile = await _userService.UpdateProfileAsync(userId, request, ct);
-            return Ok(profile);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        var profile = await _userService.UpdateProfileAsync(userId, request, ct);
+        return Ok(profile);
     }
 
     // GET: /api/users/{id}  user details for admin
@@ -78,14 +70,7 @@ public class UsersController : ControllerBase
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(int id, [FromBody] UpdateUserRequest request, CancellationToken ct)
     {
-        try
-        {
-            return Ok(await _userService.UpdateUserAsync(id, request, ct));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(await _userService.UpdateUserAsync(id, request, ct));
     }
 
     // PATCH: /api/users/{id}/active?active=false  (Batch A) — khoá/mở tài khoản.
@@ -98,14 +83,7 @@ public class UsersController : ControllerBase
             return BadRequest(new { message = "active is required" });
         }
 
-        try
-        {
-            return Ok(await _userService.SetActiveAsync(id, active.Value, _currentUser.UserId, ct));
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        return Ok(await _userService.SetActiveAsync(id, active.Value, _currentUser.UserId, ct));
     }
 
     // POST: /api/users/{id}/reset-password  (Batch A) — Admin đặt lại mật khẩu hộ nhân viên.
@@ -139,39 +117,31 @@ public class UsersController : ControllerBase
             });
         }
 
-        try
+        var created = await _authService.CreateUserWithRoleAsync(
+            new UserDto
+            {
+                UserName = request.UserName,
+                Email = request.Email,
+                Password = request.Password,
+                ConfirmPassword = request.ConfirmPassword,
+                FullName = request.FullName,
+                Phone = request.Phone
+            },
+            request.RoleName,
+            ct);
+
+        if (!created)
         {
-            var created = await _authService.CreateUserWithRoleAsync(
-                new UserDto
-                {
-                    UserName = request.UserName,
-                    Email = request.Email,
-                    Password = request.Password,
-                    ConfirmPassword = request.ConfirmPassword,
-                    FullName = request.FullName,
-                    Phone = request.Phone
-                },
-                request.RoleName,
-                ct);
-
-            if (!created)
+            return BadRequest(new
             {
-                return BadRequest(new
-                {
-                    message = "Create employee failed"
-                });
-            }
-
-            return Ok(new
-            {
-                message = "Employee created successfully"
+                message = "Create employee failed"
             });
         }
-        catch (DbUpdateException)
+
+        return Ok(new
         {
-            // Race tạo trùng username/email: unique index của DB là chốt chặn cuối.
-            return Conflict(new { message = "Username or email already exists" });
-        }
+            message = "Employee created successfully"
+        });
     }
 
     // POST: /api/users/{userId}/roles
@@ -207,15 +177,8 @@ public class UsersController : ControllerBase
         string roleName,
         CancellationToken ct)
     {
-        try
-        {
-            await _authService.RemoveRoleFromUserAsync(userId, roleName, ct);
-            return Ok(new { message = "Role removed successfully" });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+        await _authService.RemoveRoleFromUserAsync(userId, roleName, ct);
+        return Ok(new { message = "Role removed successfully" });
     }
 
     /// <summary>

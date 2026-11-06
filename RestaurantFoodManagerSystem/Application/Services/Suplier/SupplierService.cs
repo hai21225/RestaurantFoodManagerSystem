@@ -8,16 +8,19 @@ public sealed class SupplierService
     public SupplierService(AppDbContext db) => _db = db;
 
     public Task<List<Supplier>> GetAllAsync(CancellationToken ct) =>
-        _db.Suppliers.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
+        _db.Suppliers.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync(ct);
 
     public Task<Supplier?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Suppliers.AsNoTracking().FirstOrDefaultAsync(x => x.SupplierId == id, ct);
 
     public async Task<Supplier> CreateAsync(SupplierRequest r, CancellationToken ct)
     {
+        var name = r.Name.Trim();
+        await EnsureNameAvailableAsync(name, excludeId: null, ct);
+
         var x = new Supplier
         {
-            Name = r.Name.Trim(),
+            Name = name,
             Phone = r.Phone.Trim(),
             Email = r.Email.Trim(),
             Address = r.Address.Trim(),
@@ -33,12 +36,27 @@ public sealed class SupplierService
         var x = await _db.Suppliers.FindAsync([id], ct);
         if (x is null) return false;
 
-        x.Name = r.Name.Trim();
+        var name = r.Name.Trim();
+        await EnsureNameAvailableAsync(name, excludeId: id, ct);
+
+        x.Name = name;
         x.Phone = r.Phone.Trim();
         x.Email = r.Email.Trim();
         x.Address = r.Address.Trim();
         await _db.SaveChangesAsync(ct);
         return true;
+    }
+
+    private async Task EnsureNameAvailableAsync(string name, int? excludeId, CancellationToken ct)
+    {
+        var normalized = name.ToLowerInvariant();
+        if (await _db.Suppliers.AnyAsync(
+                x => x.IsActive
+                  && (excludeId == null || x.SupplierId != excludeId.Value)
+                  && x.Name.ToLower() == normalized, ct))
+        {
+            throw new InvalidOperationException($"Supplier '{name}' already exists");
+        }
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct)

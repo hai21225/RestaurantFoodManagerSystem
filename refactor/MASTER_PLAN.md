@@ -14,8 +14,8 @@
 | :--- | :--- | :--- | :--- | :--- |
 | **Baseline** | Mốc sau đợt refactor 1 | Mốc an toàn | `[x] Done` | `7bc197d` |
 | **Phase 1** | Tạo file Seed dữ liệu cơ bản & áp trực tiếp lên DB | **Must Do First** | `[x] Done` | `b12382b` |
-| **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | **Must Fix** | `[x] Done` | `pending` |
-| **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | **Should Fix** | `[ ] Todo` | - |
+| **Phase 2** | Sửa 4 lỗi nghiệp vụ cốt lõi (MoMo, Nhập kho, Hoàn tiền, Menu POS) | **Must Fix** | `[x] Done` | `218300b` |
+| **Phase 3** | Chuẩn hóa Exception Controller & ràng buộc xóa mềm `IsActive` | **Should Fix** | `[x] Done` | `pending` |
 | **Phase 4** | Gom code trùng lặp & thu gọn `OrderService` / `OrderCancellation` | **Should Fix / Clean** | `[ ] Todo` | - |
 
 ---
@@ -62,11 +62,11 @@
 ### Phase 3: Chuẩn Hóa Exception Controller & Ràng Buộc Soft-Delete (`IsActive`)
 **Mục đích:** Trả đúng mã HTTP 409 khi xung đột dữ liệu và ngăn gắn dữ liệu mới vào danh mục/nhà cung cấp đã xóa mềm.
 
-- [ ] **3.1. Xóa `try/catch` sai chuẩn còn sót tại Controller**
-  - **File:** `Api/Controllers/User/UsersController.cs`, `Api/Controllers/Auth/AuthController.cs`, `Api/Controllers/Table/RestaurantTablesController.cs`
+- [x] **3.1. Xóa `try/catch` sai chuẩn còn sót tại Controller**
+  - **File:** `Api/Controllers/Users/UsersController.cs`, `Api/Controllers/Users/AuthController.cs`, `Api/Controllers/RestaurantTables/RestaurantTablesController.cs`
   - **Việc cần làm:** Xóa các khối `catch (InvalidOperationException)` trả nhầm `400 BadRequest` và `catch (DbUpdateException)` bắt lỗi diện rộng; để `ApiExceptionFilter` xử lý đồng nhất.
-- [ ] **3.2. Bổ sung kiểm tra `IsActive` & chống trùng tên**
-  - **File:** `Application/Services/Inventory/SupplierService.cs`, `Application/Services/Food/FoodService.cs`, `Application/Services/Promotion/PromotionService.cs`
+- [x] **3.2. Bổ sung kiểm tra `IsActive` & chống trùng tên**
+  - **File:** `Application/Services/Suplier/SupplierService.cs`, `Application/Services/Food/FoodService.cs`, `Application/Services/Promotion/PromotionService.cs`
   - **Việc cần làm:**
     - `SupplierService`: lọc `IsActive` ở `GetAllAsync`; kiểm tra trùng tên active ở `CreateAsync`/`UpdateAsync`.
     - `FoodService`: kiểm tra `category.IsActive` khi thêm/sửa món; chặn bật `IsAvailable = true` khi `!food.IsActive`.
