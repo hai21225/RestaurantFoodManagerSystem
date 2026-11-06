@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class UserRoleService
@@ -11,19 +11,23 @@ public class UserRoleService
     }
 
     /// <summary>Tên các role gán cho một user (dùng để nạp claim khi đăng nhập — GĐ6).</summary>
-    public async Task<List<string>> GetRoleNamesByUserIdAsync(int userId, CancellationToken ct = default)
-    {
-        return await _db.UserRoles
+    public Task<List<string>> GetRoleNamesByUserIdAsync(int userId, CancellationToken ct = default) =>
+        QueryRoleNamesByUserIdAsync(_db, userId, ct);
+
+    public static Task<List<string>> QueryRoleNamesByUserIdAsync(
+        AppDbContext db,
+        int userId,
+        CancellationToken ct = default) =>
+        db.UserRoles
             .AsNoTracking()
             .Where(ur => ur.UserId == userId)
             .Join(
-                _db.Roles.AsNoTracking(),
+                db.Roles.AsNoTracking(),
                 ur => ur.RoleId,
                 r => r.RoleId,
                 (ur, r) => r.RoleName)
             .OrderBy(name => name)
             .ToListAsync(ct);
-    }
 
     public async Task<bool> AddUserRoleAsync(UserRoleDto userRoleDto, CancellationToken ct = default)
     {

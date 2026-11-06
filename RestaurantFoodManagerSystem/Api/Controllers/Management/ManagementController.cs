@@ -9,8 +9,11 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("ingredients")]
-    public async Task<List<IngredientResponse>> Ingredients([FromServices] IngredientService s, CancellationToken ct) =>
-        (await s.GetAllAsync(ct)).Select(IngredientResponse.From).ToList();
+    public async Task<List<IngredientResponse>> Ingredients(
+        [FromQuery] bool includeInactive,
+        [FromServices] IngredientService s,
+        CancellationToken ct) =>
+        (await s.GetAllAsync(includeInactive, ct)).Select(IngredientResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("ingredients/{id:int}")]
@@ -51,8 +54,11 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("suppliers")]
-    public async Task<List<SupplierResponse>> Suppliers([FromServices] SupplierService s, CancellationToken ct) =>
-        (await s.GetAllAsync(ct)).Select(SupplierResponse.From).ToList();
+    public async Task<List<SupplierResponse>> Suppliers(
+        [FromQuery] bool includeInactive,
+        [FromServices] SupplierService s,
+        CancellationToken ct) =>
+        (await s.GetAllAsync(includeInactive, ct)).Select(SupplierResponse.From).ToList();
 
     [Authorize(Policy = AuthPolicies.WarehouseDesk)]
     [HttpGet("suppliers/{id:int}")]
@@ -154,9 +160,12 @@ public sealed class ManagementController : ControllerBase
 
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpGet("promotions")]
-    public async Task<List<PromotionResponse>> Promotions([FromServices] PromotionService s, CancellationToken ct)
+    public async Task<List<PromotionResponse>> Promotions(
+        [FromQuery] bool includeInactive,
+        [FromServices] PromotionService s,
+        CancellationToken ct)
     {
-        var promotions = await s.GetAllAsync(ct);
+        var promotions = await s.GetAllAsync(includeInactive, ct);
 
         // C-18: target của khuyến mãi (món/danh mục được áp giảm). Đọc 1 lần cho cả danh sách.
         var targets = await s.GetTargetsAsync(

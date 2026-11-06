@@ -8,8 +8,14 @@ public sealed class IngredientService
 
     public IngredientService(AppDbContext db) => _db = db;
 
-    public Task<List<Ingredient>> GetAllAsync(CancellationToken ct) =>
-        _db.Ingredients.AsNoTracking().OrderBy(x => x.Name).ToListAsync(ct);
+    public Task<List<Ingredient>> GetAllAsync(CancellationToken ct = default) =>
+        GetAllAsync(includeInactive: false, ct);
+
+    public Task<List<Ingredient>> GetAllAsync(bool includeInactive, CancellationToken ct = default) =>
+        _db.Ingredients.AsNoTracking()
+            .Where(x => includeInactive || x.IsActive)
+            .OrderBy(x => x.Name)
+            .ToListAsync(ct);
 
     public Task<Ingredient?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Ingredients.AsNoTracking().FirstOrDefaultAsync(x => x.IngredientId == id, ct);

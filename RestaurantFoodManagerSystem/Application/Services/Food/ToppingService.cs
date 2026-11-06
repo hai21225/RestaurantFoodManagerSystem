@@ -134,6 +134,11 @@ public class ToppingService
             return false;
         }
 
+        if (isAvailable && !topping.IsActive)
+        {
+            throw new InvalidOperationException("Cannot make an inactive topping available");
+        }
+
         topping.IsAvailable = isAvailable;
 
         return await _db.SaveChangesAsync(ct) > 0;

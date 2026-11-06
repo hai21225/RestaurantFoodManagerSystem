@@ -133,21 +133,13 @@ public class AuthService
         CancellationToken ct = default)
     {
         var currentPassword = request.CurrentPassword ?? string.Empty;
-        var newPassword = request.NewPassword ?? string.Empty;
-        var confirmPassword = request.ConfirmNewPassword ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(currentPassword))
         {
             throw new ArgumentException("Current password is required");
         }
 
-        // BCrypt chỉ dùng tối đa 72 byte đầu; chặn sớm để không âm thầm cắt mật khẩu.
-        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
-
-        if (newPassword != confirmPassword)
-        {
-            throw new ArgumentException("New password and confirm password do not match");
-        }
+        var newPassword = ValidateConfirmedNewPassword(request.NewPassword, request.ConfirmNewPassword);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new KeyNotFoundException("User not found");
@@ -180,15 +172,7 @@ public class AuthService
         ResetUserPasswordRequest request,
         CancellationToken ct = default)
     {
-        var newPassword = request.NewPassword ?? string.Empty;
-        var confirmPassword = request.ConfirmPassword ?? string.Empty;
-
-        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
-
-        if (newPassword != confirmPassword)
-        {
-            throw new ArgumentException("New password and confirm password do not match");
-        }
+        var newPassword = ValidateConfirmedNewPassword(request.NewPassword, request.ConfirmPassword);
 
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new KeyNotFoundException("User not found");
@@ -197,6 +181,22 @@ public class AuthService
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+    }
+
+    private static string ValidateConfirmedNewPassword(string? rawNewPassword, string? rawConfirmPassword)
+    {
+        var newPassword = rawNewPassword ?? string.Empty;
+        var confirmPassword = rawConfirmPassword ?? string.Empty;
+
+        // BCrypt chỉ dùng tối đa 72 byte đầu; chặn sớm để không âm thầm cắt mật khẩu.
+        ValidatePassword(newPassword, "New password must be between 6 and 72 bytes (UTF-8)");
+
+        if (newPassword != confirmPassword)
+        {
+            throw new ArgumentException("New password and confirm password do not match");
+        }
+
+        return newPassword;
     }
 
     /// <summary>

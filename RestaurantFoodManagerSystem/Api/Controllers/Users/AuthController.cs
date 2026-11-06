@@ -77,14 +77,6 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request,CancellationToken ct = default)
     {
-        if (request.Password != request.ConfirmPassword)
-        {
-            return BadRequest(new
-            {
-                message = "Password and confirm password do not match"
-            });
-        }
-
         var userDto = new UserDto
         {
             UserName = request.UserName,

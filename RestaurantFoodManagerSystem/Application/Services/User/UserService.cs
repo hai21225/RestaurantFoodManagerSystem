@@ -116,16 +116,7 @@ public class UserService
             return null;
         }
 
-        var roles = await _db.UserRoles
-            .AsNoTracking()
-            .Where(ur => ur.UserId == userId)
-            .Join(
-                _db.Roles.AsNoTracking(),
-                ur => ur.RoleId,
-                r => r.RoleId,
-                (ur, r) => r.RoleName)
-            .OrderBy(name => name)
-            .ToListAsync(ct);
+        var roles = await UserRoleService.QueryRoleNamesByUserIdAsync(_db, userId, ct);
 
         return new UserProfileResponse
         {

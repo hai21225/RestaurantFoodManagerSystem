@@ -7,8 +7,14 @@ public sealed class PromotionService
 
     public PromotionService(AppDbContext db) => _db = db;
 
-    public Task<List<Promotion>> GetAllAsync(CancellationToken ct) =>
-        _db.Promotions.AsNoTracking().OrderByDescending(x => x.StartAt).ToListAsync(ct);
+    public Task<List<Promotion>> GetAllAsync(CancellationToken ct = default) =>
+        GetAllAsync(includeInactive: false, ct);
+
+    public Task<List<Promotion>> GetAllAsync(bool includeInactive, CancellationToken ct = default) =>
+        _db.Promotions.AsNoTracking()
+            .Where(x => includeInactive || x.IsActive)
+            .OrderByDescending(x => x.StartAt)
+            .ToListAsync(ct);
 
     public Task<Promotion?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Promotions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);

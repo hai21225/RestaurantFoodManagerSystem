@@ -109,14 +109,6 @@ public class UsersController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] CreateUserRequest request,CancellationToken ct)
     {
-        if (request.Password != request.ConfirmPassword)
-        {
-            return BadRequest(new
-            {
-                message = "Password and confirm password do not match"
-            });
-        }
-
         var created = await _authService.CreateUserWithRoleAsync(
             new UserDto
             {

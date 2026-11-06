@@ -7,8 +7,14 @@ public sealed class SupplierService
 
     public SupplierService(AppDbContext db) => _db = db;
 
-    public Task<List<Supplier>> GetAllAsync(CancellationToken ct) =>
-        _db.Suppliers.AsNoTracking().Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync(ct);
+    public Task<List<Supplier>> GetAllAsync(CancellationToken ct = default) =>
+        GetAllAsync(includeInactive: false, ct);
+
+    public Task<List<Supplier>> GetAllAsync(bool includeInactive, CancellationToken ct = default) =>
+        _db.Suppliers.AsNoTracking()
+            .Where(x => includeInactive || x.IsActive)
+            .OrderBy(x => x.Name)
+            .ToListAsync(ct);
 
     public Task<Supplier?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Suppliers.AsNoTracking().FirstOrDefaultAsync(x => x.SupplierId == id, ct);
