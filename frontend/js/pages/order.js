@@ -7,20 +7,43 @@
     const api = window.restaurantApi;
     const auth = window.restaurantAuth;
     const pos = window.restaurantPos;
-    let savedTable = null;
-    try { savedTable = JSON.parse(window.localStorage.getItem("restaurant.selectedTable")); } catch (_) { /* Lấy lại bàn từ API. */ }
-    const tableId = new URLSearchParams(window.location.search).get("tableId") || savedTable?.id;
+    // Chỉ mở bàn được chọn rõ trên URL; mục Đặt món luôn trở về khung chọn bàn.
+    const tableId = new URLSearchParams(window.location.search).get("tableId");
     const session = new pos.OrderSession({ tableId, api, auth, storage: window.sessionStorage });
     const dialog = $("#orderMutationDialog");
     const dishDialog = $("#sizeDialog");
     let sentVersion = "";
+    let entryError = "";
     const closed = () => session.order && pos.terminal(session.order.status);
+    const hasValidTableId = () => Number.isInteger(session.tableId) && session.tableId > 0 && session.tableId <= 2147483647;
+    const hasTableContext = () => session.isOperator() && session.table?.isActive && session.table.status !== "Maintenance" && (session.loaded || session.loading);
     const locked = () => !session.loaded || session.loading || session.busy || Boolean(session.pending) || session.hasExtraPending() || !session.isOperator() || closed() || !session.table?.isActive || session.table.status === "Maintenance" || (!session.order && session.table.status !== "Available");
     const findFood = (sizeId) => state.foods.find((food) => food.sizes.some((size) => size.sizeId === sizeId));
 
     function message(text, error = false) {
         $("#orderMessage").textContent = text;
         $(".pos-message").classList.toggle("is-error", error);
+    }
+
+    function renderEntryState() {
+        const ready = Boolean(hasTableContext());
+        const opening = !ready && hasValidTableId() && (session.loading || (!session.loaded && !entryError));
+        const maintenance = session.loaded && session.table?.status === "Maintenance";
+        $("#orderEntryCard").hidden = ready;
+        $("#orderContextBar").hidden = !ready;
+        $("#orderLayout").hidden = !ready;
+        $("#cartDock").hidden = !ready;
+        $("#activeOrderPanel").hidden = !ready || !session.order;
+        $(".order-screen").classList.toggle("is-awaiting-table", !ready);
+        $("#orderEntryTitle").textContent = opening ? "Đang mở bàn…" : maintenance ? "Bàn đang bảo trì" : entryError ? "Chưa mở được bàn" : "Chọn bàn để bắt đầu";
+        $("#orderEntryDescription").textContent = opening ? "Đang tải thông tin bàn và đơn hiện tại."
+            : maintenance ? "Bàn này tạm ngừng phục vụ. Chọn một bàn khác để đặt món."
+            : entryError || "Chọn bàn đang phục vụ hoặc bàn trống. Thực đơn và đơn tạm sẽ xuất hiện sau khi mở bàn.";
+        $("#orderEntryChooseTable").textContent = hasValidTableId() ? "Chọn bàn khác" : "Chọn bàn";
+        $("#orderEntryRetry").hidden = !hasValidTableId() || opening;
+        $("#orderEntryRetry").disabled = session.busy || session.loading;
+        $(".pos-message").hidden = (!ready && !session.pending) || (!$("#orderMessage").textContent && !session.pending);
+        if (!ready) $(".cart-panel").classList.remove("is-open");
     }
 
     function renderButtons() {
@@ -56,6 +79,7 @@
         }
         $("#mutationConfirm").textContent = session.busy ? "Đang xử lý…" : "Xác nhận";
         if (session.pending && !session.busy) message("Yêu cầu trước chưa được xác nhận đầy đủ. Hãy thử xác nhận lại; không gửi một yêu cầu mới.", true);
+        renderEntryState();
     }
 
     function renderTable() {
@@ -119,6 +143,7 @@
     }
 
     async function loadMenu() {
+        if (!hasTableContext()) return;
         $("#foodGrid").innerHTML = '<div class="empty-state"><strong>Đang tải thực đơn…</strong></div>';
         try {
             const menu = await api.get("/menu");
@@ -149,6 +174,8 @@
 
     async function refresh(quiet = false) {
         if (session.busy || session.loading) return;
+        if (!hasValidTableId()) { render(); return; }
+        entryError = "";
         const task = session.refresh();
         renderButtons();
         try {
@@ -157,6 +184,7 @@
             if (!quiet) message(session.order ? "Đã tải trạng thái mới nhất từ máy chủ." : "Bàn chưa có đơn đang mở.");
             render();
         } catch (error) {
+            entryError = error.message;
             message(error.message, true);
             render();
         }
@@ -297,6 +325,7 @@
     [$("#sendKitchenButton"), $("#cartSendButton")].forEach((button) => button.addEventListener("click", send));
     $("#retryOrderButton").addEventListener("click", () => runMutation(() => session.resume()));
     $("#refreshOrderButton").addEventListener("click", async () => { await refresh(); await loadMenu(); });
+    $("#orderEntryRetry").addEventListener("click", async () => { await refresh(); await loadMenu(); });
     $("#chooseTableButton").addEventListener("click", () => { window.location.href = "tables.html"; });
     $("#cartDock").addEventListener("click", () => { $(".cart-panel").classList.add("is-open"); $("#closeCartButton").focus(); });
     $("#closeCartButton").addEventListener("click", () => { $(".cart-panel").classList.remove("is-open"); $("#cartDock").focus(); });

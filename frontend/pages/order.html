@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
-    <link rel="stylesheet" href="../css/pages/order.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/order.css?v=20261110-pos-entry">
 </head>
 <body>
     <div class="app-shell">
@@ -49,22 +49,38 @@
             </header>
 
             <main class="content">
-                <section class="order-screen" aria-labelledby="order-title">
-                    <div class="section-heading">
+                <section class="order-screen is-awaiting-table" aria-label="Đặt món tại bàn">
+                    <section class="panel order-entry-panel" id="orderEntryCard" aria-labelledby="orderEntryTitle">
+                        <div class="order-entry-icon" aria-hidden="true">
+                            <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5">
+                                <rect x="10" y="15" width="28" height="18" rx="4"></rect>
+                                <path d="M17 10v5m14-5v5M17 33v5m14-5v5M5 20h5m-5 8h5m28-8h5m-5 8h5"></path>
+                            </svg>
+                        </div>
+                        <p class="eyebrow">Phục vụ tại bàn</p>
+                        <h2 id="orderEntryTitle">Chọn bàn để bắt đầu</h2>
+                        <p id="orderEntryDescription">Chọn bàn đang phục vụ hoặc bàn trống. Thực đơn và đơn tạm sẽ xuất hiện sau khi mở bàn.</p>
+                        <div class="order-entry-actions">
+                            <a class="primary-action" href="tables.html" id="orderEntryChooseTable">Chọn bàn</a>
+                            <button class="secondary-action" type="button" id="orderEntryRetry" hidden>Thử lại</button>
+                        </div>
+                    </section>
+
+                    <div class="section-heading" id="orderContextBar" hidden>
                         <div>
                             <p class="eyebrow">Bàn đang chọn</p>
                             <h2 id="order-title">Chưa chọn bàn</h2>
                             <p class="order-context" id="orderContext">Hãy chọn bàn trước khi đặt món.</p>
                         </div>
                         <div class="order-actions">
-                            <button class="secondary-action" type="button" id="chooseTableButton">Chọn bàn</button>
+                            <button class="secondary-action" type="button" id="chooseTableButton">Chọn bàn khác</button>
                             <button class="secondary-action" type="button" id="refreshOrderButton">Làm mới đơn</button>
                             <button class="secondary-action" type="button" id="clearOrderButton">Xóa đơn tạm</button>
                             <button class="primary-action" type="button" id="sendKitchenButton">Gửi bếp</button>
                         </div>
                     </div>
 
-                    <div class="pos-message" role="status" aria-live="polite">
+                    <div class="pos-message" role="status" aria-live="polite" hidden>
                         <p id="orderMessage"></p>
                         <button class="secondary-action" type="button" id="retryOrderButton" hidden>Thử xác nhận lại yêu cầu</button>
                         <a id="pendingTableLink" hidden>Quay lại bàn có yêu cầu chưa xác nhận</a>
@@ -90,7 +106,7 @@
                         </dl>
                     </section>
 
-                    <div class="order-layout">
+                    <div class="order-layout" id="orderLayout" hidden>
                         <aside class="panel category-panel" aria-labelledby="category-title">
                             <div class="panel-header">
                                 <h3 id="category-title">Danh mục</h3>
@@ -135,7 +151,7 @@
                         </aside>
                     </div>
 
-                    <button class="cart-dock" type="button" id="cartDock">
+                    <button class="cart-dock" type="button" id="cartDock" hidden>
                         <span>
                             <strong id="cartDockCount">0 món</strong>
                             <small>Đơn tạm</small>
@@ -198,6 +214,6 @@
     <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/common/order-session.js?v=20261101-f67"></script>
-    <script src="../js/pages/order.js?v=20261101-f67"></script>
+    <script src="../js/pages/order.js?v=20261110-pos-entry2"></script>
 </body>
 </html>
