@@ -2,27 +2,27 @@
 
 .tables-summary {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
     min-width: 0;
     margin-bottom: 18px;
+    padding: 16px 0;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface);
 }
 
 .table-summary-card {
     display: grid;
     gap: 8px;
     min-width: 0;
-    min-height: 102px;
-    padding: 16px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
+    padding: 0 20px;
 }
+.table-summary-card + .table-summary-card { border-left: 1px solid var(--line); }
 
 .table-summary-card span {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
 }
 
 .table-summary-card strong {
@@ -44,34 +44,22 @@
 
 .filter-group > span {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 700;
 }
 
-.segmented-control {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    min-width: 0;
+.filter-group select {
+    width: 100%; min-width: 0; min-height: 46px; padding: 10px 32px 10px 12px;
+    border: 1px solid var(--line); border-radius: 8px;
+    color: var(--text); background: var(--surface); font: inherit; font-size: 16px;
 }
-
-.segment-button {
-    min-height: 36px;
-    max-width: 100%;
-    padding: 0 12px;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    color: var(--text);
-    background: var(--surface);
-}
-
-.segment-button:hover,
-.segment-button:focus-visible,
-.segment-button.is-active {
-    border-color: var(--primary);
-    color: var(--primary);
-    outline: none;
-}
+.filter-group select:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.table-board-title { display: grid; gap: 4px; }
+.table-board-title h2 { font-size: 18px; }
+.table-board-title > span { color: var(--muted); font-size: 14px; }
+.table-board > .panel-header { flex-wrap: wrap; gap: 12px; align-items: center; }
+.table-board .heading-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#tableListNotice:empty { display: none; }
 
 .tables-layout {
     display: grid;
@@ -116,6 +104,7 @@
     border: 1px solid var(--line);
     border-radius: 8px;
     background: var(--surface-strong);
+    color: var(--text);
     text-align: left;
 }
 
@@ -156,23 +145,21 @@
     background: #ecfdf5;
 }
 
-.table-card-header,
-.table-card-footer {
+.table-card-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
     min-width: 0;
 }
 
 .table-card-header strong {
     font-size: 18px;
+    overflow-wrap: anywhere;
 }
 
 .table-area,
-.table-seats,
-.table-time,
-.table-order-code {
+.table-seats {
     color: var(--muted);
     font-size: 13px;
 }
@@ -258,8 +245,7 @@
 }
 
 @media (max-width: 1180px) {
-    .restaurant-map,
-    .tables-summary {
+    .restaurant-map {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -269,121 +255,72 @@
 }
 
 @media (max-width: 760px) {
-    .tables-screen .section-heading {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr);
-        align-items: end;
-        gap: 10px;
-        margin-bottom: 10px;
-    }
-
-    .tables-screen .section-heading h2 {
-        font-size: 20px;
-    }
-
-    .tables-screen .section-heading .primary-action {
-        min-height: 38px;
-        padding: 0 12px;
-        white-space: nowrap;
-    }
-
-    .tables-screen .heading-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        width: 100%;
-        overflow: visible;
-    }
-
-    .tables-screen .heading-actions button {
-        width: 100%;
-        min-height: 38px;
-        padding: 0 10px;
-        white-space: nowrap;
-    }
-
-    .tables-toolbar,
-    .detail-grid {
-        grid-template-columns: 1fr;
-    }
-
     .tables-summary {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
-        gap: 6px;
-        margin-bottom: 8px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-bottom: 14px;
+        padding: 14px 0;
     }
 
     .table-summary-card {
-        min-height: 54px;
-        padding: 8px;
-        box-shadow: none;
+        gap: 6px;
+        padding: 0 14px;
     }
 
     .table-summary-card span {
-        font-size: 11px;
+        font-size: 14px;
     }
 
     .table-summary-card strong {
-        font-size: 18px;
+        font-size: 24px;
     }
 
     .tables-toolbar {
         display: grid;
-        gap: 8px;
-        margin-bottom: 8px;
-        padding: 8px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        margin-bottom: 14px;
+        padding: 14px;
     }
 
     .filter-group {
-        gap: 4px;
-    }
-
-    .filter-group > span {
-        font-size: 11px;
-    }
-
-    .segmented-control {
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        padding-bottom: 0;
-        scrollbar-width: none;
-    }
-
-    .segment-button {
-        flex: 0 0 auto;
-        min-height: 44px;
-        padding: 0 10px;
-        border-radius: 6px;
-        font-size: 13px;
-        white-space: nowrap;
-    }
-
-    .tables-layout {
         gap: 8px;
     }
 
+    .filter-group > span {
+        font-size: 14px;
+    }
+
+    .tables-layout {
+        gap: 14px;
+    }
+
     .table-board {
-        padding: 10px;
+        padding: 14px;
     }
 
     .table-board .panel-header {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: center;
-        margin-bottom: 10px;
+        gap: 12px;
+        margin-bottom: 14px;
     }
+    .table-board .heading-actions { width: auto; justify-content: flex-end; }
+    .table-board .heading-actions:has(#manageTablesButton:not([hidden])) { grid-column: 1 / -1; justify-content: flex-start; }
+    .table-board .heading-actions button { width: auto; min-height: 44px; padding: 8px 12px; font-size: 14px; }
 
     .restaurant-map {
         display: grid;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 6px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
     }
 
     .restaurant-table-card {
-        align-content: space-between;
-        gap: 4px;
-        min-height: 108px;
-        padding: 7px;
-        border-radius: 4px;
+        align-content: start;
+        gap: 10px;
+        min-height: 126px;
+        padding: 14px;
+        border-radius: 10px;
     }
 
     .restaurant-table-card.is-selected {
@@ -391,33 +328,32 @@
         outline-offset: -2px;
     }
 
-    .table-card-header,
-    .table-card-footer {
+    .table-card-header {
         align-items: flex-start;
         flex-direction: column;
-        gap: 3px;
+        gap: 10px;
     }
 
     .table-card-header strong {
-        font-size: 14px;
+        font-size: 18px;
+        overflow-wrap: anywhere;
     }
 
     .restaurant-table-card .status {
         align-self: start;
-        padding: 2px 5px;
-        border-radius: 4px;
-        font-size: 10px;
+        padding: 4px 7px;
+        border-radius: 5px;
+        font-size: 13px;
+        white-space: normal;
     }
 
     .table-area {
         display: none;
     }
 
-    .table-seats,
-    .table-time,
-    .table-order-code {
-        font-size: 11px;
-        line-height: 1.25;
+    .table-seats {
+        font-size: 14px;
+        line-height: 1.4;
     }
 
     .table-detail {
@@ -498,7 +434,5 @@
 }
 
 @media (max-width: 360px) {
-    .restaurant-map {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
+    .tables-toolbar { grid-template-columns: 1fr; }
 }

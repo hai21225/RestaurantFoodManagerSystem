@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
-    <link rel="stylesheet" href="../css/pages/tables.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/tables.css?v=20261110-tables-clean">
 </head>
 <body>
     <div class="app-shell">
@@ -50,37 +50,29 @@
 
             <main class="content">
                 <section class="tables-screen" aria-labelledby="tables-title">
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Sơ đồ bàn</p>
-                            <h2 id="tables-title">Bàn đang phục vụ</h2>
-                        </div>
-                        <div class="heading-actions">
-                            <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
-                            <button class="secondary-action" type="button" id="manageTablesButton" hidden>Sửa bàn / Khu vực</button>
-                            <button class="primary-action" type="button" id="addTableButton" hidden>Thêm bàn</button>
-                        </div>
-                    </div>
-
                     <div class="tables-summary" id="tablesSummary" aria-label="Thống kê trạng thái bàn"></div>
 
                     <section class="panel tables-toolbar" aria-label="Bộ lọc bàn">
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Khu vực</span>
-                            <div class="segmented-control" id="areaFilters"></div>
-                        </div>
+                            <select id="areaFilters"></select>
+                        </label>
 
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Trạng thái</span>
-                            <div class="segmented-control" id="statusFilters"></div>
-                        </div>
+                            <select id="statusFilters"></select>
+                        </label>
                     </section>
 
                     <div class="tables-layout">
-                        <section class="panel table-board" aria-labelledby="table-board-title">
+                        <section class="panel table-board" aria-labelledby="tables-title">
                             <div class="panel-header">
-                                <h3 id="table-board-title">Danh sách bàn</h3>
-                                <span id="visibleTableCount">0 bàn</span>
+                                <div class="table-board-title"><h2 id="tables-title">Danh sách bàn</h2><span id="visibleTableCount">0 bàn</span></div>
+                                <div class="heading-actions">
+                                    <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                                    <button class="secondary-action" type="button" id="manageTablesButton" hidden>Sửa bàn / Khu vực</button>
+                                    <button class="primary-action" type="button" id="addTableButton" hidden>Thêm bàn</button>
+                                </div>
                             </div>
                             <p id="tableListNotice" class="ui-message" role="status"></p>
                             <div class="restaurant-map" id="restaurantMap"></div>
@@ -156,7 +148,7 @@
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
     <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
     <script src="../js/common/dialogs.js"></script>
-    <script src="../js/data/tables.data.js?v=20261101-delete-visibility"></script>
-    <script src="../js/pages/tables.js?v=20261109-role-review"></script>
+    <script src="../js/data/tables.data.js?v=20261110-tables-clean"></script>
+    <script src="../js/pages/tables.js?v=20261110-tables-clean"></script>
 </body>
 </html>

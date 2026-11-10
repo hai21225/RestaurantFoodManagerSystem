@@ -39,7 +39,7 @@
     function normalizeStatus(status, isActive) {
         if (!isActive) return { value: "deleted", label: "Đã xóa" };
         const value = String(status || "").toLowerCase();
-        if (value === "occupied") return { value: "serving", label: "Đang sử dụng" };
+        if (value === "occupied") return { value: "serving", label: "Có khách" };
         if (value === "maintenance") return { value: "inactive", label: "Bảo trì" };
         return { value: "empty", label: "Trống" };
     }
@@ -101,7 +101,6 @@
                     area: table.areaId ? String(table.areaId) : "unassigned",
                     areaLabel: table.areaName || "Chưa phân khu",
                     seats: table.capacity,
-                    updatedAt: "",
                     isActive: table.isActive,
                     status: status.value,
                     statusLabel: status.label
@@ -143,9 +142,8 @@
 
     function renderSummary() {
         const summary = [
-            { label: "Bàn đang dùng", value: tablesData.tables.filter((table) => table.isActive).length },
-            { label: "Bàn trống", value: tablesData.tables.filter((table) => table.status === "empty").length },
-            { label: "Đang sử dụng", value: tablesData.tables.filter((table) => table.status === "serving").length },
+            { label: "Trống", value: tablesData.tables.filter((table) => table.status === "empty").length },
+            { label: "Có khách", value: tablesData.tables.filter((table) => table.status === "serving").length },
             { label: "Bảo trì", value: tablesData.tables.filter((table) => table.status === "inactive").length }
         ];
 
@@ -157,34 +155,20 @@
         `).join("");
     }
 
-    function renderFilterButtons(container, items, activeValue, onClick) {
+    function renderFilterOptions(container, items, activeValue) {
+        const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
         container.innerHTML = items.map((item) => `
-            <button
-                class="segment-button${item.value === activeValue ? " is-active" : ""}"
-                type="button"
-                data-value="${item.value}"
-            >
-                ${item.label}
-            </button>
+            <option value="${escape(item.value)}">${escape(item.label)}</option>
         `).join("");
-
-        container.querySelectorAll(".segment-button").forEach((button) => {
-            button.addEventListener("click", () => onClick(button.dataset.value));
-        });
+        container.value = activeValue;
     }
 
     function renderFilters() {
-        renderFilterButtons(areaFilters, tablesData.areas, state.area, (value) => {
-            state.area = value;
-            render();
-        });
+        renderFilterOptions(areaFilters, tablesData.areas, state.area);
 
         const statuses = canManageTables() ? tablesData.statuses
             : tablesData.statuses.filter((item) => !["all", "deleted"].includes(item.value));
-        renderFilterButtons(statusFilters, statuses, state.status, (value) => {
-            state.status = value;
-            render();
-        });
+        renderFilterOptions(statusFilters, statuses, state.status);
     }
 
     function renderTableCards() {
@@ -196,8 +180,8 @@
         if (!filteredTables.length) {
             restaurantMap.innerHTML = `
                 <div class="empty-state">
-                    <strong>Chưa có dữ liệu bàn</strong>
-                    <span>Dữ liệu bàn sẽ hiển thị tại đây sau khi kết nối nguồn dữ liệu thật.</span>
+                    <strong>Không có bàn phù hợp</strong>
+                    <span>Thử chọn khu vực hoặc trạng thái khác.</span>
                 </div>
             `;
             return;
@@ -215,10 +199,6 @@
                 </div>
                 <span class="table-area">${table.areaLabel}</span>
                 <span class="table-seats">${table.seats} chỗ</span>
-                <div class="table-card-footer">
-                    <span class="table-order-code">${table.status === "serving" ? "Mở đơn để xem món" : table.status === "empty" ? "Sẵn sàng đón khách" : "Tạm ngừng phục vụ"}</span>
-                    <span class="table-time">${table.updatedAt}</span>
-                </div>
             </button>
         `).join("");
 
@@ -287,7 +267,6 @@
                         <strong>${table.statusLabel}</strong>
                     </div>
                 </div>
-                ${table.status === "serving" ? '<p class="table-action-hint">Mở đơn để xem món đã gọi và tổng tiền từ máy chủ.</p>' : ""}
 
                 <div class="detail-actions">
                     ${orderAction}
@@ -384,6 +363,8 @@
     }
 
     refreshTablesButton.addEventListener("click", loadTables);
+    areaFilters.addEventListener("change", () => { state.area = areaFilters.value; render(); });
+    statusFilters.addEventListener("change", () => { state.status = statusFilters.value; render(); });
 
     addTableButton.addEventListener("click", () => {
         if (!canManageTables()) return;

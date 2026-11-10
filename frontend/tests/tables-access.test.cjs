@@ -66,8 +66,15 @@ test('Phục vụ không thấy quản lý bàn, bàn đã xóa hoặc số li�
     assert.equal(p.node('#manageTablesButton').hidden, true);
     assert.doesNotMatch(p.node('#selectedTable').innerHTML, /delete-table|maintenance-table|restore-table|0đ|Khách hiện tại/);
     assert.match(p.node('#selectedTable').innerHTML, /order-table/);
-    assert.doesNotMatch(p.node('#restaurantMap').innerHTML, /THỬ 05|0 khách|Chưa có đơn/);
-    assert.doesNotMatch(p.node('#statusFilters').innerHTML, /data-value="(?:all|deleted)"/);
+    assert.doesNotMatch(p.node('#restaurantMap').innerHTML, /THỬ 05|0 khách|Chưa có đơn|Mở đơn để xem món/);
+    assert.doesNotMatch(p.node('#statusFilters').innerHTML, /value="(?:all|deleted)"/);
+    p.node('#statusFilters').value = 'empty';
+    await p.node('#statusFilters').emit('change');
+    assert.match(p.node('#restaurantMap').innerHTML, /THỬ 03/);
+    assert.doesNotMatch(p.node('#restaurantMap').innerHTML, /THỬ 04/);
+    p.node('#areaFilters').value = '99';
+    await p.node('#areaFilters').emit('change');
+    assert.equal(p.node('#visibleTableCount').textContent, '0 bàn');
 });
 
 test('Phục vụ không mở form quản lý và không gửi POST/PATCH/DELETE kể cả sự kiện bị gọi trực tiếp', async () => {
