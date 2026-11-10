@@ -35,6 +35,19 @@ Máy Đông đã có source thì mở **hai cửa sổ PowerShell** tại:
 Set-Location 'D:\Hoc_Tap\quanliduan1111\hkdn\RestaurantFoodManagerSystem'
 ```
 
+## Chạy nhanh backend bằng file BAT
+
+Sau khi đã cài .NET SDK 8 và SQL Server đang chạy, bấm đúp [start-backend.bat](start-backend.bat)
+ở thư mục gốc repository, hoặc chạy trong PowerShell:
+
+```powershell
+.\start-backend.bat
+```
+
+File tự chọn đúng thư mục, dùng profile HTTP/Development ở cổng 5225 và tắt migration/seed.
+Database và JWT lấy từ cấu hình backend/biến môi trường hiện có. Nếu cổng 5225 đã được dùng,
+file báo để tránh mở thêm tiến trình. Frontend vẫn chạy riêng theo mục Terminal 2 bên dưới.
+
 ## Terminal 1 — chạy backend
 
 ### 1. Chọn database
