@@ -113,7 +113,17 @@
 
     function applyLayout() {
         // Đổi kích thước/xoay màn hình: không để hai popup chồng lên nhau hoặc giữ menu bị ẩn.
-        groups.forEach((group) => setOpen(group, !mobile.matches && (group.alwaysDesktop || group.entries.some((item) => item.classList.contains("is-active")))));
+        groups.forEach((group) => {
+            const visible = group.entries.filter((item) => !item.hidden);
+            const active = visible.find((item) => item.classList.contains("is-active"));
+            const personalOnly = visible.length === 1 && new URL(visible[0].dataset.page, location.href).pathname.endsWith("/account.html");
+            const title = personalOnly ? "Tài khoản" : auth?.hasRole("Admin") ? group.title : group.alwaysDesktop ? "Công việc" : "Quản lý kho";
+            // Thanh dưới trên điện thoại cho biết màn đang mở; popup vẫn chứa cả nhóm.
+            group.name.textContent = mobile.matches && active ? active.textContent.trim() : title;
+            group.submenu.setAttribute("aria-label", `Các mục ${title}`);
+            group.toggle.classList.toggle("is-active", Boolean(active));
+            setOpen(group, !mobile.matches && (group.alwaysDesktop || Boolean(active)));
+        });
     }
     function renderNavigation() {
         items.forEach((item) => {
@@ -125,10 +135,6 @@
             group.single = visible.length === 1;
             group.root.classList.toggle("nav-group-single", group.single);
             group.toggle.hidden = group.single;
-            group.toggle.classList.toggle("is-active", visible.some((item) => item.classList.contains("is-active")));
-            const personalOnly = visible.length === 1 && new URL(visible[0].dataset.page, location.href).pathname.endsWith("/account.html");
-            group.name.textContent = personalOnly ? "Tài khoản" : auth?.hasRole("Admin") ? group.title : group.alwaysDesktop ? "Công việc" : "Quản lý kho";
-            group.submenu.setAttribute("aria-label", `Các mục ${group.name.textContent}`);
         });
         navigation.classList.toggle("nav-one-group", groups.filter((group) => !group.root.hidden).length === 1);
         applyLayout();
@@ -150,6 +156,7 @@
         if (operator && auth) renderOperatorAfterReady();
     });
     mobile.addEventListener("change", applyLayout);
+    window.addEventListener("restaurant:admin-module-changed", applyLayout);
 
     navigation.addEventListener("click", (event) => {
         const item = event.target.closest(".nav-item[data-page]");
