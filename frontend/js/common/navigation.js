@@ -18,7 +18,10 @@
             operator.querySelector(".operator-role").textContent = (user?.roles || []).map((role) => roleNames[role] || role).join(", ") || "Chưa có vai trò";
             operator.querySelector("strong").textContent = user?.fullName || user?.userName || "Chưa đăng nhập";
             logout.hidden = !user;
-            sessionMessage.textContent = "";
+            if (auth.isPageAllowed()) {
+                const notice = window.sessionStorage.getItem("restaurant.accessNotice");
+                if (notice) { sessionMessage.textContent = notice; window.sessionStorage.removeItem("restaurant.accessNotice"); }
+            }
         }
         window.addEventListener("restaurant:auth-changed", renderOperator);
         window.addEventListener("restaurant:auth-error", (event) => { sessionMessage.textContent = event.detail; });
@@ -37,9 +40,6 @@
     if (window.location.pathname === catalogUrl.pathname) catalogItem.classList.add("is-active");
     const inventoryItem = navigation.querySelector('[data-page$="inventory.html"]');
     if (inventoryItem) inventoryItem.after(catalogItem); else navigation.appendChild(catalogItem);
-    const renderCatalogEntry = () => { catalogItem.hidden = !auth?.hasRole("WarehouseManager", "Admin"); };
-    renderCatalogEntry(); auth?.ready?.then(renderCatalogEntry);
-    window.addEventListener("restaurant:auth-changed", renderCatalogEntry);
 
     const adminModules = [
         { tab: "categories", label: "Danh mục / Topping", modules: ["categories", "toppings", "sizes", "links"], roles: ["Admin", "WarehouseManager"] },
@@ -59,28 +59,11 @@
             item.classList.toggle("is-active", active);
             if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
         });
-        const visible = () => { item.hidden = !auth?.hasRole(...entry.roles); };
-        visible(); auth?.ready?.then(visible); window.addEventListener("restaurant:auth-changed", visible);
         navigation.appendChild(item);
     });
     if (/\/order-tools\.html$/.test(location.pathname)) navigation.querySelector('[data-page="order.html"]')?.classList.add("is-active");
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
-    const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
     const managementItems = items.slice(6);
-
-    // Nhân viên/vai trò theo đúng policy AdminOnly, không hiện nút quản trị cho vai trò khác.
-    const staffItems = items.filter((item) => /(?:^|\/)(?:employees|roles)\.html$/.test(item.dataset.page || ""));
-    const renderStaffEntries = () => staffItems.forEach((item) => { item.hidden = !auth?.hasRole("Admin"); });
-    renderStaffEntries(); auth?.ready?.then(renderStaffEntries);
-    window.addEventListener("restaurant:auth-changed", renderStaffEntries);
-
-    // Báo cáo thuộc nhóm Quản trị, chỉ hiển thị cho Admin.
-    if (reportsItem) {
-        const renderReportsEntry = () => { reportsItem.hidden = !auth?.hasRole("Admin"); };
-        renderReportsEntry();
-        auth?.ready?.then(renderReportsEntry);
-        window.addEventListener("restaurant:auth-changed", renderReportsEntry);
-    }
     items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
 
     const mobile = window.matchMedia("(max-width: 760px)");
@@ -89,6 +72,7 @@
     if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
 
     function setOpen(group, open) {
+        open = !group.root.hidden && (group.single || open);
         group.root.classList.toggle("is-open", open);
         group.toggle.setAttribute("aria-expanded", String(open));
         group.submenu.hidden = !open;
@@ -115,7 +99,7 @@
         submenu.setAttribute("role", "group"); submenu.setAttribute("aria-label", `Các mục ${title}`);
         entries.forEach((item) => submenu.appendChild(item));
         root.append(toggle, submenu); navigation.appendChild(root);
-        const group = { root, toggle, submenu, entries, alwaysDesktop }; groups.push(group);
+        const group = { root, toggle, submenu, entries, alwaysDesktop, title, name }; groups.push(group);
         toggle.addEventListener("click", () => {
             if (!mobile.matches && alwaysDesktop) return;
             const open = !root.classList.contains("is-open");
@@ -131,12 +115,45 @@
         // Đổi kích thước/xoay màn hình: không để hai popup chồng lên nhau hoặc giữ menu bị ẩn.
         groups.forEach((group) => setOpen(group, !mobile.matches && (group.alwaysDesktop || group.entries.some((item) => item.classList.contains("is-active")))));
     }
-    applyLayout();
+    function renderNavigation() {
+        items.forEach((item) => {
+            item.hidden = !auth?.isPageAllowed() || !auth.canAccessPage(new URL(item.dataset.page, location.href).href);
+        });
+        groups.forEach((group) => {
+            const visible = group.entries.filter((item) => !item.hidden);
+            group.root.hidden = !visible.length;
+            group.single = visible.length === 1;
+            group.root.classList.toggle("nav-group-single", group.single);
+            group.toggle.hidden = group.single;
+            group.toggle.classList.toggle("is-active", visible.some((item) => item.classList.contains("is-active")));
+            const personalOnly = visible.length === 1 && new URL(visible[0].dataset.page, location.href).pathname.endsWith("/account.html");
+            group.name.textContent = personalOnly ? "Tài khoản" : auth?.hasRole("Admin") ? group.title : group.alwaysDesktop ? "Công việc" : "Quản lý kho";
+            group.submenu.setAttribute("aria-label", `Các mục ${group.name.textContent}`);
+        });
+        navigation.classList.toggle("nav-one-group", groups.filter((group) => !group.root.hidden).length === 1);
+        applyLayout();
+    }
+    renderNavigation();
+    auth?.ready?.then(() => { renderNavigation(); if (operator && auth) renderOperatorAfterReady(); });
+    function renderOperatorAfterReady() {
+        const notice = window.sessionStorage.getItem("restaurant.accessNotice");
+        if (notice && auth.isPageAllowed()) {
+            operator.querySelector(".operator-session-message").textContent = notice;
+            window.sessionStorage.removeItem("restaurant.accessNotice");
+        }
+    }
+    window.addEventListener("restaurant:auth-changed", renderNavigation);
+    // Bàn/Bếp cũ nạp navigation trước api.js, khi đó auth.ready chưa được tạo.
+    // Luôn cập nhật sau lúc bootstrap thực sự chốt quyền, kể cả thứ tự script cũ.
+    window.addEventListener("restaurant:page-access-changed", () => {
+        renderNavigation();
+        if (operator && auth) renderOperatorAfterReady();
+    });
     mobile.addEventListener("change", applyLayout);
 
     navigation.addEventListener("click", (event) => {
         const item = event.target.closest(".nav-item[data-page]");
-        if (!item || !navigation.contains(item) || item.hidden || item.disabled) return;
+        if (!item || !navigation.contains(item) || item.hidden || item.disabled || !auth?.canAccessPage(new URL(item.dataset.page, location.href).href)) return;
         closeMenus();
         const targetUrl = new URL(item.dataset.page, window.location.href).href;
         if (targetUrl !== window.location.href) window.location.href = targetUrl;
@@ -148,7 +165,7 @@
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
-        const open = groups.find((group) => group.root.classList.contains("is-open") && (mobile.matches || !group.alwaysDesktop));
+        const open = groups.find((group) => !group.single && group.root.classList.contains("is-open") && (mobile.matches || !group.alwaysDesktop));
         if (open) { closeMenus(); open.toggle.focus(); }
     });
 })();

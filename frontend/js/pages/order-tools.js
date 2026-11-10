@@ -9,6 +9,8 @@
     function message(text = "", error = false) { $("toolsNotice").textContent = text; $("toolsNotice").classList.toggle("is-error", error); }
     function render(fill = false) {
         const o = session.order;
+        $("backToOrder").hidden = !auth.canAccessPage(new URL("order.html", location.href).href);
+        $("goToPayment").hidden = !auth.canAccessPage(new URL("payment.html", location.href).href);
         $("toolsTitle").textContent = o ? `Đơn #${o.orderId} · Bàn ${session.tables.find((t) => t.tableId === o.tableId)?.tableNumber || o.tableId}` : "Chưa chọn đơn";
         $("toolsSummary").innerHTML = o ? `<dl class="admin-details">${[["Trạng thái", ({ Pending: "Chờ xử lý", SentToKitchen: "Đã gửi bếp", Preparing: "Đang chế biến", Ready: "Chờ thanh toán", Completed: "Hoàn tất", Paid: "Đã thu", Cancelled: "Đã hủy" })[o.status] || o.status], ["Tạm tính", money(o.subtotal)], ["Giảm giá", money(o.discountAmount)], ["VAT", money(o.taxAmount)], ["Phí dịch vụ", money(o.serviceChargeAmount)], ["Tổng đơn", money(o.totalAmount)], ["Khuyến mãi", o.promotionId ? `#${o.promotionId} · ${o.promotionDiscountType === "Percent" ? `${o.promotionDiscountValue}%` : money(o.promotionDiscountValue)}` : "Chưa áp dụng"], ["Ghi chú hóa đơn", o.note || "—"]].map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : '<p class="admin-context">Mở từ một đơn tại màn Đặt món để xem thông tin.</p>';
         if (fill && o) {

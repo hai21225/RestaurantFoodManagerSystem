@@ -1,3 +1,5 @@
+.tables-screen [hidden] { display: none !important; }
+
 .tables-summary {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -348,7 +350,7 @@
 
     .segment-button {
         flex: 0 0 auto;
-        min-height: 32px;
+        min-height: 44px;
         padding: 0 10px;
         border-radius: 6px;
         font-size: 13px;
@@ -457,8 +459,8 @@
 
     .detail-close-button {
         display: grid;
-        width: 32px;
-        height: 32px;
+        width: 44px;
+        height: 44px;
         place-items: center;
         border: 1px solid var(--line);
         border-radius: 6px;

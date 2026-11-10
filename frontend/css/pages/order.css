@@ -724,6 +724,25 @@
 }
 
 @media (max-width: 480px) {
+    .quantity-button,
+    .cart-close-button,
+    .dialog-close-button {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .sent-dish-line .secondary-action,
+    .sent-dish-heading .secondary-action {
+        min-height: 44px;
+    }
+
+    .cart-item-note,
+    .size-dialog input,
+    #mutationDialog input,
+    #mutationDialog textarea {
+        font-size: 16px;
+    }
+
     .secondary-action {
         width: auto;
     }

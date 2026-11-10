@@ -41,6 +41,14 @@
         }
         const method = (options.method || "GET").toUpperCase();
         const isAnonymous = anonymous(path, method);
+        // Các trang cũ có thể tải dữ liệu ngay khi script chạy: đợi hồ sơ thật trước.
+        // /users/me là chính bước bootstrap, không được đợi promise của nó.
+        if (!isAnonymous && path.split("?")[0] !== "/users/me" && !auth.isPublicPage()) {
+            if (auth.isCheckingPageAccess()) await auth.ready;
+            if (auth.getToken() && !auth.isPageAllowed()) {
+                throw new ApiError("Bạn không có quyền truy cập màn hình này.", 403, null);
+            }
+        }
         const requestToken = auth.getToken();
         const headers = new Headers(options.headers || {});
         if (options.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
@@ -108,10 +116,14 @@
     const bootstrapToken = auth.getToken();
     auth.ready = auth.isPublicPage() || !bootstrapToken ? Promise.resolve(null)
         : window.restaurantApi.get("/users/me").then((user) => {
-            if (auth.getToken() === bootstrapToken) auth.updateUser(user);
+            if (auth.getToken() === bootstrapToken) {
+                auth.updateUser(user);
+                auth.enforcePageAccess();
+            }
             return user;
         }).catch((error) => {
             if (error.status !== 401) window.dispatchEvent(new CustomEvent("restaurant:auth-error", { detail: error.message }));
+            if (auth.getToken() === bootstrapToken) auth.blockPageAccess(error.message);
             return null;
         });
 })();

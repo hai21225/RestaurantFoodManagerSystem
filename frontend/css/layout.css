@@ -78,6 +78,9 @@
     min-width: 0;
 }
 
+.nav-group[hidden], .nav-group-toggle[hidden] { display: none !important; }
+.nav-group-single > .nav-submenu { padding-left: 0; }
+
 .nav-group-toggle {
     display: flex;
     align-items: center;
@@ -267,6 +270,8 @@
         min-width: 0;
     }
 
+    .main-nav.nav-one-group { grid-template-columns: minmax(0, 1fr); }
+
     .nav-group-toggle,
     .nav-group-overview > .nav-group-toggle {
         display: flex;
@@ -336,6 +341,13 @@
         border-radius: 6px;
         white-space: nowrap;
         text-align: center;
+    }
+
+    /* Chỉ một màn hợp lệ: cho bấm trực tiếp, không mở popup một mục. */
+    .nav-group-single > .nav-submenu {
+        position: static; display: grid; grid-template-columns: minmax(0, 1fr);
+        padding: 0; border: 0; border-radius: 0; box-shadow: none;
+        max-height: none; overflow: visible; background: transparent;
     }
 
     .topbar {

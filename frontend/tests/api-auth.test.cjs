@@ -13,12 +13,12 @@ function storage(initial = {}) {
     return { getItem: (k) => items.get(k) ?? null, setItem: (k, v) => items.set(k, String(v)), removeItem: (k) => items.delete(k) };
 }
 
-async function browser({ url = 'http://localhost:5500/pages/tables.html', token = 'test.token.signature' } = {}) {
+async function browser({ url = 'http://localhost:5500/pages/tables.html', token = 'test.token.signature', user = profile, cachedUser = user, bootstrap, waitForBootstrap = true } = {}) {
     const redirects = [], requests = [], downloads = [], revoked = [];
-    const initial = token ? { 'restaurant.token': token, 'restaurant.currentUser': JSON.stringify(profile) } : {};
+    const initial = token ? { 'restaurant.token': token, 'restaurant.currentUser': JSON.stringify(cachedUser) } : {};
     const localStorage = storage(initial), sessionStorage = storage();
     const events = new EventTarget();
-    let handler = async () => json(profile);
+    let handler = bootstrap || (async () => json(user));
     class BrowserUrl extends URL {
         static createObjectURL() { return 'blob:test-download'; }
         static revokeObjectURL(url) { revoked.push(url); }
@@ -38,8 +38,7 @@ async function browser({ url = 'http://localhost:5500/pages/tables.html', token 
     for (const file of ['auth.js', 'api.js']) {
         vm.runInContext(fs.readFileSync(path.join(__dirname, '../js/common', file), 'utf8'), context, { filename: file });
     }
-    await window.restaurantAuth.ready;
-    requests.length = 0;
+    if (waitForBootstrap) { await window.restaurantAuth.ready; requests.length = 0; }
     return { window, localStorage, sessionStorage, redirects, requests, downloads, revoked,
         api: window.restaurantApi, auth: window.restaurantAuth, respond: (fn) => { handler = fn; } };
 }
@@ -191,9 +190,11 @@ test('401 của request cũ không xoá phiên mới vừa đăng nhập', async
 test('URL quay lại chỉ thuộc ứng dụng và không quay vào login/setup', async () => {
     for (const target of ['https://outside.example/x.html', 'javascript:alert(1)', '/pages/login.html', '/pages/setup.html']) {
         const b = await browser({ url: 'http://localhost:5500/pages/login.html?returnUrl=' + encodeURIComponent(target), token: null });
+        b.auth.setSession({ ...profile, token: 'login-token' });
         assert.equal(b.auth.getReturnUrl(), 'http://localhost:5500/index.html');
     }
     const b = await browser({ url: 'http://localhost:5500/pages/login.html?returnUrl=%2Fpages%2Fpurchases.html', token: null });
+    b.auth.setSession({ ...profile, token: 'login-token' });
     assert.equal(b.auth.getReturnUrl(), 'http://localhost:5500/pages/purchases.html');
 });
 
@@ -223,4 +224,84 @@ test('không gửi token tới URL ngoài API', async () => {
     await assert.rejects(b.api.get('//outside.example'), /Đường dẫn/);
     await assert.rejects(b.api.get('https://outside.example'), /Đường dẫn/);
     assert.equal(b.requests.length, 0);
+});
+
+const workspaces = {
+    Waiter: ['pages/tables.html', 'pages/order.html', 'pages/order-tools.html', 'pages/account.html'],
+    Chef: ['pages/kitchen.html', 'pages/account.html'],
+    Cashier: ['pages/payment.html', 'pages/order-tools.html', 'pages/account.html'],
+    WarehouseManager: ['pages/foods.html', 'pages/inventory.html', 'pages/purchases.html', 'pages/recipes.html',
+        'pages/administration.html?tab=categories', 'pages/administration.html?tab=toppings',
+        'pages/administration.html?tab=sizes', 'pages/administration.html?tab=links', 'pages/account.html'],
+    Admin: ['index.html', 'pages/tables.html', 'pages/order.html', 'pages/order-tools.html', 'pages/kitchen.html',
+        'pages/payment.html', 'pages/foods.html', 'pages/inventory.html', 'pages/purchases.html', 'pages/recipes.html',
+        'pages/employees.html', 'pages/roles.html', 'pages/reports.html', 'pages/account.html',
+        'pages/administration.html?tab=categories', 'pages/administration.html?tab=toppings',
+        'pages/administration.html?tab=sizes', 'pages/administration.html?tab=links', 'pages/administration.html?tab=areas',
+        'pages/administration.html?tab=tables', 'pages/administration.html?tab=promotions', 'pages/administration.html?tab=settings']
+};
+for (const [role, allowed] of Object.entries(workspaces)) {
+    test(`${role}: chỉ cho mở các màn/tab thuộc vai trò`, async () => {
+        const b = await browser({ url: 'http://localhost:5500/pages/account.html', user: { ...profile, roles: [role] } });
+        for (const target of new Set(Object.values(workspaces).flat())) {
+            assert.equal(b.auth.canAccessPage('http://localhost:5500/' + target), allowed.includes(target), target);
+        }
+    });
+}
+
+test('sau đăng nhập chọn màn mặc định theo role, không dùng returnUrl ngoài quyền', async () => {
+    for (const [role, page] of [['Waiter','tables'], ['Chef','kitchen'], ['Cashier','payment'], ['WarehouseManager','inventory']]) {
+        const b = await browser({ url: 'http://localhost:5500/pages/login.html?returnUrl=/pages/employees.html', token: null });
+        b.auth.setSession({ ...profile, roles: [role], token: 'real-login-response' });
+        assert.equal(b.auth.getReturnUrl(), `http://localhost:5500/pages/${page}.html`);
+    }
+});
+
+test('returnUrl hợp quyền giữ tham số đơn và tab; chặn trang không biết và tab quản trị giả', async () => {
+    const b = await browser({ url: 'http://localhost:5500/pages/login.html?returnUrl=' + encodeURIComponent('/pages/payment.html?orderId=42'), token: null });
+    b.auth.setSession({ ...profile, roles: ['Cashier'], token: 'real-login-response' });
+    assert.equal(b.auth.getReturnUrl(), 'http://localhost:5500/pages/payment.html?orderId=42');
+    for (const value of ['https://outside.example/pages/payment.html', '/unknown.html', '/pages/administration.html?tab=unknown']) {
+        assert.equal(b.auth.canAccessPage(value), false);
+    }
+});
+
+test('nhiều role dùng hợp quyền; role lạ hoặc chưa có role chỉ mở hồ sơ', async () => {
+    for (const roles of [['Chef', 'Cashier'], [], ['Manager']]) {
+        const b = await browser({ url: 'http://localhost:5500/pages/account.html', user: { ...profile, roles } });
+        assert.equal(b.auth.canAccessPage('/pages/kitchen.html'), roles.includes('Chef'));
+        assert.equal(b.auth.canAccessPage('/pages/payment.html'), roles.includes('Cashier'));
+        assert.equal(b.auth.canAccessPage('/pages/account.html'), true);
+        assert.equal(b.auth.canAccessPage('/pages/employees.html'), false);
+    }
+});
+
+test('mở URL trái quyền: đợi /users/me và không gọi API của màn bị chặn', async () => {
+    let completeProfile;
+    const b = await browser({ user: { ...profile, roles: ['Chef'] }, cachedUser: profile, waitForBootstrap: false,
+        bootstrap: () => new Promise((resolve) => { completeProfile = resolve; }) });
+    const pending = b.api.get('/restaurant-tables');
+    assert.equal(b.requests.length, 1);
+    assert.ok(b.requests[0].url.endsWith('/users/me'));
+    completeProfile(json({ ...profile, roles: ['Chef'] }));
+    await assert.rejects(pending, (e) => e.status === 403);
+    assert.deepEqual(b.redirects, ['http://localhost:5500/pages/kitchen.html']);
+    assert.equal(b.requests.length, 1);
+    assert.equal(b.auth.isPageAllowed(), false);
+});
+
+test('lỗi xác minh hồ sơ không dùng quyền Admin trong cache để mở màn hoặc gọi API', async () => {
+    const b = await browser({ bootstrap: async () => json({ message: 'Unavailable' }, 503) });
+    assert.equal(b.auth.isPageAllowed(), false);
+    await assert.rejects(b.api.get('/restaurant-tables'), (e) => e.status === 403);
+    assert.equal(b.requests.length, 0);
+    assert.ok(b.auth.getToken());
+});
+
+test('Back/Forward không giữ màn cũ sau khi chuyển sang tài khoản khác vai trò', async () => {
+    const b = await browser();
+    b.auth.setSession({ ...profile, roles: ['Chef'], token: 'another-session' });
+    b.window.dispatchEvent(new Event('pageshow'));
+    assert.deepEqual(b.redirects, ['http://localhost:5500/pages/kitchen.html']);
+    assert.equal(b.auth.isPageAllowed(), false);
 });

@@ -32,6 +32,9 @@
     const tableLifecycleNotice = document.querySelector("#tableLifecycleNotice");
     const tableLifecycleMessage = document.querySelector("#tableLifecycleMessage");
     const tableLifecycleConfirm = document.querySelector("#tableLifecycleConfirm");
+    const auth = window.restaurantAuth;
+    const canManageTables = () => auth.isPageAllowed() && auth.hasRole("Admin");
+    const canPlaceOrder = () => auth.isPageAllowed() && auth.hasRole("Admin", "Waiter");
 
     function normalizeStatus(status, isActive) {
         if (!isActive) return { value: "deleted", label: "Đã xóa" };
@@ -98,9 +101,6 @@
                     area: table.areaId ? String(table.areaId) : "unassigned",
                     areaLabel: table.areaName || "Chưa phân khu",
                     seats: table.capacity,
-                    guestCount: 0,
-                    orderCode: "",
-                    totalAmount: 0,
                     updatedAt: "",
                     isActive: table.isActive,
                     status: status.value,
@@ -131,12 +131,9 @@
         }
     }
 
-    function formatCurrency(value) {
-        return `${value.toLocaleString("vi-VN")}đ`;
-    }
-
     function getFilteredTables() {
         return tablesData.tables.filter((table) => {
+            if (!canManageTables() && !table.isActive) return false;
             const matchArea = state.area === "all" || table.area === state.area;
             const matchStatus = state.status === "active" ? table.isActive : state.status === "all" || table.status === state.status;
 
@@ -182,7 +179,9 @@
             render();
         });
 
-        renderFilterButtons(statusFilters, tablesData.statuses, state.status, (value) => {
+        const statuses = canManageTables() ? tablesData.statuses
+            : tablesData.statuses.filter((item) => !["all", "deleted"].includes(item.value));
+        renderFilterButtons(statusFilters, statuses, state.status, (value) => {
             state.status = value;
             render();
         });
@@ -215,9 +214,9 @@
                     <span class="status status-${table.status}">${table.statusLabel}</span>
                 </div>
                 <span class="table-area">${table.areaLabel}</span>
-                <span class="table-seats">${table.seats} chỗ - ${table.guestCount || 0} khách</span>
+                <span class="table-seats">${table.seats} chỗ</span>
                 <div class="table-card-footer">
-                    <span class="table-order-code">${table.orderCode || "Chưa có đơn"}</span>
+                    <span class="table-order-code">${table.status === "serving" ? "Mở đơn để xem món" : table.status === "empty" ? "Sẵn sàng đón khách" : "Tạm ngừng phục vụ"}</span>
                     <span class="table-time">${table.updatedAt}</span>
                 </div>
             </button>
@@ -245,19 +244,19 @@
         selectedTableStatus.textContent = table.statusLabel;
         const isActive = table.isActive;
         const isMaintenance = table.status === "inactive";
-        const canOrder = isActive && !isMaintenance;
-        const canChangeState = isActive && table.status !== "serving";
+        const canOrder = canPlaceOrder() && isActive && !isMaintenance;
+        const canChangeState = canManageTables() && isActive && table.status !== "serving";
         const orderAction = canOrder
             ? `<button class="primary-action" type="button" data-action="order-table">
                     ${table.status === "empty" ? "Đặt món cho bàn này" : "Xem / thêm món"}
                </button>`
             : "";
-        const maintenanceAction = isActive && table.status === "empty"
+        const maintenanceAction = !canManageTables() ? "" : isActive && table.status === "empty"
             ? `<button class="secondary-action" type="button" data-action="maintenance-table">Bảo trì</button>`
             : isActive && isMaintenance
                 ? `<button class="secondary-action" type="button" data-action="end-maintenance">Kết thúc bảo trì</button>`
                 : "";
-        const lifecycleAction = !isActive
+        const lifecycleAction = !canManageTables() ? "" : !isActive
             ? `<button class="primary-action" type="button" data-action="restore-table">Khôi phục bàn</button>`
             : `<button class="danger-action" type="button" data-action="delete-table"
                     ${canChangeState ? "" : "disabled title=\"Bàn đang có đơn chưa thanh toán\""}>
@@ -284,18 +283,11 @@
                         <strong>${table.seats}</strong>
                     </div>
                     <div class="detail-item">
-                        <span>Khách hiện tại</span>
-                        <strong>${table.guestCount}</strong>
-                    </div>
-                    <div class="detail-item">
-                        <span>Mã đơn</span>
-                        <strong>${table.orderCode || "Chưa có"}</strong>
-                    </div>
-                    <div class="detail-item">
-                        <span>Tạm tính</span>
-                        <strong>${formatCurrency(table.totalAmount)}</strong>
+                        <span>Trạng thái</span>
+                        <strong>${table.statusLabel}</strong>
                     </div>
                 </div>
+                ${table.status === "serving" ? '<p class="table-action-hint">Mở đơn để xem món đã gọi và tổng tiền từ máy chủ.</p>' : ""}
 
                 <div class="detail-actions">
                     ${orderAction}
@@ -310,7 +302,7 @@
     function saveSelectedTableForOrder() {
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
 
-        if (!table) {
+        if (!canPlaceOrder() || !table?.isActive || table.status === "inactive") {
             return;
         }
 
@@ -318,8 +310,6 @@
             id: table.id,
             name: table.name,
             areaLabel: table.areaLabel,
-            guestCount: table.guestCount || 0,
-            orderCode: table.orderCode || "",
             status: table.status,
             statusLabel: table.statusLabel
         }));
@@ -338,6 +328,7 @@
     let lifecycleMode = "delete";
 
     function openTableLifecycleDialog(mode) {
+        if (!canManageTables()) return;
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
         if (!table) {
             return;
@@ -395,6 +386,7 @@
     refreshTablesButton.addEventListener("click", loadTables);
 
     addTableButton.addEventListener("click", () => {
+        if (!canManageTables()) return;
         tableForm.reset();
         tableForm.elements.capacity.value = "4";
         populateAreaOptions();
@@ -419,6 +411,7 @@
 
     tableForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!canManageTables()) return;
         tableFormMessage.textContent = "";
 
         if (!tableForm.checkValidity()) {
@@ -469,6 +462,7 @@
     });
 
     tableLifecycleConfirm.addEventListener("click", async () => {
+        if (!canManageTables()) return;
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
         if (!table) {
             return;
@@ -513,9 +507,21 @@
     });
 
     const manageTablesButton = document.getElementById("manageTablesButton");
-    const updateTableManagement = () => { manageTablesButton.hidden = !window.restaurantAuth.hasRole("Admin"); };
-    manageTablesButton.addEventListener("click", () => { if (window.restaurantAuth.hasRole("Admin")) window.location.href = "administration.html?tab=tables"; });
+    const updateTableManagement = () => {
+        const allowed = canManageTables();
+        manageTablesButton.hidden = !allowed;
+        addTableButton.hidden = !allowed;
+        if (!allowed) {
+            tableDialog.close();
+            tableLifecycleDialog.close();
+            if (["all", "deleted"].includes(state.status)) state.status = "active";
+        }
+        render();
+    };
+    manageTablesButton.addEventListener("click", () => { if (canManageTables()) window.location.href = "administration.html?tab=tables"; });
     window.addEventListener("restaurant:auth-changed", updateTableManagement);
+    window.addEventListener("restaurant:page-access-changed", updateTableManagement);
+    auth.ready.then(updateTableManagement);
     updateTableManagement();
     render();
     loadTables();
