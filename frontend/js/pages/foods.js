@@ -158,10 +158,10 @@
         const outCount = state.foods.filter((food) => food.status === "out").length;
         const stoppedCount = state.foods.filter((food) => food.status === "stopped").length;
         const summary = [
-            { label: "Món đang sử dụng", value: state.foods.length - stoppedCount },
+            { label: "Đang sử dụng", value: state.foods.length - stoppedCount },
             { label: "Đang bán", value: availableCount },
             { label: "Tạm hết", value: outCount },
-            { label: "Đã xóa / Ngừng bán", value: stoppedCount }
+            { label: "Ngừng bán", value: stoppedCount }
         ];
 
         foodsSummary.innerHTML = summary.map((item) => `
@@ -172,32 +172,16 @@
         `).join("");
     }
 
-    function renderFilterButtons(container, items, activeValue, onClick) {
+    function renderFilterOptions(container, items, activeValue) {
         container.innerHTML = items.map((item) => `
-            <button
-                class="segment-button${item.value === activeValue ? " is-active" : ""}"
-                type="button"
-                data-value="${item.value}"
-            >
-                ${item.label}
-            </button>
+            <option value="${escapeHtml(item.value)}">${escapeHtml(item.label)}</option>
         `).join("");
-
-        container.querySelectorAll(".segment-button").forEach((button) => {
-            button.addEventListener("click", () => onClick(button.dataset.value));
-        });
+        container.value = activeValue;
     }
 
     function renderFilters() {
-        renderFilterButtons(categoryFilters, foodsData.categories, state.category, (value) => {
-            state.category = value;
-            render();
-        });
-
-        renderFilterButtons(statusFilters, foodsData.statuses, state.status, (value) => {
-            state.status = value;
-            render();
-        });
+        renderFilterOptions(categoryFilters, foodsData.categories, state.category);
+        renderFilterOptions(statusFilters, foodsData.statuses, state.status);
     }
 
     function getFoodInitials(name) {
@@ -229,11 +213,14 @@
                 <span class="food-thumb" aria-hidden="true">${escapeHtml(getFoodInitials(food.name))}</span>
                 <span class="food-row-main">
                     <strong>${escapeHtml(food.name)}</strong>
-                    <span>${food.code} - ${escapeHtml(food.description)}</span>
+                    <span class="food-code">${food.code}</span>
+                    ${food.description !== "Chưa có mô tả" ? `<span class="food-row-description">${escapeHtml(food.description)}</span>` : ""}
                 </span>
                 <span class="food-category">${escapeHtml(food.categoryLabel)}</span>
-                <span class="food-price">${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
-                <span class="status status-${food.status === "available" ? "empty" : food.status === "out" ? "waiting" : "payment"}">${food.statusLabel}</span>
+                <span class="food-row-footer">
+                    <span class="food-price">${formatCurrency(food.price)} / ${window.foodUnits.getShortLabel(food.unit)}</span>
+                    <span class="status status-${food.status === "available" ? "empty" : food.status === "out" ? "waiting" : "payment"}">${food.statusLabel}</span>
+                </span>
             </button>
         `).join("");
 
@@ -445,6 +432,16 @@
         renderFoodList();
         renderFoodDetail();
     }
+
+    categoryFilters.addEventListener("change", () => {
+        state.category = categoryFilters.value;
+        render();
+    });
+
+    statusFilters.addEventListener("change", () => {
+        state.status = statusFilters.value;
+        render();
+    });
 
     foodSearchInput.addEventListener("input", () => {
         state.searchTerm = foodSearchInput.value.trim();

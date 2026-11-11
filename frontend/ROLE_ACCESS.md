@@ -262,3 +262,33 @@ Chưa đăng nhập thật Waiter/Chef/Cashier/WarehouseManager vì không tạo
   mô tả cách nhau 8px; không tràn ngang toàn trang. 249/249 test frontend, cú pháp và diff đạt.
 - Không gửi đơn, không thay dữ liệu. Ảnh ngoài repo:
   `_codex_runtime/search-empty-fixed-320-20261111.png`; log `search-empty-tests-20261111.log`.
+
+### Căn lại màn quản lý Món ăn theo ảnh 320px — 11/11/2026
+
+- **Đông / frontend:** sửa `pages/foods.html`, `css/pages/foods.css`, `js/pages/foods.js`.
+  Lỗi cũ: thẻ món dùng grid hai cột trên điện thoại nhưng giá/danh mục bị ép vào
+  cột 2, trạng thái tự rơi sang cột 1; chữ thống kê 11px, bộ lọc kéo ngang bị cắt.
+- Thẻ mới đặt ảnh viết tắt cạnh tên/mã/danh mục; giá và trạng thái cùng một hàng
+  cuối, có đường phân cách. Tên món 16px, giá 15px trên màn nhỏ; tên dài xuống dòng.
+  Mô tả dài chỉ hiện trong chi tiết trên màn nhỏ; desktop vẫn hiện mô tả có dữ liệu.
+  Không đổi tên món, danh mục, giá, trạng thái hoặc công thức trong database.
+- Thống kê hai cột bằng nhau trên màn nhỏ, bốn ô cao 76px ở 320px; nhãn Ngừng bán
+  vẫn tính đúng nhóm đã xóa/ngừng dùng. Nút Thêm món hiện riêng; bốn thao tác Công thức,
+  Danh mục/Topping, Thêm danh mục, Thêm kích cỡ nằm trong mục mở rộng có nhãn rõ.
+- Bộ lọc danh mục/trạng thái thành select có label, giữ nguyên giá trị lọc và quyền.
+  320px xếp dọc, 390px trở lên đủ chỗ thì hai cột; ô nhập/chọn cao 44px, font 16px.
+  Đổi bộ lọc không làm mất từ tìm kiếm; không thêm API hoặc sửa cách lưu dữ liệu.
+  Laptop hẹp xếp danh sách và chi tiết dọc để không ép các cột; desktop rộng giữ hai khung.
+  Nút đóng chi tiết tăng lên 44px. HTML tăng version riêng CSS/JS để tải bản mới.
+- **Đã chạy:** cú pháp `foods.js`; 249/249 test frontend; `git diff --check`;
+  12/12 tài nguyên CSS/JS của trang trả HTTP 200. Bộ test hiện có không có test riêng
+  cho màn Foods; phần thay đổi bộ lọc được kiểm tra trực tiếp qua trình duyệt Admin.
+- **Kiểm tra trực tiếp:** 320/390/768/1024/1280/1536px, không tràn ngang toàn trang,
+  giá/trạng thái không vượt thẻ. Lọc Hải sản trả Tôm rang me và Mực xào sa tế;
+  Ngừng bán trả hai món cũ; tìm từ không tồn tại trả 0. Mở/đóng chi tiết và biểu mẫu
+  Thêm món; mở/đóng nhóm thao tác phụ. Không bấm Tạo/Lưu/Xóa/đổi trạng thái.
+- **Hải / backend:** không có phần cần sửa trong thay đổi này. Không chỉnh backend,
+  database hoặc package. Các luồng ghi nghiệp vụ không được nghiệm thu trong lượt sửa này.
+  Bằng chứng ngoài repo, tính từ workspace: `_codex_runtime/foods-layout-top-320-20261111.png`,
+  `foods-layout-cards-320-20261111.png`, `foods-layout-responsive-20261111.json`,
+  `foods-layout-tests-20261111.log` trong cùng thư mục `_codex_runtime`.

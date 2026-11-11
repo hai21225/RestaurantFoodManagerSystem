@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
-    <link rel="stylesheet" href="../css/pages/foods.css?v=20261101-f67">
+    <link rel="stylesheet" href="../css/pages/foods.css?v=20261111-food-layout2">
 </head>
 <body>
     <div class="app-shell">
@@ -52,15 +52,19 @@
                 <section class="foods-screen" aria-labelledby="foods-title">
                     <div class="section-heading">
                         <div>
-                            <p class="eyebrow">Danh sách món</p>
-                            <h2 id="foods-title">Thực đơn đang bán</h2>
+                            <h2 id="foods-title">Quản lý thực đơn</h2>
                         </div>
                         <div class="heading-actions">
-                            <button class="secondary-action" type="button" data-page="recipes.html">Công thức</button>
-                            <button class="secondary-action" type="button" id="manageCatalogButton" data-page="administration.html?tab=categories">Danh mục / Topping</button>
-                            <button class="secondary-action" type="button" id="addCategoryButton">Thêm danh mục</button>
-                            <button class="secondary-action" type="button" id="addSizeButton">Thêm kích cỡ</button>
                             <button class="primary-action" type="button" id="addFoodButton">Thêm món</button>
+                            <details class="catalog-tools">
+                                <summary>Danh mục, kích cỡ &amp; công thức</summary>
+                                <div class="catalog-tools-actions">
+                                    <button class="secondary-action" type="button" data-page="recipes.html">Công thức</button>
+                                    <button class="secondary-action" type="button" id="manageCatalogButton" data-page="administration.html?tab=categories">Danh mục / Topping</button>
+                                    <button class="secondary-action" type="button" id="addCategoryButton">Thêm danh mục</button>
+                                    <button class="secondary-action" type="button" id="addSizeButton">Thêm kích cỡ</button>
+                                </div>
+                            </details>
                         </div>
                     </div>
 
@@ -72,15 +76,15 @@
                             <input type="search" id="foodSearchInput" placeholder="Nhập tên món hoặc mã món">
                         </label>
 
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Danh mục</span>
-                            <div class="segmented-control" id="categoryFilters"></div>
-                        </div>
+                            <select id="categoryFilters"></select>
+                        </label>
 
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Trạng thái</span>
-                            <div class="segmented-control" id="statusFilters"></div>
-                        </div>
+                            <select id="statusFilters"></select>
+                        </label>
                     </section>
 
                     <div class="foods-layout">
@@ -246,6 +250,6 @@
     <script src="../js/common/food-units.js"></script>
     <script src="../js/common/food-sizes.js"></script>
     <script src="../js/data/foods.data.js?v=20261101-delete-visibility"></script>
-    <script src="../js/pages/foods.js?v=20261101-f67"></script>
+    <script src="../js/pages/foods.js?v=20261111-food-layout2"></script>
 </body>
 </html>
