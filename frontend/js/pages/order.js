@@ -130,8 +130,24 @@
         $("#categoryList").innerHTML = [{ id: "all", name: "Tất cả" }, ...state.categories].map((category) => `<button type="button" class="category-button${state.category === category.id ? " is-active" : ""}" data-category-id="${escapeHtml(category.id)}"><strong>${escapeHtml(category.name)}</strong></button>`).join("");
     }
 
+    function normalizeSearch(value) {
+        return String(value ?? "").toLocaleLowerCase("vi-VN").normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d")
+            .replace(/[^a-z0-9]+/g, " ").trim();
+    }
+
+    function matchesFood(food) {
+        if (!state.search) return true;
+        const name = normalizeSearch(food.foodName);
+        const terms = state.search.split(" ");
+        if (terms.every((term) => name.includes(term))) return true;
+        // Chữ đầu theo thứ tự tên món: bll = Bò lúc lắc, cchs = Cơm chiên hải sản.
+        const initials = name.split(" ").map((word) => word[0] || "").join("");
+        return terms.length === 1 && state.search.length >= 2 && initials.startsWith(state.search);
+    }
+
     function renderFoods() {
-        const foods = state.foods.filter((food) => (state.category === "all" || food.categoryId === state.category) && food.foodName.toLocaleLowerCase("vi-VN").includes(state.search));
+        const foods = state.foods.filter((food) => (state.category === "all" || food.categoryId === state.category) && matchesFood(food));
         $("#foodCount").textContent = `${foods.length} món`;
         $("#foodGrid").innerHTML = foods.length ? foods.map((food) => {
             const priceSize = food.sizes.find((size) => size.isDefault) || food.sizes[0];
@@ -139,7 +155,7 @@
             <div class="food-card-top"><h4>${escapeHtml(food.foodName)}</h4></div><p>${escapeHtml(food.foodDescription || "")}</p>
             <div class="food-meta"><span class="food-price">${escapeHtml(priceSize.sizeName)} · ${money(priceSize.sizePrice)}</span><span>${food.sizes.length} kích cỡ</span><span>Chọn món</span></div></button>`;
         }).join("")
-            : '<div class="empty-state"><strong>Chưa có món phù hợp</strong><span>Thực đơn được tải từ máy chủ. Hãy đổi bộ lọc hoặc kiểm tra món đang bán.</span></div>';
+            : '<div class="empty-state"><strong>Chưa có món phù hợp</strong><span>Chỉ tìm món đang bán. Thử từ khác hoặc chọn Tất cả danh mục.</span></div>';
     }
 
     async function loadMenu() {
@@ -287,7 +303,7 @@
         const button = event.target.closest("[data-category-id]");
         if (button) { state.category = button.dataset.categoryId; renderCategories(); renderFoods(); }
     });
-    $("#foodSearchInput").addEventListener("input", (event) => { state.search = event.target.value.trim().toLocaleLowerCase("vi-VN"); renderFoods(); });
+    $("#foodSearchInput").addEventListener("input", (event) => { state.search = normalizeSearch(event.target.value); renderFoods(); });
     $("#foodGrid").addEventListener("click", (event) => { const button = event.target.closest("[data-food-id]"); if (button) openDish(Number(button.dataset.foodId)); });
     $("#dishForm").addEventListener("submit", (event) => {
         event.preventDefault();

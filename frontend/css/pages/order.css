@@ -202,8 +202,19 @@
 }
 
 .food-grid .empty-state {
+    display: grid;
     grid-column: 1 / -1;
+    gap: 8px;
+    min-width: 0;
+    padding: 16px;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    background: var(--surface-strong);
+    overflow-wrap: anywhere;
+    line-height: 1.5;
 }
+.food-grid .empty-state strong { color: var(--text); font-size: 16px; }
+.food-grid .empty-state span { color: var(--muted); font-size: 14px; }
 
 .food-card {
     display: grid;

@@ -29,7 +29,7 @@ function storage(initial = {}) {
     const data = new Map(Object.entries(initial));
     return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value), removeItem: key => data.delete(key) };
 }
-async function page({ search = '', savedTable, tableStatus = 'Available', active = true, pending, fail = false } = {}) {
+async function page({ search = '', savedTable, tableStatus = 'Available', active = true, pending, fail = false, menu } = {}) {
     const nodes = new Map();
     const node = selector => {
         if (!nodes.has(selector)) nodes.set(selector, new Element());
@@ -46,7 +46,7 @@ async function page({ search = '', savedTable, tableStatus = 'Available', active
             return [{ tableId: 3, tableNumber: '3', isActive: active, status: tableStatus }];
         }
         if (route.startsWith('/orders?')) return { items: [], total: 0 };
-        if (route === '/menu') return [{ categoryId: 1, categoryName: 'Cơm', foods: [{ foodId: 1, foodName: 'Cơm trắng', sizes: [{ sizeId: 1, sizeName: 'Vừa', sizePrice: 25000 }], toppings: [] }] }];
+        if (route === '/menu') return menu ?? [{ categoryId: 1, categoryName: 'Cơm', foods: [{ foodId: 1, foodName: 'Cơm trắng', sizes: [{ sizeId: 1, sizeName: 'Vừa', sizePrice: 25000 }], toppings: [] }] }];
         throw new Error('Unexpected GET ' + route);
     } };
     for (const method of ['post', 'patch', 'delete']) api[method] = async (...args) => { writes.push({ method, args }); throw new Error('Write must not run'); };
@@ -154,4 +154,53 @@ test('Chưa chọn bàn vẫn giữ đường quay lại yêu cầu chưa xác n
     assert.deepEqual(JSON.parse(p.window.sessionStorage.getItem('restaurant.posPending')), pending);
     assert.deepEqual(p.requests, []);
     assert.equal(p.writes.length, 0);
+});
+
+const searchMenu = [
+    { categoryId: 1, categoryName: 'Món mặn', foods: [[11,'Bò lúc lắc'],[12,'Bò xào rau củ'],[14,'Tôm rang me']] },
+    { categoryId: 2, categoryName: 'Cơm', foods: [[13,'Cơm chiên hải sản']] },
+    { categoryId: 3, categoryName: 'Lẩu', foods: [[15,'Lẩu Thái hải sản']] },
+    { categoryId: 4, categoryName: 'Rau', foods: [[16,'Đậu hũ chiên sả']] },
+    { categoryId: 5, categoryName: 'Đồ uống', foods: [[17,'Trà tắc']] }
+].map(category => ({ ...category, foods: category.foods.map(([foodId,foodName]) => ({ foodId,foodName,sizes:[{sizeId:foodId,sizeName:'1 phần',sizePrice:65000}],toppings:[] })) }));
+function searchFoods(p, value) {
+    p.node('#foodSearchInput').emit('input', { target: { value } });
+    return [...p.node('#foodGrid').innerHTML.matchAll(/data-food-id="(\d+)"/g)].map(match => Number(match[1]));
+}
+
+test('Tìm món có/không dấu, chữ hoa và Unicode tổ hợp trả đúng món ngay khi nhập', async () => {
+    const p = await page({ search:'?tableId=3', menu:searchMenu });
+    for (const value of ['bò', 'bo', '  BÒ  ', 'Bò'.normalize('NFD')]) assert.deepEqual(searchFoods(p,value), [11,12]);
+    for (const value of ['ĐẬU', 'dau', 'Đậu'.normalize('NFD')]) assert.deepEqual(searchFoods(p,value), [16]);
+    assert.deepEqual(searchFoods(p,'  tra    tac  '), [17]);
+});
+
+test('Viết tắt theo chữ đầu tìm đúng món và giữ nguyên tên hiển thị', async () => {
+    const p = await page({ search:'?tableId=3', menu:searchMenu });
+    for (const [value,expected] of [['bll',[11]],['CCHS',[13]],['lths',[15]],['dhcs',[16]],['cc',[13]]]) assert.deepEqual(searchFoods(p,value),expected);
+    searchFoods(p,'bll');
+    assert.match(p.node('#foodGrid').innerHTML, /Bò lúc lắc/);
+    assert.equal(p.node('#foodCount').textContent,'1 món');
+});
+
+test('Từ khóa rời không cần đúng thứ tự, không gửi thêm API hoặc lệnh ghi', async () => {
+    const p = await page({ search:'?tableId=3', menu:searchMenu });
+    const requests = [...p.requests];
+    for (const value of ['tom me','me tom']) assert.deepEqual(searchFoods(p,value),[14]);
+    assert.deepEqual(searchFoods(p,'com hai'),[13]);
+    assert.deepEqual(searchFoods(p,'bo me'),[]);
+    assert.deepEqual(p.requests,requests);
+    assert.equal(p.writes.length,0);
+});
+
+test('Tìm kiếm giữ phạm vi danh mục; xóa từ khóa trả lại danh sách và trường hợp rỗng có hướng dẫn', async () => {
+    const p = await page({ search:'?tableId=3', menu:searchMenu });
+    p.node('#categoryList').emit('click',{target:{closest:()=>({dataset:{categoryId:'1'}})}});
+    assert.deepEqual(searchFoods(p,'cchs'),[]);
+    assert.match(p.node('#foodGrid').innerHTML,/Tất cả danh mục/);
+    assert.deepEqual(searchFoods(p,''),[11,12,14]);
+    p.node('#categoryList').emit('click',{target:{closest:()=>({dataset:{categoryId:'all'}})}});
+    assert.deepEqual(searchFoods(p,'   '),[11,12,14,13,15,16,17]);
+    assert.deepEqual(searchFoods(p,'khongco'),[]);
+    assert.equal(p.node('#foodCount').textContent,'0 món');
 });

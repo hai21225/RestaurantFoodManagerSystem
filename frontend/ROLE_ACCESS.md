@@ -221,3 +221,44 @@ Chưa đăng nhập thật Waiter/Chef/Cashier/WarehouseManager vì không tạo
   Việc kiểm tra trình duyệt đã mô tả theo từng màn/kích thước; chưa nghiệm thu lệnh ghi
   nghiệp vụ trên database thật trong đợt UI này. Giỏ tạm chưa gửi vẫn mất khi rời trang.
 - Ảnh và log nằm ngoài repository, không nằm trong các commit frontend.
+
+## Tìm món không dấu, từ khóa rời và viết tắt — 11/11/2026
+
+- **Đông / frontend:** `js/pages/order.js` chuẩn hóa hoa/thường, dấu tiếng Việt (kể cả
+  Unicode tổ hợp và Đ/đ), khoảng trắng và dấu câu khi tìm. Không đổi tên món hiển thị.
+  Các từ khóa có thể cách nhau hoặc đảo thứ tự: `tom me` / `me tom` tìm Tôm rang me.
+  Chữ đầu theo thứ tự tên món: `bll` tìm Bò lúc lắc, `cchs` tìm Cơm chiên hải sản,
+  `lths` tìm Lẩu Thái hải sản. Cho phép tiền tố viết tắt từ hai ký tự, không đoán lỗi chính tả.
+- Lọc ngay khi nhập trên danh sách đã tải, không phát request tìm kiếm và không nhấn Enter.
+  Giữ phạm vi danh mục đang chọn; muốn tìm toàn thực đơn thì chọn Tất cả. Xóa từ khóa
+  trả danh sách của danh mục đó. Kết quả rỗng có hướng dẫn đổi từ khóa/danh mục.
+- `pages/order.html`: placeholder minh họa `bo, bll, tom me`; tắt kiểm tra chính tả và
+  tự viết hoa cho ô tìm; cập nhật version URL script. Không thay giỏ, giá hoặc API gửi bếp.
+- **249/249 test frontend đạt**, gồm bốn test trang mới cho dấu/Unicode, viết tắt,
+  từ khóa rời, phạm vi danh mục và xóa từ khóa; test xác nhận không có request/lệnh ghi mới.
+  Cú pháp order.js và `git diff --check` đạt.
+- Trình duyệt thật bằng Waiter: `bo` trả ba món; `bll`, `cchs`, `tom me`, `lths`, `dau`
+  trả đúng món; từ không có kết quả trả 0 và xóa từ khóa trả 21 món. Món mặn + `tom me`
+  trả 0, đổi Tất cả trả Tôm rang me. Đã xem `bll` trên viewport 390px và yêu cầu reset sau đó.
+  Không gửi bếp hoặc tạo đơn để kiểm thử.
+- **Hải / backend:** không có thay đổi cần thực hiện. Database giữ nguyên trong lượt sửa tìm kiếm.
+  Bằng chứng ngoài repo: `_codex_runtime/food-search-bll-20261111.png`
+  và `_codex_runtime/food-search-tests-20261111.log` tính từ workspace.
+
+### Bổ sung theo ảnh kết quả rỗng 320px — 11/11/2026
+
+- Ảnh gửi sau lượt sửa còn dòng “Thực đơn được tải từ máy chủ…” của script cũ. Đã
+  đối chiếu HTTP localhost:5500: file phục vụ khớp source mới, nhưng static server không
+  đặt Cache-Control. Có URL mới `order.html?tableId=3&v=20261111-search2` để tải lại HTML.
+- Đồng thời API hiện không đưa các món bò vào menu: các món vẫn active/available,
+  cỡ và công thức còn active, nhưng thuộc danh mục id 4 (cơm) và 5 (Món mặn) đã ngừng dùng.
+  Đông chọn **giữ nguyên trạng thái**; không bật lại danh mục/món hay sửa database.
+  Menu thay đổi theo danh mục đang bật, nên số món ở lần kiểm tra trước không cố định.
+- `css/pages/order.css`: empty-state thành grid, tách tiêu đề/mô tả cách nhau 8px,
+  có padding, chữ 16/14px, xuống dòng trong khung; áp dụng cả đang tải/lỗi tải/rỗng.
+  `order.js` giải thích chỉ tìm món đang bán; `order.html` tăng version CSS và JS tương ứng.
+- Kiểm tra thật ở 320px: `tom me` và `trm` trả Tôm rang me, `lths` trả Lẩu Thái hải sản;
+  `bo` trả 0 đúng trạng thái danh mục. Đo scrollWidth=305 ≤ innerWidth=320, tiêu đề và
+  mô tả cách nhau 8px; không tràn ngang toàn trang. 249/249 test frontend, cú pháp và diff đạt.
+- Không gửi đơn, không thay dữ liệu. Ảnh ngoài repo:
+  `_codex_runtime/search-empty-fixed-320-20261111.png`; log `search-empty-tests-20261111.log`.
