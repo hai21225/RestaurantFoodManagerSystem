@@ -292,3 +292,142 @@ Chưa đăng nhập thật Waiter/Chef/Cashier/WarehouseManager vì không tạo
   Bằng chứng ngoài repo, tính từ workspace: `_codex_runtime/foods-layout-top-320-20261111.png`,
   `foods-layout-cards-320-20261111.png`, `foods-layout-responsive-20261111.json`,
   `foods-layout-tests-20261111.log` trong cùng thư mục `_codex_runtime`.
+
+
+## Pilot Sahara cho luồng Phục vụ — 11/11/2026
+
+### Đông / frontend đã thay đổi
+
+- `css/pages/service-workspace.css`: bộ trình bày mới chỉ áp dụng khi body có
+  `service-workspace`; ba trang Chọn bàn, Đặt món, Tiện ích đơn chủ động nạp stylesheet.
+  Nền kem, màu cam đất đậm #a94f1c, chữ Segoe UI hỗ trợ tiếng Việt, nút/ô nhập 44px.
+  Màu nút được làm đậm hơn mẫu Stitch để chữ trắng dễ đọc (tỷ lệ tính được 5.49:1).
+  Không nhập nguyên HTML/JS mẫu hoặc thêm thư viện/font/CDN.
+- `pages/tables.html`: nhóm thống kê/bộ lọc thành một khối; giữ board và chi tiết.
+  Thẻ bàn hiện khu vực/sức chứa/trạng thái từ API. Tablet 761–1100px có ngăn chi tiết
+  mở/đóng, mobile giữ ngăn phía dưới; không dựng khách đặt chỗ/thời gian/tổng tiền giả.
+- `pages/order.html`: thực đơn/tìm kiếm/danh mục ở trái, giỏ tạm và món đã gửi ở phải
+  trên desktop; mobile danh sách một cột, giỏ mở qua thanh dưới. Danh mục đặt sau tìm kiếm,
+  các nhãn xuống dòng thay vì bị cắt ngang. Nút Xóa đơn tạm chuyển vào giỏ; nút Gửi bếp
+  chính ở giỏ để tránh hai CTA giống nhau trên thanh đầu. Giữ toàn bộ ID và handler cũ.
+- `js/pages/order.js`: thẻ món có ảnh từ foodImageUrl HTTP/HTTPS nếu hợp lệ, chữ viết tắt
+  khi thiếu/lỗi ảnh; tên/giá/kích cỡ vẫn từ menu. Không lấy ảnh hoặc giá giả trong Stitch.
+  Bỏ thông báo lặp lúc tải lần đầu; Làm mới vẫn báo kết quả, pending/lỗi vẫn giữ.
+  Không sửa OrderSession, API, công thức tính tiền, điều kiện khóa hoặc lệnh gửi bếp.
+- `js/common/navigation.js`: chỉ thêm class trình bày khi trang pilot đã xác minh quyền
+  và có 2–4 mục hợp lệ. Mobile Phục vụ mở trực tiếp Bàn ăn/Đặt món/Tài khoản; Admin giữ
+  nhóm đầy đủ 17 mục. CSS không mở các nav-item hoặc nhóm bị ẩn do không có quyền.
+- `pages/order-tools.html`: nạp cùng bộ trình bày; giữ form/ID/lệnh và xác nhận cũ.
+  Chuyển toàn bộ đơn chỉ đến bàn trống/hoạt động; không thêm chia/gộp hoặc ca/két tiền.
+  Bếp/Thu ngân/Kho/Quản trị/Đăng nhập chưa được đổi sang Sahara ở lượt pilot này.
+
+### Kiểm tra thực sự đã chạy
+
+- **253/253 test frontend đạt**: 249 test cũ và bốn test mới cho menu trực tiếp không
+  mở rộng quyền, trang ngoài pilot giữ hành vi cũ, URL ảnh/escape/hook chọn món/giá và
+  liên kết HTML có phiên bản nhưng không tự thêm tableId.
+  `node --check` bốn JS đã sửa và `git diff --check` đạt.
+- Cả ba HTML giữ nguyên ID (Bàn 26, POS 73, Tiện ích 27), không ID trùng.
+  Mỗi trang có 11/11 tài nguyên CSS/JS trả HTTP 200.
+- Fixture HTTP riêng cổng 5508 phục vụ source thật và dữ liệu giả có banner vàng;
+  không proxy API, chặn toàn bộ request ghi. Ba màn x bốn kích thước 320/390/768/1440px:
+  **12 cấu hình không tràn ngang**, menu Phục vụ chỉ ba mục đúng quyền.
+- Fixture: bàn -> POS -> Chọn bàn khác -> mục Đặt món trở về bước chọn bàn, không dính
+  bàn cũ. Chọn cỡ/topping/2 phần, tăng/giảm, ghi chú, mở/đóng/xóa giỏ; không gửi bếp.
+  Giỏ 320/390px có nút gửi cao 44px trong vùng nhìn thấy, không bị thanh dưới che.
+  Ở 320px elementFromPoint tại tâm nút xác định đúng cartSendButton.
+- Fixture: dòng Preparing không có nút hủy, chỉ Gọi tăng và giải thích khóa. Bàn bảo trì
+  không hiện thực đơn; lỗi tải có Thử lại. Chi tiết bàn mở/đóng được ở 320/768px.
+  Tiện ích chỉ có bàn trống THỬ 04 làm đích; mở xác nhận chuyển rồi Hủy, không xác nhận ghi.
+- Website thật localhost:5500: tài khoản Admin hiện có, GET dữ liệu bàn/thực đơn thật,
+  **8 cấu hình** (hai màn x 320/390/768/1440px) không tràn ngang. Ảnh trước/sau được chụp
+  cùng vai trò và kích thước; không dùng kết quả fixture để khẳng định dữ liệu thật đã ghi.
+
+### Giới hạn và bàn giao
+
+- **Hải / backend:** không có thay đổi backend cần áp dụng trong pilot này. Không thay
+  database, tài khoản, trạng thái danh mục/món/bàn, tổng tiền hoặc cấu hình máy.
+- Chưa nghiệm thu gửi bếp/giảm-hủy món/chuyển bàn thật hay luồng Bếp/Thu ngân trên database.
+  Các kiểm tra giả không phải bằng chứng các lệnh ghi backend đã chạy hoàn chỉnh.
+- Dữ liệu chưa có ảnh dùng chữ viết tắt; không tự tải ảnh stock hoặc chỉnh database.
+- Chưa commit/push. Backup source frontend trước sửa, ảnh/log/matrix nằm ngoài repo tại
+  `_codex_runtime/service-sahara-20261111/` tính từ workspace. Báo cáo so sánh:
+  `hkdn/Restaurant-UXUI-Audit/reports/service-sahara-pilot-2026-11-11.md`.
+
+### Bổ sung chống quay lại giao diện HTML cũ
+
+- Đã quan sát trình duyệt tải lại `tables.html` từ cache, không có stylesheet/body class
+  mới dù source đã đổi. Không coi việc CSS tải thành công là đủ để kết luận chuyển trang đúng.
+- `navigation.js` giữ tham số `ui=20261111-sahara3` cho liên kết ba trang pilot;
+  `tables.js`, `order.js`, `order-tools.js` giữ phiên bản khi chọn bàn, chọn bàn khác,
+  quay lại yêu cầu pending, mở tiện ích và quay lại POS. Các HTML tăng version JS tương ứng.
+  Không đổi tableId/orderId, URL API hoặc tự khôi phục bàn cũ.
+- Đã thử trực tiếp trên website thật: Chọn bàn -> POS tableId=1 -> Chọn bàn khác ->
+  Đặt món không tableId. Cả ba URL giữ ui=sahara3, body vẫn service-workspace, màu chính
+  #a94f1c; bước cuối trở về Chọn bàn để bắt đầu. Bằng chứng `cache-roundtrip.json`.
+- Đây là xử lý phía frontend. Tab cũ đã lưu HTML từ trước vẫn nên mở link phiên bản mới
+  hoặc tải lại không dùng cache một lần; không sửa cấu hình static server/file BAT.
+
+## Mở rộng Sahara toàn bộ giao diện — 12/11/2026
+
+- **Đông / frontend:** đã mở rộng khung Sahara từ ba trang pilot sang đủ 17 HTML:
+  Bếp, Thu ngân, Món ăn/Kho/Nhập hàng/Công thức, Dashboard/Báo cáo, Quản trị,
+  Nhân viên/Vai trò/Tài khoản và Đăng nhập/Setup. Không đổi ma trận quyền hoặc API.
+- Đã sửa lỗi frontend Bếp/Thu ngân báo danh sách rỗng khi GET thất bại. Loading/lỗi
+  dùng số liệu `—`; dữ liệu cũ chỉ xem và khóa lệnh cho tới khi tải lại đầy đủ.
+- Toàn bộ navbar dùng phiên bản `20261112-service-nav5`; trang nghiệp vụ và CSS mới
+  dùng `20261112-sahara-all2`. Đây là phiên bản thay cho khóa cache pilot ghi ở trên.
+- **266/266 test frontend đạt**, sáu JS đạt kiểm tra cú pháp, diff check đạt. Giữ 577 ID
+  cũ của 17 trang, thêm ba anchor Thanh toán; 199 tham chiếu CSS/JS tồn tại.
+- **Hải / backend:** không cần sửa backend để nhận bộ giao diện này. Chưa nghiệm thu
+  lệnh ghi trên database thật, provider MoMo hoặc thu hồi JWT; không xem thay đổi UI là
+  bằng chứng đã giải quyết các ghi chú backend cũ.
+- Chi tiết từng file, hành vi, quyền hoàn tiền đúng `CashierDesk`, các lượt kiểm tra thật,
+  fixture và giới hạn: đọc [SAHARA_UI_HANDOFF.md](SAHARA_UI_HANDOFF.md).
+- Chưa commit/push. Không đưa prototype `docs/design/`, `figma-plugin/` hoặc file local
+  `BACKEND_CHANGES_FOR_FRONTEND.md` vào phạm vi này.
+
+## Bố cục Sahara theo Stitch — cập nhật cấu trúc 12/11/2026
+
+Mốc này thay thế mô tả bố cục/font/cache của lượt “Mở rộng Sahara” phía trên; các ghi chú
+lịch sử vẫn giữ để đối chiếu. Source đang ở local nhánh `dong`, chưa commit/push.
+
+- **Đông / frontend:** đã thay cách tổ chức công việc, không chỉ thay màu. Shell dùng
+  Manrope + EB Garamond đóng gói local tại `assets/fonts/` cùng hai giấy phép OFL; menu có
+  icon và nhãn theo quyền. Không thêm package hoặc phụ thuộc CDN.
+- POS có toolbar/catalog riêng và một ticket: món đã gửi trước, món mới chưa gửi sau.
+  Thu ngân có hàng đợi trái/hóa đơn dạng giấy phải, tab Thanh toán/Phiếu thu. Quyền hoàn
+  tiền giữ đúng API `CashierDesk` cho **Admin và Cashier**, không đổi hợp đồng nghiệp vụ.
+- Bếp dùng toolbar gọn và hàng đợi/tab trạng thái. Kho có register trái/chi tiết nguyên
+  liệu phải, tab Tồn kho/Lịch sử; deep link chứng từ mở đúng lịch sử. Nhập hàng tách tab
+  Phiếu nhập/Nhà cung cấp. Món ăn dùng register căn cột; Công thức có list/rail định lượng
+  và phiên bản. Mobile dùng sheet chi tiết đóng được; thống kê thu gọn thành dòng đếm.
+- Dashboard có hero/tổng quan, Báo cáo có công tắc kỳ; Nhân viên mở form trong hộp thoại;
+  Quản trị có rail chọn module; Tài khoản tách danh tính/hồ sơ/mật khẩu. Các giới hạn API,
+  MoMo Mock, đơn vị/phiên bản, trạng thái, tổng tiền server và quyền vẫn giữ nguyên.
+- Sửa GET chi tiết phiếu/công thức lỗi trên màn hẹp: đóng sheet, đưa focus về thông báo
+  để người dùng thấy lỗi; không để sheet trống che nội dung. Các trạng thái lỗi/rỗng/tải
+  Bếp/Thu ngân đã sửa ở lượt trước tiếp tục giữ.
+- Cache hiện tại: `navigation.js?v=20261112-service-nav6`, UI/CSS/JS
+  `20261112-stitch-layout3`; `recipes.js` và `purchases.js` thêm hậu tố `-fix1`.
+- **Đã chạy:** 281/281 test frontend đạt; 17 HTML giữ đủ 577 ID cũ, không ID trùng;
+  222 tham chiếu local tồn tại; 21 JS/CJS đạt cú pháp, 6 CSS và hai font được kiểm tra;
+  `git diff --check` toàn repository đạt.
+- **Trình duyệt thật:** 12 trang (tables/payment/inventory/purchases/recipes/foods/reports/
+  employees/roles/administration/account/index) × 320/390/768/1440px = 48 cấu hình;
+  không quan sát thấy tràn ngang toàn trang hoặc lỗi trong các lượt đó. Đây là viewport,
+  chưa thử thiết bị thật. Đã mở form điều chỉnh tồn rồi Hủy và mở/đóng dialog Nhân viên
+  ở 390px, không lưu dữ liệu.
+- **Fixture 5508:** thêm một món vào giỏ tạm, mở/xóa giỏ; nút Gửi bếp 50px nhìn thấy ở
+  390px, không bấm gửi. Mở xác nhận thanh toán rồi Quay lại; đổi tab Phiếu thu và dùng
+  ArrowLeft quay lại. Fixture chặn ghi, không nối database; không xem đây là nghiệm thu
+  đặt đơn/thanh toán/nhập kho thật.
+- **Hải / backend:** không có file backend, endpoint, DTO, migration hoặc database được
+  thay trong lượt này. Các ghi chú backend/JWT cũ vẫn cần xử lý riêng. Chưa nghiệm thu
+  luồng end-to-end có ghi dữ liệu thật, provider MoMo, máy in hoặc tải giờ cao điểm.
+- Đọc [SAHARA_UI_HANDOFF.md](SAHARA_UI_HANDOFF.md) để biết chính xác file Đông sửa,
+  quy tắc nghiệp vụ giữ nguyên và giới hạn. Ảnh/log/JSON ngoài repo tại
+  `_codex_runtime/stitch-layout-20261112/` tính từ workspace; báo cáo trước/sau ở
+  `hkdn/Restaurant-UXUI-Audit/reports/stitch-structural-redesign-2026-11-12.md`.
+  Không đưa prototype `docs/design/`, `figma-plugin/` hoặc file local
+  `BACKEND_CHANGES_FOR_FRONTEND.md` vào phạm vi frontend này.
