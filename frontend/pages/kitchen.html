@@ -8,8 +8,13 @@
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/kitchen.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/kitchen-sahara.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/preparation-timing.css?v=20261112-queue1">
+    <link rel="stylesheet" href="../css/pages/kitchen-queue.css?v=20261112-queue2">
+    <link rel="stylesheet" href="../css/pages/kitchen-printing.css?v=20261112-print4">
 </head>
-<body class="kitchen-page">
+<body class="kitchen-page service-workspace service-workspace--kitchen">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -53,15 +58,15 @@
                     <div class="section-heading">
                         <div>
                             <p class="eyebrow">Hàng đợi chế biến</p>
-                            <h2 id="kitchen-title">Phiếu bếp</h2>
+                            <div class="kitchen-heading-title"><h2 id="kitchen-title">Hàng đợi bếp</h2><div class="kitchen-summary" id="kitchenSummary" aria-label="Thống kê đơn bếp"></div></div>
                             <p class="kitchen-access-note" id="kitchenAccessNote"></p>
                         </div>
                         <button class="primary-action" type="button" id="refreshKitchenButton">Làm mới</button>
                     </div>
 
-                    <div class="kitchen-summary" id="kitchenSummary" aria-label="Thống kê đơn bếp"></div>
 
-                    <section class="panel kitchen-toolbar" aria-label="Bộ lọc bếp">
+
+                    <section class="kitchen-toolbar" aria-label="Bộ lọc bếp">
                         <div class="filter-group">
                             <label for="kitchenSearch">Tìm bàn, món hoặc phục vụ</label>
                             <input id="kitchenSearch" type="search" placeholder="Tên bàn, tên món, phục vụ">
@@ -71,8 +76,14 @@
                             <span>Mức ưu tiên</span>
                             <div class="segmented-control" id="priorityFilters"></div>
                         </div>
+                        <label class="filter-group" for="kitchenSort"><span>Thứ tự phiếu</span><select id="kitchenSort"><option value="oldest">Gửi trước → làm trước</option><option value="priority">Ưu tiên trước, rồi giờ gửi</option></select></label>
                     </section>
 
+                    <aside id="kitchenWaitingAlert" class="kitchen-waiting-alert" aria-label="Món chưa được bếp nhận" hidden>
+                        <div><strong id="kitchenWaitingCount" role="status" aria-live="polite"></strong><span id="kitchenWaitingOldest"></span></div>
+                        <button id="kitchenShowWaiting" class="secondary-action" type="button">Xem món chưa nhận</button>
+                    </aside>
+                    <p id="kitchenQueueHint" class="kitchen-queue-hint"></p>
                     <div class="kitchen-status-tabs" id="kitchenStatusTabs" aria-label="Trạng thái phiếu bếp"></div>
                     <p class="kitchen-announcement" id="kitchenAnnouncement" role="status" aria-live="polite" aria-atomic="true"></p>
                     <section id="kitchenPendingNotice" class="panel kitchen-pending-notice" hidden aria-labelledby="pendingKitchenTitle">
@@ -88,7 +99,7 @@
 
     <script src="../js/common/auth.js?v=20261105-role-access3"></script>
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
-    <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <dialog id="kitchenActionDialog" class="form-dialog" aria-labelledby="kitchenActionTitle">
         <div class="form-dialog-header"><div><h2 id="kitchenActionTitle">Xử lý món</h2><p id="kitchenActionDescription"></p></div><button class="dialog-close-button" type="button" data-close-kitchen-action aria-label="Đóng">×</button></div>
         <form id="kitchenActionForm" class="dialog-form">
@@ -101,8 +112,28 @@
             <div class="dialog-actions"><button type="button" class="secondary-action" data-close-kitchen-action>Đóng</button><button id="kitchenActionConfirm" class="primary-action" type="submit">Xác nhận</button></div>
         </form>
     </dialog>
+    <dialog id="kitchenPrintDialog" class="form-dialog kitchen-print-dialog" aria-labelledby="kitchenPrintTitle">
+        <div class="kitchen-print-shell">
+            <header class="kitchen-print-header"><div><p class="eyebrow">Phiếu cho khu chế biến</p><h2 id="kitchenPrintTitle">In phiếu bếp</h2></div><button id="kitchenPrintClose" class="dialog-close-button" type="button" aria-label="Đóng xem trước phiếu bếp">×</button></header>
+            <div class="kitchen-print-scroll">
+                <div class="kitchen-print-options">
+                    <label class="form-field"><span>Nội dung phiếu</span><select id="kitchenPrintScope"><option value="active">Món còn xử lý</option><option value="all">Toàn bộ phiếu, để đối chiếu</option></select></label>
+                    <label class="form-field"><span>Khổ giấy</span><select id="kitchenPrintSize"><option value="80">80 mm</option><option value="58">58 mm</option></select></label>
+                </div>
+                <label class="kitchen-print-reprint"><input id="kitchenPrintReprint" type="checkbox"> Đánh dấu BẢN IN LẠI</label>
+                <p class="field-hint">Mỗi dòng món được in thành một phiếu riêng, giữ đủ số phần của món đó. Món còn xử lý gồm món chờ nhận và đang làm; không phải chỉ phần vừa gọi tăng.</p>
+                <p id="kitchenPrintMessage" class="form-message" role="status"></p>
+                <section id="kitchenPrintPreview" class="kitchen-print-preview" aria-label="Nội dung phiếu bếp để in" data-paper-size="80"></section>
+            </div>
+            <footer class="kitchen-print-actions"><button id="kitchenPrintRefresh" class="secondary-action" type="button">Cập nhật phiếu</button><button id="kitchenPrintCancel" class="secondary-action" type="button">Đóng</button><button id="kitchenPrintButton" class="primary-action" type="button">Mở hộp thoại in</button></footer>
+        </div>
+    </dialog>
+    <div id="kitchenPrintPaper" aria-hidden="true" data-paper-size="80"></div>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/common/kitchen-session.js"></script>
-    <script src="../js/pages/kitchen.js?v=20261029"></script>
+    <script src="../js/common/preparation-timing.js?v=20261112-queue1"></script>
+    <script src="../js/common/kitchen-printing.js?v=20261112-print4"></script>
+    <script src="../js/common/kitchen-print-controller.js?v=20261112-print2"></script>
+    <script src="../js/pages/kitchen.js?v=20261112-print1"></script>
 </body>
 </html>

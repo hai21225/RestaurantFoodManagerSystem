@@ -1,0 +1,534 @@
+/* Kitchen presentation only. Item permissions and transitions remain in kitchen-session.js. */
+.service-workspace--kitchen {
+    --warning: #80501f;
+}
+
+.service-workspace--kitchen .kitchen-screen,
+.service-workspace--kitchen .kitchen-screen > *,
+.service-workspace--kitchen .filter-group {
+    min-width: 0;
+}
+
+.service-workspace--kitchen .section-heading {
+    align-items: center;
+    margin-bottom: 18px;
+}
+
+.service-workspace--kitchen .kitchen-access-note {
+    max-width: 660px;
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.service-workspace--kitchen .kitchen-access-note:empty,
+.service-workspace--kitchen .kitchen-announcement:empty {
+    display: none;
+}
+
+.service-workspace--kitchen .kitchen-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.service-workspace--kitchen .kitchen-summary-card {
+    align-content: center;
+    gap: 3px;
+    min-height: 82px;
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: none;
+}
+
+.service-workspace--kitchen .kitchen-summary-card span {
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.service-workspace--kitchen .kitchen-summary-card strong {
+    font-size: 25px;
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+}
+
+.service-workspace--kitchen .kitchen-toolbar {
+    grid-template-columns: minmax(0, 1.6fr) minmax(260px, 1fr);
+    gap: 20px;
+    align-items: end;
+    margin-bottom: 20px;
+    padding: 16px;
+}
+
+.service-workspace--kitchen .filter-group {
+    gap: 7px;
+}
+
+.service-workspace--kitchen .filter-group > :is(label, span) {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.service-workspace--kitchen #kitchenSearch {
+    min-height: 46px;
+    padding: 10px 13px;
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 16px;
+}
+
+.service-workspace--kitchen .segmented-control {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    overflow: visible;
+}
+
+.service-workspace--kitchen .segment-button {
+    flex: 1 1 70px;
+    min-height: 46px;
+    padding: 9px 12px;
+    border-radius: 9px;
+    background: var(--surface);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.service-workspace--kitchen .segment-button.is-active {
+    border-color: var(--primary);
+    color: var(--primary-strong);
+    background: #f8e8d5;
+}
+
+.service-workspace--kitchen .kitchen-board {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.service-workspace--kitchen .kitchen-column-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 0 0 12px;
+    border-bottom: 2px solid var(--line);
+    margin-bottom: 14px;
+}
+
+.service-workspace--kitchen .kitchen-column-header h3 {
+    font-size: 16px;
+}
+
+.service-workspace--kitchen .kitchen-column-header span {
+    flex-shrink: 0;
+}
+
+.service-workspace--kitchen .ticket-list {
+    gap: 14px;
+}
+
+.service-workspace--kitchen .kitchen-ticket {
+    gap: 12px;
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+}
+
+.service-workspace--kitchen .ticket-topline {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.service-workspace--kitchen .ticket-code strong {
+    font-size: 17px;
+    line-height: 1.4;
+}
+
+.service-workspace--kitchen :is(.ticket-code span, .ticket-meta, .ticket-parent-status, .ticket-progress) {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.service-workspace--kitchen .ticket-meta {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+}
+
+.service-workspace--kitchen .ticket-topline .status {
+    flex-shrink: 0;
+    padding: 4px 8px;
+    border-radius: 7px;
+    font-size: 12px;
+}
+
+.service-workspace--kitchen .priority-normal {
+    color: #685b4f;
+    background: #f0e9df;
+}
+
+.service-workspace--kitchen .priority-high {
+    color: #8a302a;
+    background: #fae8e2;
+}
+
+.service-workspace--kitchen .ticket-items {
+    gap: 10px;
+}
+
+.service-workspace--kitchen .ticket-items .kitchen-dish {
+    padding: 12px;
+    border: 1px solid #e9dfd1;
+    border-radius: 11px;
+    background: #f8f2e9;
+}
+
+.service-workspace--kitchen .ticket-item-content {
+    gap: 6px;
+}
+
+.service-workspace--kitchen .ticket-item-content strong {
+    font-size: 16px;
+    line-height: 1.45;
+}
+
+.service-workspace--kitchen .ticket-item-content > span {
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.service-workspace--kitchen .ticket-item-content .ticket-item-status {
+    width: fit-content;
+    max-width: 100%;
+    padding: 3px 8px;
+    border-radius: 6px;
+    color: #80501f;
+    background: #f0e1c9;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.service-workspace--kitchen .ticket-items .is-complete {
+    border-color: #d9e4d5;
+    background: #f1f6ed;
+}
+
+.service-workspace--kitchen .is-complete .ticket-item-status {
+    color: #38684a;
+    background: #dfeadb;
+}
+
+.service-workspace--kitchen .ticket-items .is-cancelled {
+    border-color: var(--line);
+    background: #f1ede8;
+    opacity: 1;
+}
+
+.service-workspace--kitchen .is-cancelled .ticket-item-status {
+    color: var(--danger);
+    background: #f4e2dc;
+}
+
+.service-workspace--kitchen .kitchen-item-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.service-workspace--kitchen .ticket-action,
+.service-workspace--kitchen .kitchen-item-actions .ticket-action {
+    min-height: 44px;
+    width: auto;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.service-workspace--kitchen .kitchen-item-actions .ticket-action:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+}
+
+.service-workspace--kitchen .ticket-action[data-kitchen-action="cancel"] {
+    border-color: #e3ccc4;
+    color: var(--danger);
+}
+
+.service-workspace--kitchen .ticket-action.primary {
+    border-color: var(--primary);
+    color: white;
+    background: var(--primary);
+}
+
+.service-workspace--kitchen :is(.segment-button, .status-tab, .ticket-action):focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+}
+
+.service-workspace--kitchen .ticket-progress {
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+}
+
+.service-workspace--kitchen .empty-column {
+    padding: 22px 16px;
+    border-style: solid;
+    border-radius: 12px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.service-workspace--kitchen .kitchen-announcement {
+    margin: 0 0 16px;
+    padding: 12px 14px;
+    border: 1px solid #e6cfb5;
+    border-radius: 10px;
+    background: #fff1df;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.service-workspace--kitchen .kitchen-announcement.is-error {
+    border-color: #e6c5bb;
+    color: var(--danger);
+    background: #fbede7;
+}
+
+.service-workspace--kitchen .kitchen-pending-notice {
+    border-color: #d9b989;
+    background: #fff1df;
+}
+
+.service-workspace--kitchen .kitchen-pending-notice p {
+    margin: 8px 0 14px;
+    overflow-wrap: anywhere;
+}
+
+.service-workspace--kitchen #kitchenActionDialog {
+    width: min(580px, calc(100% - 24px));
+    max-height: calc(100dvh - 24px);
+}
+
+.service-workspace--kitchen #kitchenActionDialog .form-dialog-header {
+    gap: 12px;
+}
+
+.service-workspace--kitchen #kitchenActionDescription {
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+}
+
+.service-workspace--kitchen #kitchenActionDialog :is(input:not([type="checkbox"]), select, textarea) {
+    min-height: 46px;
+    padding: 10px 12px;
+    border-radius: 9px;
+    background: var(--surface);
+    font-size: 16px;
+}
+
+.service-workspace--kitchen .kitchen-deactivate {
+    align-items: flex-start;
+    min-height: 44px;
+    padding: 10px;
+    border-radius: 9px;
+    background: var(--surface-strong);
+    font-size: 14px;
+}
+
+.service-workspace--kitchen .kitchen-deactivate input {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+}
+
+/* A single queue with status tabs avoids narrow tickets on tablets and small laptops. */
+@media (max-width: 1279px) {
+    .service-workspace--kitchen .kitchen-status-tabs {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .service-workspace--kitchen .status-tab {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+        min-height: 52px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        color: var(--text);
+        background: var(--surface);
+        text-align: left;
+    }
+
+    .service-workspace--kitchen .status-tab strong {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .service-workspace--kitchen .status-tab span {
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .service-workspace--kitchen .status-tab.is-active {
+        border-color: var(--primary);
+        color: var(--primary-strong);
+        background: #f8e8d5;
+    }
+
+    .service-workspace--kitchen .kitchen-board {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .service-workspace--kitchen .kitchen-column {
+        display: none;
+    }
+
+    .service-workspace--kitchen .kitchen-column.is-active-status {
+        display: block;
+    }
+}
+
+@media (max-width: 980px) {
+    .service-workspace--kitchen .kitchen-toolbar {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+    }
+}
+
+@media (max-width: 760px) {
+    .service-workspace--kitchen .section-heading {
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+        gap: 12px;
+    }
+
+    .service-workspace--kitchen .section-heading .primary-action {
+        min-height: 44px;
+        padding: 10px 12px;
+    }
+
+    .service-workspace--kitchen .kitchen-access-note {
+        font-size: 13px;
+    }
+
+    .service-workspace--kitchen .kitchen-toolbar {
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    .service-workspace--kitchen .kitchen-ticket {
+        padding: 14px;
+    }
+
+    .service-workspace--kitchen .ticket-meta {
+        flex-direction: row;
+        align-items: baseline;
+    }
+
+    .service-workspace--kitchen #kitchenActionDialog .form-dialog-header {
+        flex-direction: row;
+        padding: 16px;
+    }
+
+    .service-workspace--kitchen #kitchenActionDialog .dialog-form {
+        padding: 16px;
+    }
+
+    .service-workspace--kitchen #kitchenActionDialog .dialog-actions {
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 600px) {
+    .service-workspace--kitchen .kitchen-summary {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .service-workspace--kitchen .kitchen-summary-card {
+        min-height: 72px;
+        padding: 10px 12px;
+    }
+
+    .service-workspace--kitchen .status-tab {
+        display: grid;
+        align-content: start;
+        gap: 4px;
+        min-height: 76px;
+        padding: 10px 8px;
+    }
+
+    .service-workspace--kitchen .status-tab strong {
+        min-height: 2.8em;
+        font-size: 13px;
+    }
+
+    .service-workspace--kitchen .status-tab span {
+        font-size: 16px;
+    }
+}
+
+/* Mobile stage tabs already show the three status counts; keep only the total above. */
+@media (max-width: 760px) {
+    .service-workspace--kitchen .kitchen-summary { display: block; }
+    .service-workspace--kitchen .kitchen-summary-card:not(:first-child) { display: none; }
+    .service-workspace--kitchen .kitchen-summary-card:first-child { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 10px 14px; }
+}
+
+/* KDS workspace: compact title/count toolbar above the working columns. */
+.service-workspace--kitchen .kitchen-heading-title { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.service-workspace--kitchen .kitchen-heading-title h2 { font-size:32px; }
+.service-workspace--kitchen .kitchen-summary { display:block; padding:0; margin:0; }
+.service-workspace--kitchen .kitchen-summary-card:not(:first-child) { display:none; }
+.service-workspace--kitchen .kitchen-summary-card:first-child { display:flex; flex-direction:row-reverse; align-items:center; justify-content:start; gap:6px; min-height:0; padding:4px 10px; border:0; border-radius:6px; background:#eee3d5; box-shadow:none; }
+.service-workspace--kitchen .kitchen-summary-card:first-child span { font-size:11px; }
+.service-workspace--kitchen .kitchen-summary-card:first-child strong { font-size:13px; }
+.service-workspace--kitchen .kitchen-access-note { max-width:none; font-size:12px; }
+.service-workspace--kitchen .kitchen-toolbar { display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,.5fr); gap:20px; padding:14px 0 18px; margin:0 0 24px; border-bottom:1px solid var(--line); border-radius:0; background:transparent; }
+.service-workspace--kitchen .kitchen-toolbar .filter-group { gap:6px; }
+.service-workspace--kitchen #kitchenSearch { background:var(--surface); font-size:14px; }
+.service-workspace--kitchen .segment-button { min-height:44px; border:0; background:#eee7dc; }
+.service-workspace--kitchen .segment-button.is-active { background:var(--primary); color:white; }
+.service-workspace--kitchen .kitchen-column-header { padding:12px 14px; border:0; border-top:3px solid #bc8650; border-radius:8px; background:#eee5d8; }
+.service-workspace--kitchen .kitchen-column:nth-child(2) .kitchen-column-header { border-top-color:#947755; }
+.service-workspace--kitchen .kitchen-column:nth-child(3) .kitchen-column-header { border-top-color:#5c7854; background:#e8eee3; }
+.service-workspace--kitchen .kitchen-column-header span { padding:3px 8px; border-radius:5px; background:var(--surface); font-size:11px; }
+.service-workspace--kitchen .kitchen-ticket { padding:16px; border:1px solid #e5d9ca; border-radius:12px; background:var(--surface); box-shadow:none; }
+.service-workspace--kitchen .ticket-code strong { font-family:'EB Garamond',Georgia,serif; font-size:28px; line-height:1.1; }
+.service-workspace--kitchen .ticket-code span { margin-top:4px; font-size:10px; }
+.service-workspace--kitchen .ticket-meta,.service-workspace--kitchen .ticket-parent-status { font-size:10px; }
+.service-workspace--kitchen .ticket-items .kitchen-dish { padding:14px 0 0; border:0; border-top:1px solid var(--line); border-radius:0; background:transparent; }
+.service-workspace--kitchen .ticket-item-content strong { font-size:14px; }
+.service-workspace--kitchen .ticket-item-content>span { font-size:12px; }
+.service-workspace--kitchen .ticket-items .is-complete { border-top-color:#cddac7; background:transparent; }
+.service-workspace--kitchen .kitchen-item-actions { gap:6px; }
+.service-workspace--kitchen .kitchen-item-actions .ticket-action { font-size:12px; }
+.service-workspace--kitchen .ticket-progress { font-size:10px; margin-top:2px; }
+.service-workspace--kitchen .kitchen-announcement:not(.is-error) { padding:0; border:0; background:transparent; color:var(--muted); font-size:11px; }
+@media (max-width:980px) { .service-workspace--kitchen .kitchen-toolbar { grid-template-columns:minmax(0,1fr); gap:12px; } }
+@media (max-width:760px) {
+ .service-workspace--kitchen .section-heading { margin-bottom:10px; }
+ .service-workspace--kitchen .kitchen-heading-title { gap:8px; }
+ .service-workspace--kitchen .kitchen-heading-title h2 { font-size:28px; }
+ .service-workspace--kitchen .kitchen-toolbar { padding:10px 0 16px; margin-bottom:16px; }
+ .service-workspace--kitchen #kitchenSearch { font-size:16px; }
+ .service-workspace--kitchen .status-tab { min-height:62px; padding:10px; gap:4px; }
+ .service-workspace--kitchen .status-tab strong { min-height:0; font-size:12px; }
+ .service-workspace--kitchen .status-tab span { font-size:14px; }
+}
