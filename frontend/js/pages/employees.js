@@ -8,6 +8,26 @@
     const locked = () => session.busy || session.loading || session.detailLoading || !!session.pending || !session.loaded;
     let selectedId = null, editing = null, passwordTarget = null, confirmAction = null;
     const requestedRole = new URLSearchParams(location.search).get("role");
+    const detailMobile = window.matchMedia("(max-width: 1100px)");
+    function placeDetail(open = false) {
+        const panel = $("employeeDetailPanel"), sheet = $("employeeDetailSheet");
+        if (detailMobile.matches) {
+            if (panel.parentElement !== sheet) sheet.appendChild(panel);
+            if (open && !sheet.open) sheet.showModal();
+        } else {
+            if (sheet.open) sheet.close();
+            $("employeeDetailRail").appendChild(panel);
+        }
+    }
+    function closeDetail() {
+        if (session.busy) return;
+        $("employeeDetailSheet").close();
+        const selected = $("employeeList").querySelector(`[data-view-user="${selectedId}"]`);
+        selected?.focus();
+    }
+    $("employeeDetailClose").addEventListener("click", closeDetail);
+    detailMobile.addEventListener("change", () => placeDetail());
+    placeDetail();
     function message(text = "", error = false, id = "staffNotice") { $(id).textContent = text; $(id).classList.toggle("is-error", error); }
     function clearPasswords() { for (const id of ["employeePassword", "employeeConfirmPassword", "staffNewPassword", "staffConfirmPassword"]) $(id).value = ""; }
     function date(value) {
@@ -33,6 +53,7 @@
     function render() {
         const allowed = session.hasAccess(); $("staffContent").hidden = !allowed; $("staffAccess").hidden = allowed; if (!allowed) return;
         $("staffRefresh").disabled = session.busy || session.loading || session.detailLoading;
+        $("employeeDetailClose").disabled = session.busy;
         $("addEmployeeButton").disabled = locked(); $("staffPending").hidden = !session.pending;
         if (session.pending) {
             const names = { create: "Tạo nhân viên", update: "Sửa hồ sơ", active: "Khóa/mở", assignRole: "Gán vai trò", removeRole: "Thu vai trò", resetPassword: "Đặt lại mật khẩu" };
@@ -55,7 +76,11 @@
         const query = $("employeeSearch").value.trim().toLocaleLowerCase("vi"), role = $("employeeRoleFilter").value, state = $("employeeStatusFilter").value;
         const users = session.users.filter((u) => `${u.fullName} ${u.userName} ${u.email} ${u.phone}`.toLocaleLowerCase("vi").includes(query) && (role === "all" || (role === "none" ? !u.roles.length : u.roles.includes(role))) && (state === "all" || u.isActive === (state === "active")));
         $("employeeCount").textContent = `${users.length} người`;
-        $("employeeList").innerHTML = users.length ? users.map((u) => `<article class="staff-row${u.userId === selectedId ? " is-selected" : ""}"><div><strong>${esc(u.fullName || u.userName)}</strong><span>@${esc(u.userName)} · #${u.userId}</span><span>${esc(u.email)}</span><span>${esc(u.phone || "Chưa có số điện thoại")}</span></div><div class="staff-row-meta"><span class="staff-badge ${u.isActive ? "" : "is-locked"}">${u.isActive ? "Đang hoạt động" : "Tạm khóa"}</span><span>${esc(u.roles.map(label).join(", ") || "Chưa gán vai trò")}</span></div><button class="secondary-action" data-view-user="${u.userId}" ${session.busy || session.loading ? "disabled" : ""}>Xem / Quản lý</button></article>`).join("") : '<p class="staff-empty">Không có nhân viên phù hợp. Thay đổi bộ lọc hoặc thêm nhân viên.</p>';
+        $("employeeList").innerHTML = users.length ? users.map((u) => {
+            const name = u.fullName || u.userName;
+            const initials = name.trim().split(/\s+/).filter(Boolean).slice(-2).map((part) => part[0]).join("").toLocaleUpperCase("vi");
+            return `<article class="staff-row staff-directory-row${u.userId === selectedId ? " is-selected" : ""}"><div class="staff-person"><span class="staff-avatar" aria-hidden="true">${esc(initials)}</span><div><strong>${esc(name)}</strong><span>@${esc(u.userName)} · #${u.userId}</span><span class="staff-contact">${esc(u.email)}${u.phone ? ` · ${esc(u.phone)}` : ""}</span></div></div><div class="staff-row-meta"><span class="staff-role-label">${esc(u.roles.map(label).join(", ") || "Chưa gán vai trò")}</span><span class="staff-badge ${u.isActive ? "" : "is-locked"}">${u.isActive ? "Đang hoạt động" : "Tạm khóa"}</span></div><button class="secondary-action" data-view-user="${u.userId}" aria-label="Quản lý ${esc(name)}" ${session.busy || session.loading ? "disabled" : ""}>Quản lý <span aria-hidden="true">→</span></button></article>`;
+        }).join("") : '<p class="staff-empty">Không có nhân viên phù hợp. Thay đổi bộ lọc hoặc thêm nhân viên.</p>';
         renderDetail();
     }
     async function run(action, success = "", target = "staffNotice") {
@@ -72,8 +97,8 @@
     }
     async function selectUser(id) {
         selectedId = Number(id); const out = await run(() => session.selectUser(selectedId));
-        if (out.ok && session.detail && window.matchMedia("(max-width: 1150px)").matches) {
-            $("employeeDetailTitle").scrollIntoView({ block: "start" }); $("employeeDetailTitle").focus({ preventScroll: true });
+        if (out.ok && session.detail && detailMobile.matches) {
+            placeDetail(true); $("employeeDetailTitle").focus({ preventScroll: true });
         }
         return out;
     }
@@ -117,7 +142,7 @@
     $("employeeList").addEventListener("click", (event) => { const button = event.target.closest("[data-view-user]"); if (button) selectUser(button.dataset.viewUser); });
     $("employeeDetail").addEventListener("click", (event) => {
         const button = event.target.closest("button"), user = session.detail; if (!button || !user) return;
-        if (button.hasAttribute("data-staff-back")) { $("employeeListTitle").scrollIntoView({ block: "start" }); $("employeeListTitle").focus({ preventScroll: true }); return; }
+        if (button.hasAttribute("data-staff-back")) { if (detailMobile.matches) closeDetail(); else { $("employeeListTitle").scrollIntoView({ block: "start" }); $("employeeListTitle").focus({ preventScroll: true }); } return; }
         if (locked()) return;
         const expected = snapshot(user), context = `${user.fullName || user.userName} · @${user.userName} · #${user.userId}`;
         if (button.hasAttribute("data-staff-edit")) return openEmployee(user);

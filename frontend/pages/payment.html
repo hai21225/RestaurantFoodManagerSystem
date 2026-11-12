@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/payment.css?v=20261101-mobile-ledger">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/payment-sahara.css?v=20261112-stitch-layout3">
 </head>
-<body>
+<body class="payment-page service-workspace service-workspace--payment">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -52,14 +54,14 @@
                 <section class="payment-screen" aria-labelledby="payment-title">
                     <div class="section-heading">
                         <div>
-                            <p class="eyebrow">Thu ngân · dữ liệu trực tiếp</p>
-                            <h2 id="payment-title">Phiếu thanh toán</h2>
+                            <p class="eyebrow">Thu ngân</p>
+                            <h2 id="payment-title">Quầy thanh toán</h2>
                         </div>
-                        <div class="payment-actions">
-                            <button class="secondary-action" type="button" id="refreshPaymentsButton">Làm mới</button>
-                            <button class="secondary-action" type="button" id="tableBillButton" disabled>Tạm tính bàn</button>
-                            <button class="primary-action" type="button" id="printBillButton" disabled>In phiếu đơn</button>
-                        </div>
+                        <button class="secondary-action" type="button" id="refreshPaymentsButton">Làm mới</button>
+                    </div>
+                    <div class="payment-workspace-tabs" role="tablist" aria-label="Công việc thu ngân">
+                        <button id="checkoutTab" type="button" role="tab" aria-selected="true" aria-controls="paymentDesk" tabindex="0">Thanh toán</button>
+                        <button id="ledgerTab" type="button" role="tab" aria-selected="false" aria-controls="paymentLedger" tabindex="-1">Phiếu thu</button>
                     </div>
                     <p id="paymentNotice" class="payment-notice" role="status" hidden></p>
                     <section id="pendingPayment" class="pending-payment" aria-label="Đối chiếu yêu cầu chưa rõ kết quả" hidden>
@@ -69,63 +71,56 @@
                             <button type="button" class="secondary-action" id="ackPaymentButton" hidden>Đã đối chiếu, tiếp tục</button>
                         </div>
                     </section>
-                    <div class="payment-summary" id="paymentSummary" aria-label="Thống kê thanh toán"></div>
-
-                    <div class="payment-layout">
-                        <section class="panel bill-list-panel" aria-labelledby="bill-list-title">
-                            <div class="panel-header">
-                                <h3 id="bill-list-title">Đơn chờ thanh toán</h3>
+                    <div id="paymentDesk" class="payment-layout" role="tabpanel" aria-labelledby="checkoutTab">
+                        <details id="paymentQueue" class="panel bill-list-panel" open>
+                            <summary class="queue-heading">
+                                <div><p class="eyebrow">Đơn đang mở</p><h3 id="bill-list-title">Hàng chờ thanh toán</h3></div>
                                 <span id="billCount">0 đơn</span>
-                            </div>
-
-                            <label class="search-box">
-                                <span>Tìm bàn hoặc mã đơn</span>
-                                <input type="search" id="billSearchInput" placeholder="Nhập tên bàn hoặc mã đơn">
-                            </label>
-                            <label class="search-box"><span>Trạng thái đơn</span><select id="queueStatus">
-                                <option value="all">Tất cả đơn đang mở</option><option value="ready">Đã xong bếp</option><option value="kitchen">Đang chờ bếp</option>
-                            </select></label>
-                            <div class="bill-list" id="billList"></div>
-                        </section>
-
-                        <section class="panel bill-detail-panel" aria-labelledby="bill-detail-title">
-                            <div class="panel-header">
-                                <h3 id="bill-detail-title">Chi tiết hóa đơn</h3>
-                                <span id="selectedBillStatus">Chưa chọn</span>
-                            </div>
-
-                            <div class="bill-detail" id="billDetail"></div>
-                            <h3 class="history-heading">Lịch sử thanh toán của đơn</h3>
-                            <div id="orderPayments" class="order-payments"></div>
-                        </section>
-
-                        <aside class="panel payment-method-panel" aria-labelledby="payment-method-title">
-                            <div class="panel-header">
-                                <h3 id="payment-method-title">Thanh toán</h3>
-                                <span id="paymentMethodLabel">Tiền mặt</span>
-                            </div>
-
-                            <div class="method-list" id="methodList" aria-label="Phương thức thanh toán"></div>
-
-                            <p id="methodHint" class="payment-hint"></p>
-                            <label class="discount-box">
-                                <span>Mã giao dịch (không bắt buộc)</span>
-                                <input type="text" id="transactionCode" maxlength="100" autocomplete="off" placeholder="Để trống để tự tạo mã thu">
-                            </label>
-                            <div class="payment-total" id="paymentTotals" aria-label="Tổng tiền đơn"></div>
-                            <p id="paymentBlock" class="payment-hint"></p>
-                            <button class="primary-action confirm-payment-button" type="button" id="confirmPaymentButton" disabled>Xác nhận đã nhận tiền</button>
-                            <section id="momoPanel" class="momo-panel" aria-label="Giao dịch MoMo" hidden>
-                                <h4>MoMo</h4><div id="momoInfo"></div>
-                                <button class="secondary-action" type="button" id="createMomoButton">Tạo giao dịch MoMo</button>
-                                <div id="mockActions" class="payment-actions" hidden>
-                                    <button class="secondary-action" type="button" id="mockSuccessButton">Giả lập thành công</button>
-                                    <button class="secondary-action" type="button" id="mockFailButton">Giả lập thất bại</button>
+                            </summary>
+                            <div class="queue-content">
+                                <div class="queue-filters">
+                                    <label class="search-box"><span>Tìm bàn hoặc mã đơn</span><input type="search" id="billSearchInput" placeholder="Tên bàn, ORD-…"></label>
+                                    <label class="search-box"><span>Trạng thái bếp</span><select id="queueStatus"><option value="all">Tất cả đơn đang mở</option><option value="ready">Đã xong bếp</option><option value="kitchen">Đang chờ bếp</option></select></label>
                                 </div>
+                                <div class="bill-list" id="billList"></div>
+                                <div class="payment-summary" id="paymentSummary" aria-label="Thống kê thanh toán"></div>
+                            </div>
+                        </details>
+
+                        <section id="paymentCheckout" class="panel payment-checkout" aria-labelledby="bill-detail-title">
+                            <header class="invoice-toolbar">
+                                <div><p class="eyebrow">Hóa đơn hiện tại</p><h3 id="bill-detail-title">Kiểm tra &amp; thu tiền</h3></div>
+                                <span id="selectedBillStatus" class="invoice-status">Chưa chọn</span>
+                            </header>
+                            <div class="invoice-document bill-detail-panel">
+                                <div class="bill-detail" id="billDetail"></div>
+                                <div id="invoiceTotalsSection" class="invoice-total-section"><div class="payment-total" id="paymentTotals" aria-label="Tổng tiền đơn"></div></div>
+                                <div id="invoicePrintActions" class="invoice-print-actions payment-actions">
+                                    <button class="secondary-action" type="button" id="tableBillButton" disabled>Tạm tính bàn</button>
+                                    <button class="secondary-action" type="button" id="printBillButton" disabled>In phiếu đơn</button>
+                                </div>
+                            </div>
+                            <section id="paymentMethodSection" class="payment-method-panel" aria-labelledby="payment-method-title">
+                                <div class="panel-header"><h3 id="payment-method-title">Phương thức thanh toán</h3><span id="paymentMethodLabel">Tiền mặt</span></div>
+                                <div class="method-list" id="methodList" aria-label="Phương thức thanh toán"></div>
+                                <div class="payment-entry">
+                                    <label class="discount-box"><span>Mã giao dịch (không bắt buộc)</span><input type="text" id="transactionCode" maxlength="100" autocomplete="off" placeholder="Để trống để tự tạo mã thu"></label>
+                                    <p id="methodHint" class="payment-hint"></p>
+                                </div>
+                                <section id="momoPanel" class="momo-panel" aria-label="Giao dịch MoMo" hidden>
+                                    <h4>MoMo</h4><div id="momoInfo"></div>
+                                    <button class="secondary-action" type="button" id="createMomoButton">Tạo giao dịch MoMo</button>
+                                    <div id="mockActions" class="payment-actions" hidden><button class="secondary-action" type="button" id="mockSuccessButton">Giả lập thành công</button><button class="secondary-action" type="button" id="mockFailButton">Giả lập thất bại</button></div>
+                                </section>
+                                <div class="invoice-confirm"><p id="paymentBlock" class="payment-hint"></p><button class="primary-action confirm-payment-button" type="button" id="confirmPaymentButton" disabled>Xác nhận đã nhận tiền</button></div>
                             </section>
-                        </aside>
+                            <details id="orderPaymentHistory" class="invoice-history">
+                                <summary>Lịch sử thanh toán của đơn</summary>
+                                <div id="orderPayments" class="order-payments"></div>
+                            </details>
+                        </section>
                     </div>
-                    <section class="panel payment-ledger" aria-labelledby="ledger-title">
+                    <section id="paymentLedger" class="panel payment-ledger" role="tabpanel" aria-labelledby="ledgerTab" hidden>
                         <div class="panel-header"><h3 id="ledger-title">Danh sách phiếu thu</h3><span>Ngày lọc theo giờ Việt Nam, dựa trên thời điểm thu</span></div>
                         <form id="paymentFilters" class="payment-filters">
                             <label><span>Trạng thái phiếu</span><select name="status"><option value="">Tất cả</option><option value="Paid">Đã thu</option><option value="Pending">Đang chờ</option><option value="Failed">Thất bại</option><option value="Refunded">Đã hoàn</option></select></label>
@@ -157,8 +152,8 @@
 
     <script src="../js/common/auth.js?v=20261105-role-access3"></script>
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
-    <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/payment-session.js?v=20261101-f67"></script>
-    <script src="../js/pages/payment.js?v=20261101-f67"></script>
+    <script src="../js/pages/payment.js?v=20261112-stitch-layout3"></script>
 </body>
 </html>

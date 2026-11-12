@@ -50,6 +50,10 @@
         if (!allowed) return;
         $("loadRevenue").disabled = session.revenueLoading || session.exporting;
         for (const id of ["reportPeriod", "reportDate"]) $(id).disabled = session.revenueLoading || session.exporting;
+        document.querySelectorAll("[data-report-period]").forEach((button) => {
+            button.disabled = session.revenueLoading || session.exporting;
+            button.setAttribute("aria-pressed", String(button.dataset.reportPeriod === $("reportPeriod").value));
+        });
         $("loadRevenue").textContent = session.revenueLoading ? "Đang tải…" : "Xem báo cáo";
         $("exportRevenue").disabled = !session.matches(input()) || session.exporting;
         $("exportRevenue").textContent = session.exporting ? "Đang xuất…" : "Tải báo cáo CSV ↓";
@@ -81,6 +85,11 @@
         finally { render(); }
     }
     $("reportFilters").addEventListener("submit", (event) => { event.preventDefault(); if (!session.revenueLoading && !session.exporting) load(); });
+    document.querySelectorAll("[data-report-period]").forEach((button) => button.addEventListener("click", () => {
+        if (session.revenueLoading || session.exporting || !session.hasAccess()) return;
+        $("reportPeriod").value = button.dataset.reportPeriod;
+        load();
+    }));
     for (const id of ["reportPeriod", "reportDate"]) $(id).addEventListener("input", render);
     $("onlyWithActivity").addEventListener("change", renderTable);
     $("reportChart").addEventListener("click", (event) => {

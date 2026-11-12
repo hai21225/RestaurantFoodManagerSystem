@@ -7,6 +7,7 @@
     const api = window.restaurantApi;
     const auth = window.restaurantAuth;
     const pos = window.restaurantPos;
+    const timing = window.restaurantPreparationTiming;
     // Chỉ mở bàn được chọn rõ trên URL; mục Đặt món luôn trở về khung chọn bàn.
     const tableId = new URLSearchParams(window.location.search).get("tableId");
     const session = new pos.OrderSession({ tableId, api, auth, storage: window.sessionStorage });
@@ -14,6 +15,8 @@
     const dishDialog = $("#sizeDialog");
     let sentVersion = "";
     let entryError = "";
+    let timingRequest = 0;
+    let preparationHistory = { orderId: null, rows: [], state: "idle" };
     const closed = () => session.order && pos.terminal(session.order.status);
     const hasValidTableId = () => Number.isInteger(session.tableId) && session.tableId > 0 && session.tableId <= 2147483647;
     const hasTableContext = () => session.isOperator() && session.table?.isActive && session.table.status !== "Maintenance" && (session.loaded || session.loading);
@@ -56,6 +59,7 @@
         $("#clearOrderButton").disabled = !state.cart.length || session.busy || Boolean(session.pending);
         $("#refreshOrderButton").disabled = session.busy || session.loading;
         $("#orderHistoryButton").disabled = session.busy || !session.order;
+        $("#orderToolsButton").hidden = !session.order;
         $("#orderToolsButton").disabled = !session.order || session.busy || session.loading || Boolean(session.pending);
         $("#cancelWholeOrderButton").hidden = !session.isAdmin() || !session.isOpen();
         $("#cancelWholeOrderButton").disabled = isLocked;
@@ -63,7 +67,7 @@
         $("#retryOrderButton").hidden = !ownPending;
         $("#retryOrderButton").disabled = session.busy || session.loading;
         $("#pendingTableLink").hidden = !session.pending || ownPending;
-        if (session.pending) $("#pendingTableLink").href = `order.html?tableId=${encodeURIComponent(session.pending.tableId)}`;
+        if (session.pending) $("#pendingTableLink").href = `order.html?tableId=${encodeURIComponent(session.pending.tableId)}&ui=20261112-print1`;
         $("#orderNoteInput").disabled = isLocked || Boolean(session.order);
         $("#cartList").querySelectorAll("button, input").forEach((input) => { input.disabled = isLocked; });
         $("#foodGrid").querySelectorAll("button").forEach((button) => { button.disabled = isLocked; });
@@ -112,7 +116,7 @@
                 <div class="sent-dish-heading"><div><strong>${escapeHtml(first.foodName || "Món đã ngừng bán")}</strong><p>${escapeHtml(first.sizeName)} · ${group.quantity} phần còn phục vụ</p></div>
                 ${group.active.length && session.isOperator() && session.isOpen() ? `<button class="secondary-action" type="button" data-edit-group="${escapeHtml(group.key)}" ${isLocked ? "disabled" : ""}>${session.canReduce(group) ? "Đổi số lượng" : "Gọi tăng"}</button>` : ""}</div>
                 ${group.items.map((item) => `<div class="sent-dish-line ${pos.cancelled(item) ? "is-cancelled" : ""}">
-                    <div><span class="pos-item-status">${escapeHtml(statusLabel(item.status))} · ${item.quantity} phần</span><span class="sent-unit-price">Đơn giá: ${money(item.unitPrice)}</span>
+                    <div><span class="pos-item-status">${escapeHtml(statusLabel(item.status))} · ${item.quantity} phần</span>${session.isOpen() ? `<span class="ordered-time" data-ordered-item="${escapeHtml(item.id)}" aria-live="off">Đang lấy giờ gọi…</span>` : ""}${item.status === "Pending" && session.isOpen() ? `<span class="preparation-clock preparation-clock--waiting" data-waiting-item="${escapeHtml(item.id)}" aria-live="off">Đang lấy thời gian chờ…</span>` : ""}${item.status === "Preparing" && session.isOpen() ? `<span class="preparation-clock" data-preparation-item="${escapeHtml(item.id)}" aria-live="off">Đang lấy thời gian…</span>` : ""}<span class="sent-unit-price">Đơn giá: ${money(item.unitPrice)}</span>
                     ${item.note ? `<p>Ghi chú: ${escapeHtml(item.note)}</p>` : ""}
                     ${item.toppings?.length ? `<p>Topping mỗi phần: ${item.toppings.map((t) => `${escapeHtml(t.toppingName)} × ${t.quantity}`).join(", ")}</p>` : ""}
                     ${item.cancelReason ? `<p>Lý do hủy: ${escapeHtml(item.cancelReason)}</p>` : ""}</div>
@@ -125,9 +129,72 @@
             .forEach(([selector, field]) => { $(selector).textContent = money(order[field]); });
     }
 
+    function renderPreparationTimes() {
+        const order = session.order;
+        const items = new Map((order?.items || []).map((item) => [String(item.id), item]));
+        const history = preparationHistory.orderId === order?.orderId ? preparationHistory : { rows: [], state: "idle" };
+        const notice = $("#preparationTimeNotice");
+        const error = session.loaded ? history.error : "";
+        const text = error ? `Chưa tải được giờ gọi và thời gian món. ${error} Bấm Làm mới đơn để thử lại.` : "";
+        notice.hidden = !text;
+        if (notice.textContent !== text) notice.textContent = text;
+        document.querySelectorAll("[data-ordered-item]").forEach((node) => {
+            const item = items.get(node.dataset.orderedItem);
+            const ordered = item && timing.orderedForItem(item, history.rows);
+            const known = ordered && timing.label(ordered) !== null;
+            node.textContent = !session.loaded ? "Giờ gọi chưa cập nhật" : known
+                ? `Gọi lúc ${new Date(timing.parseUtc(ordered)).toLocaleTimeString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })}`
+                : history.state === "loading" ? "Đang lấy giờ gọi…" : history.state === "failed" ? "Chưa rõ giờ gọi riêng" : "Chưa có giờ gọi riêng";
+            node.classList.toggle("is-unavailable", !session.loaded || !known);
+            node.title = known ? `Giờ gọi dòng món theo máy chủ: ${new Date(timing.parseUtc(ordered)).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (giờ Việt Nam).`
+                : "Chỉ dùng giờ gọi riêng được máy chủ lưu; không suy từ giờ tạo đơn, cập nhật hoặc tách dòng món.";
+        });
+        document.querySelectorAll("[data-waiting-item]").forEach((node) => {
+            const item = items.get(node.dataset.waitingItem);
+            const ordered = item && timing.orderedForItem(item, history.rows);
+            const elapsed = item?.status === "Pending" && ordered && timing.label(ordered);
+            node.textContent = !session.loaded ? "Thời gian chờ chưa cập nhật" : elapsed ? `Chờ bếp nhận · ${elapsed}`
+                : history.state === "loading" ? "Đang lấy thời gian chờ…" : history.state === "failed" ? "Chưa rõ thời gian chờ" : "Chưa có giờ gọi riêng";
+            node.classList.toggle("is-unavailable", !session.loaded || !elapsed);
+            node.title = "Thời gian từ giờ gọi riêng của dòng món đến hiện tại, khi bếp chưa nhận món; không phải thời gian dự kiến hoàn thành.";
+        });
+        document.querySelectorAll("[data-preparation-item]").forEach((node) => {
+            const item = items.get(node.dataset.preparationItem);
+            const start = item && timing.startedForItem(item, history.rows);
+            const elapsed = start && timing.label(start);
+            node.textContent = !session.loaded ? "Thời gian chưa cập nhật" : elapsed ? `Đang làm · ${elapsed}`
+                : history.state === "loading" ? "Đang lấy thời gian…"
+                : history.state === "failed" ? "Chưa rõ thời gian" : "Chưa có mốc bắt đầu";
+            node.classList.toggle("is-unavailable", !session.loaded || !elapsed);
+            node.title = elapsed ? `Từ lúc bếp bắt đầu món: ${new Date(timing.parseUtc(start)).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} (giờ Việt Nam). Thời gian đã làm, không phải dự kiến hoàn thành.`
+                : "Chỉ tính từ mốc bếp bắt đầu món do máy chủ lưu; không tính từ lúc gọi món hoặc mở trang.";
+        });
+    }
+
+    async function loadPreparationTimes() {
+        const request = ++timingRequest, order = session.order;
+        if (!session.loaded || !session.isOpen() || !order.items.length) {
+            preparationHistory = { orderId: null, rows: [], state: "idle" }; renderPreparationTimes(); return;
+        }
+        const previous = preparationHistory.orderId === order.orderId ? preparationHistory.rows : [];
+        preparationHistory = { orderId: order.orderId, rows: previous, state: "loading", error: preparationHistory.orderId === order.orderId ? preparationHistory.error : "" };
+        renderPreparationTimes();
+        try {
+            // Lịch sử món cho phép Phục vụ đọc; lỗi phần thời gian không khóa thao tác POS.
+            const rows = await api.get(`/orders/${order.orderId}/item-history`);
+            if (!Array.isArray(rows)) throw new Error("Không đọc được lịch sử thời gian món.");
+            if (request !== timingRequest || session.order?.orderId !== order.orderId) return;
+            preparationHistory = { orderId: order.orderId, rows, state: "ready" };
+        } catch (error) {
+            if (request !== timingRequest || session.order?.orderId !== order.orderId) return;
+            preparationHistory = { orderId: order.orderId, rows: [], state: "failed", error: error.message };
+        }
+        renderPreparationTimes();
+    }
+
     function renderCategories() {
         $("#categoryCount").textContent = `${state.categories.length} mục`;
-        $("#categoryList").innerHTML = [{ id: "all", name: "Tất cả" }, ...state.categories].map((category) => `<button type="button" class="category-button${state.category === category.id ? " is-active" : ""}" data-category-id="${escapeHtml(category.id)}"><strong>${escapeHtml(category.name)}</strong></button>`).join("");
+        $("#categoryList").innerHTML = [{ id: "all", name: "Tất cả" }, ...state.categories].map((category) => `<button type="button" class="category-button${state.category === category.id ? " is-active" : ""}" data-category-id="${escapeHtml(category.id)}"><strong>${escapeHtml(category.name)}</strong><small>${category.id === "all" ? state.foods.length : state.foods.filter((food) => food.categoryId === category.id).length}</small></button>`).join("");
     }
 
     function normalizeSearch(value) {
@@ -151,11 +218,20 @@
         $("#foodCount").textContent = `${foods.length} món`;
         $("#foodGrid").innerHTML = foods.length ? foods.map((food) => {
             const priceSize = food.sizes.find((size) => size.isDefault) || food.sizes[0];
+            const initials = food.foodName.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toLocaleUpperCase("vi-VN");
+            let imageUrl = "";
+            try {
+                const image = new URL(food.foodImageUrl, window.location.href);
+                if (food.foodImageUrl && ["http:", "https:"].includes(image.protocol)) imageUrl = image.href;
+            } catch { /* Món chưa có đường dẫn ảnh hợp lệ dùng chữ viết tắt. */ }
             return `<button class="food-card" type="button" data-food-id="${food.foodId}" ${locked() ? "disabled" : ""}>
-            <div class="food-card-top"><h4>${escapeHtml(food.foodName)}</h4></div><p>${escapeHtml(food.foodDescription || "")}</p>
-            <div class="food-meta"><span class="food-price">${escapeHtml(priceSize.sizeName)} · ${money(priceSize.sizePrice)}</span><span>${food.sizes.length} kích cỡ</span><span>Chọn món</span></div></button>`;
+            <span class="food-visual" aria-hidden="true"><svg viewBox="0 0 100 80" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="50" cy="40" r="28"/><circle cx="50" cy="40" r="21"/><path d="M10 14v16m5-16v16m5-16v16m-10-7h10m-5 7v36M85 14v52m0-52c-10 7-10 21 0 22"/></svg><span class="food-monogram">${escapeHtml(initials)}</span>${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="" loading="lazy" data-food-image>` : ""}</span>
+            <span class="food-card-content"><span class="food-card-top"><h4>${escapeHtml(food.foodName)}</h4></span><span class="food-description">${escapeHtml(food.foodDescription || "")}</span>
+            <span class="food-meta"><span class="food-price">${money(priceSize.sizePrice)}</span><span>${escapeHtml(priceSize.sizeName)} · ${food.sizes.length} kích cỡ</span></span></span>
+            <span class="food-card-add" aria-hidden="true">+</span></button>`;
         }).join("")
             : '<div class="empty-state"><strong>Chưa có món phù hợp</strong><span>Chỉ tìm món đang bán. Thử từ khác hoặc chọn Tất cả danh mục.</span></div>';
+        $("#foodGrid").querySelectorAll("[data-food-image]").forEach((image) => image.addEventListener("error", () => { image.hidden = true; }));
     }
 
     async function loadMenu() {
@@ -180,25 +256,28 @@
             const name = food?.foodName || "Món từ yêu cầu trước";
             return `<article class="cart-item"><div class="cart-item-top"><div class="cart-item-name"><strong>${escapeHtml(name)}</strong><span class="cart-item-size">${escapeHtml(size?.sizeName || "Cỡ đã chọn")} · Đơn giá cỡ: ${money(size?.sizePrice)}</span></div></div>
                 ${item.toppings.length ? `<p class="field-hint">Topping mỗi phần: ${item.toppings.map((t) => escapeHtml(food?.toppings.find((entry) => entry.toppingId === t.toppingId)?.toppingName || "Topping đã chọn")).join(", ")}</p>` : ""}
-                <div class="quantity-control"><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="-1" aria-label="Giảm ${escapeHtml(name)}">−</button><strong>${item.quantity} phần</strong><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="1" aria-label="Tăng ${escapeHtml(name)}">+</button></div>
+                <div class="quantity-control"><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="-1" aria-label="Giảm ${escapeHtml(name)}">−</button><strong>${item.quantity} phần</strong><button class="quantity-button" type="button" data-cart-index="${index}" data-delta="1" aria-label="Tăng ${escapeHtml(name)}">+</button><button class="quantity-button cart-remove" type="button" data-cart-index="${index}" data-delta="-${item.quantity}" aria-label="Xóa ${escapeHtml(name)} khỏi giỏ">×</button></div>
                 <input class="cart-item-note" maxlength="500" value="${escapeHtml(item.note)}" data-cart-note="${index}" aria-label="Ghi chú ${escapeHtml(name)}" placeholder="Ghi chú riêng cho món"></article>`;
         }).join("") : '<p class="cart-empty">Giỏ món chưa gửi đang trống.</p>';
         renderButtons();
     }
 
-    function render() { renderTable(); renderSentItems(); renderButtons(); }
+    function render() { renderTable(); renderSentItems(); renderButtons(); renderPreparationTimes(); }
 
     async function refresh(quiet = false) {
         if (session.busy || session.loading) return;
         if (!hasValidTableId()) { render(); return; }
+        const previouslyLoaded = session.loaded;
         entryError = "";
         const task = session.refresh();
         renderButtons();
         try {
             await task;
             if (session.order) window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(session.order));
-            if (!quiet) message(session.order ? "Đã tải trạng thái mới nhất từ máy chủ." : "Bàn chưa có đơn đang mở.");
+            if (!quiet) message(previouslyLoaded ? "Đã tải trạng thái mới nhất từ máy chủ." : "");
             render();
+            // Không chờ truy vấn phụ trước khi mở form hoặc hoàn tất refresh nghiệp vụ.
+            loadPreparationTimes();
         } catch (error) {
             entryError = error.message;
             message(error.message, true);
@@ -342,7 +421,7 @@
     $("#retryOrderButton").addEventListener("click", () => runMutation(() => session.resume()));
     $("#refreshOrderButton").addEventListener("click", async () => { await refresh(); await loadMenu(); });
     $("#orderEntryRetry").addEventListener("click", async () => { await refresh(); await loadMenu(); });
-    $("#chooseTableButton").addEventListener("click", () => { window.location.href = "tables.html"; });
+    $("#chooseTableButton").addEventListener("click", () => { window.location.href = "tables.html?ui=20261112-print1"; });
     $("#cartDock").addEventListener("click", () => { $(".cart-panel").classList.add("is-open"); $("#closeCartButton").focus(); });
     $("#closeCartButton").addEventListener("click", () => { $(".cart-panel").classList.remove("is-open"); $("#cartDock").focus(); });
     $("#sentOrderItems").addEventListener("click", (event) => {
@@ -380,7 +459,7 @@
         } catch (error) { $("#orderHistoryContent").textContent = error.message; }
     });
     $("#closeOrderHistory").addEventListener("click", () => $("#orderHistoryDialog").close());
-    $("#orderToolsButton").addEventListener("click", () => { if (session.order && !session.pending) location.href = `order-tools.html?orderId=${session.order.orderId}`; });
+    $("#orderToolsButton").addEventListener("click", () => { if (session.order && !session.pending) location.href = `order-tools.html?orderId=${session.order.orderId}&ui=20261112-print1`; });
     window.addEventListener("restaurant:auth-changed", render);
     if (session.pending && ["create", "add"].includes(session.pending.kind) && session.pending.tableId === session.tableId) {
         state.cart = session.pending.body.items.map((item) => ({ ...item }));
@@ -389,15 +468,17 @@
     renderCart(); render();
     Promise.resolve(auth.ready).then(async () => { await refresh(); await loadMenu(); });
     // Không cắt ngang nhập liệu/hộp thoại; trước khi mở lệnh sửa cũng tải lại đơn.
-    let poll;
+    let poll, preparationClock;
     function startPolling() {
         window.clearInterval(poll);
+        window.clearInterval(preparationClock);
         poll = window.setInterval(() => {
             if (!document.hidden && session.isOpen() && !dialog.open && !dishDialog.open && !$("#orderHistoryDialog").open
                 && !document.activeElement?.closest("input, textarea, select")) refresh(true);
         }, 5000);
+        preparationClock = window.setInterval(() => { if (!document.hidden) renderPreparationTimes(); }, 1000);
     }
     startPolling();
     window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
-    window.addEventListener("pagehide", () => window.clearInterval(poll));
+    window.addEventListener("pagehide", () => { window.clearInterval(poll); window.clearInterval(preparationClock); });
 })();

@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/order.css?v=20261111-search-empty">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/preparation-timing.css?v=20261112-queue1">
 </head>
-<body>
+<body class="service-workspace service-workspace--order">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -61,7 +63,7 @@
                         <h2 id="orderEntryTitle">Chọn bàn để bắt đầu</h2>
                         <p id="orderEntryDescription">Chọn bàn đang phục vụ hoặc bàn trống. Thực đơn và đơn tạm sẽ xuất hiện sau khi mở bàn.</p>
                         <div class="order-entry-actions">
-                            <a class="primary-action" href="tables.html" id="orderEntryChooseTable">Chọn bàn</a>
+                            <a class="primary-action" href="tables.html?ui=20261112-print1" id="orderEntryChooseTable">Chọn bàn</a>
                             <button class="secondary-action" type="button" id="orderEntryRetry" hidden>Thử lại</button>
                         </div>
                     </section>
@@ -74,8 +76,8 @@
                         </div>
                         <div class="order-actions">
                             <button class="secondary-action" type="button" id="chooseTableButton">Chọn bàn khác</button>
+                            <button class="secondary-action" type="button" id="orderToolsButton" disabled>Tiện ích đơn</button>
                             <button class="secondary-action" type="button" id="refreshOrderButton">Làm mới đơn</button>
-                            <button class="secondary-action" type="button" id="clearOrderButton">Xóa đơn tạm</button>
                             <button class="primary-action" type="button" id="sendKitchenButton">Gửi bếp</button>
                         </div>
                     </div>
@@ -86,34 +88,9 @@
                         <a id="pendingTableLink" hidden>Quay lại bàn có yêu cầu chưa xác nhận</a>
                     </div>
 
-                    <section class="panel sent-order-panel" id="activeOrderPanel" aria-labelledby="activeOrderTitle" hidden>
-                        <div class="panel-header sent-order-heading">
-                            <div><h3 id="activeOrderTitle">Món đã gửi</h3><p id="activeOrderStatus"></p></div>
-                            <div class="order-actions">
-                                <button class="secondary-action" type="button" id="orderHistoryButton">Lịch sử</button>
-                                <button class="secondary-action" type="button" id="orderToolsButton" disabled>Chuyển bàn / Khuyến mãi / Ghi chú</button>
-                                <button class="secondary-action" type="button" id="cancelWholeOrderButton" hidden>Hủy toàn bộ đơn</button>
-                            </div>
-                        </div>
-                        <p class="field-hint">Phục vụ chỉ giảm/hủy phần chưa được bếp nhận. Phần đã nhận cần quản trị viên xử lý.</p>
-                        <div id="sentOrderItems" class="sent-order-items"></div>
-                        <dl class="server-order-totals" aria-label="Số tiền đơn do máy chủ trả về">
-                            <div><dt>Tiền hàng</dt><dd id="serverSubtotal">—</dd></div>
-                            <div><dt>Giảm giá</dt><dd id="serverDiscount">—</dd></div>
-                            <div><dt>Phí phục vụ</dt><dd id="serverService">—</dd></div>
-                            <div><dt>Thuế</dt><dd id="serverTax">—</dd></div>
-                            <div><dt>Tổng đơn đã gửi</dt><dd id="serverTotal">—</dd></div>
-                        </dl>
-                    </section>
-
                     <div class="order-layout" id="orderLayout" hidden>
-                        <aside class="panel category-panel" aria-labelledby="category-title">
-                            <div class="panel-header">
-                                <h3 id="category-title">Danh mục</h3>
-                                <span id="categoryCount">0 mục</span>
-                            </div>
-                            <div class="category-list" id="categoryList"></div>
-                        </aside>
+                        <div class="pos-catalog">
+
 
                         <section class="panel menu-panel" aria-labelledby="menu-title">
                             <div class="menu-header">
@@ -127,12 +104,45 @@
                                 </label>
                             </div>
 
-                            <div class="food-grid" id="foodGrid"></div>
-                        </section>
-
-                        <aside class="panel cart-panel" aria-labelledby="cart-title">
+                        <aside class="category-panel" aria-labelledby="category-title">
                             <div class="panel-header">
-                                <h3 id="cart-title">Đơn tạm</h3>
+                                <h3 id="category-title">Danh mục</h3>
+                                <span id="categoryCount">0 mục</span>
+                            </div>
+                            <div class="category-list" id="categoryList"></div>
+                        </aside>
+
+                        </section>
+                            <div class="food-grid" id="foodGrid" aria-labelledby="menu-title"></div>
+
+                        </div>
+                        <div class="pos-order-sidebar">
+                        <aside class="panel pos-ticket" aria-label="Đơn hàng tại bàn">
+                            <div class="pos-ticket-heading"><p class="eyebrow">Chi tiết bàn</p><h2>Đơn hàng tại bàn</h2></div>
+                    <section class="sent-order-panel" id="activeOrderPanel" aria-labelledby="activeOrderTitle" hidden>
+                        <div class="panel-header sent-order-heading">
+                            <div><span class="eyebrow">Đơn đã gửi bếp</span><h3 id="activeOrderTitle">Món đã gửi</h3><p id="activeOrderStatus"></p></div>
+                            <div class="pos-ticket-amount"><span>Tổng đơn đã gửi</span><strong id="serverTotal">—</strong></div>
+                            <div class="order-actions">
+                                <button class="secondary-action" type="button" id="orderHistoryButton">Lịch sử</button>
+
+                                <button class="secondary-action" type="button" id="cancelWholeOrderButton" hidden>Hủy toàn bộ đơn</button>
+                            </div>
+                        </div>
+                        <p class="field-hint">Phục vụ chỉ giảm/hủy phần chưa được bếp nhận. Phần đã nhận cần quản trị viên xử lý.</p>
+                        <p id="preparationTimeNotice" class="preparation-time-notice" role="status" hidden></p>
+                        <div id="sentOrderItems" class="sent-order-items"></div>
+                        <details class="pos-totals-details"><summary>Chi tiết tiền hàng, thuế &amp; phí</summary><dl class="server-order-totals" aria-label="Số tiền đơn do máy chủ trả về">
+                            <div><dt>Tiền hàng</dt><dd id="serverSubtotal">—</dd></div>
+                            <div><dt>Giảm giá</dt><dd id="serverDiscount">—</dd></div>
+                            <div><dt>Phí phục vụ</dt><dd id="serverService">—</dd></div>
+                            <div><dt>Thuế</dt><dd id="serverTax">—</dd></div>
+
+                        </dl></details>
+                    </section>
+                        <aside class="cart-panel" aria-labelledby="cart-title">
+                            <div class="panel-header">
+                                <h3 id="cart-title"><span class="ticket-step" aria-hidden="true">2</span> Món mới chưa gửi</h3>
                                 <span id="cartItemCount">0 món</span>
                                 <button class="cart-close-button" type="button" id="closeCartButton" aria-label="Đóng đơn tạm">×</button>
                             </div>
@@ -145,10 +155,15 @@
                             </label>
 
                             <div class="cart-summary">
-                                <p class="field-hint">Món trong giỏ chưa được gửi. Tổng tiền, giảm giá, thuế và phí dịch vụ sẽ do máy chủ tính sau khi gửi.</p>
+                                <p class="field-hint">Chỉ gửi các món mới trong giỏ. Tổng đơn được cập nhật sau khi gửi bếp.</p>
+                                <div class="cart-submit-actions">
+                            <button class="secondary-action" type="button" id="clearOrderButton">Xóa đơn tạm</button>
                                 <button class="primary-action" type="button" id="cartSendButton">Gửi bếp</button>
+                                </div>
                             </div>
                         </aside>
+                        </aside>
+                        </div>
                     </div>
 
                     <button class="cart-dock" type="button" id="cartDock" hidden>
@@ -211,9 +226,10 @@
 
     <script src="../js/common/auth.js?v=20261105-role-access3"></script>
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
-    <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/common/order-session.js?v=20261101-f67"></script>
-    <script src="../js/pages/order.js?v=20261111-food-search2"></script>
+    <script src="../js/common/preparation-timing.js?v=20261112-queue1"></script>
+    <script src="../js/pages/order.js?v=20261112-print1"></script>
 </body>
 </html>

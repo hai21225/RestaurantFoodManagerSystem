@@ -6,8 +6,10 @@
     <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review"><link rel="stylesheet" href="../css/pages/management.css">
     <link rel="stylesheet" href="../css/pages/warehouse.css?v=20261101-f6">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/warehouse-sahara.css?v=20261112-stitch-layout3">
 </head>
-<body class="warehouse-page">
+<body class="warehouse-page service-workspace warehouse-sahara service-workspace--inventory">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
@@ -35,17 +37,32 @@
                     <section class="warehouse-pending" id="warehousePending" hidden aria-label="Đối chiếu thao tác kho">
                         <p id="warehousePendingSummary"></p><div class="warehouse-actions"><button class="secondary-action" type="button" id="warehouseReview">Tải dữ liệu để đối chiếu</button><button class="secondary-action" type="button" id="warehouseAck" hidden>Đã đối chiếu, tiếp tục</button><a id="warehousePendingLink" href="purchases.html" hidden>Mở màn hình đối chiếu</a></div>
                     </section>
-                    <div class="management-summary" id="inventorySummary"></div>
-                    <section class="panel management-toolbar" aria-label="Bộ lọc tồn kho">
+                    <div class="warehouse-workspace-bar">
+                        <div class="warehouse-view-tabs" role="tablist" aria-label="Nghiệp vụ kho">
+                            <button id="stockTab" type="button" role="tab" aria-controls="stockWorkspace" aria-selected="true">Tồn kho</button>
+                            <button id="ledgerTab" type="button" role="tab" aria-controls="ledgerSection" aria-selected="false" tabindex="-1">Lịch sử biến động</button>
+                        </div>
+                        <div class="warehouse-inline-summary" id="inventorySummary"></div>
+                    </div>
+                    <section id="stockWorkspace" role="tabpanel" aria-labelledby="stockTab">
+                    <div class="inventory-workbench">
+                    <section class="panel inventory-stock-panel" aria-labelledby="inventoryTitle">
+                    <div class="panel-header"><h3 id="inventoryTitle">Danh sách tồn kho</h3><span id="inventoryCount">0 nguyên liệu</span></div>
+                    <div class="management-toolbar" aria-label="Bộ lọc tồn kho">
                         <label class="field"><span class="field-label">Tìm nguyên liệu</span><input id="inventorySearch" type="search" placeholder="Tên hoặc mã nguyên liệu"></label>
                         <label class="field"><span class="field-label">Danh sách</span><select id="inventoryView"><option value="all">Tất cả tồn kho</option><option value="low">Cần kho xử lý</option><option value="Spoiled">Đánh dấu hỏng</option><option value="OutOfStock">Đánh dấu hết hàng</option></select></label>
+                    </div>
+                        <div class="stock-list-heading" aria-hidden="true"><span>Nguyên liệu</span><span>Tình trạng</span><span>Tồn ghi sổ</span><span>Đơn vị</span><span></span></div>
+                        <div id="inventoryList" class="inventory-stock-list"></div>
+                        <p class="warehouse-list-caption">Chọn nguyên liệu để xem tồn, điều chỉnh hoặc tra lịch sử.</p>
                     </section>
-                    <section class="panel warehouse-panel" aria-labelledby="inventoryTitle">
-                        <div class="panel-header"><h3 id="inventoryTitle">Danh sách tồn kho</h3><span id="inventoryCount">0 nguyên liệu</span></div>
-                        <p class="warehouse-hint">Lượng tồn là số ghi sổ. Nguyên liệu báo hỏng/hết vẫn cần kiểm tra dù sổ còn hàng. Điều chỉnh là phần tăng/giảm, cần ghi lý do.</p>
-                        <div id="inventoryList" class="warehouse-cards"></div>
+                    <aside class="panel stock-detail-panel" id="stockDetailPanel" aria-labelledby="stockDetailTitle">
+                        <div class="panel-header"><h3 id="stockDetailTitle">Chi tiết nguyên liệu</h3><button id="closeStockDetail" class="stock-detail-close secondary-action" type="button" aria-label="Đóng chi tiết nguyên liệu">×</button></div>
+                        <div id="stockDetail"><p class="warehouse-empty">Chọn nguyên liệu trong danh sách.</p></div>
+                    </aside>
+                    </div>
                     </section>
-                    <section class="panel warehouse-panel" id="ledgerSection" aria-labelledby="ledgerTitle">
+                    <section class="panel warehouse-panel" id="ledgerSection" role="tabpanel" aria-labelledby="ledgerTab" hidden>
                         <div class="panel-header"><h3 id="ledgerTitle">Lịch sử biến động kho</h3><span>Thời gian theo giờ Việt Nam</span></div>
                         <form id="ledgerFilters" class="warehouse-filters">
                             <label class="field"><span>Nguyên liệu</span><select id="ledgerIngredient" name="ingredientId"><option value="">Tất cả</option></select></label>
@@ -55,7 +72,8 @@
                             <label class="field"><span>Từ ngày</span><input name="from" type="date"></label><label class="field"><span>Đến ngày</span><input name="to" type="date"></label>
                             <button class="secondary-action" type="submit">Lọc lịch sử</button>
                         </form>
-                        <div class="warehouse-table-wrap"><table class="warehouse-table"><thead><tr><th>Thời điểm</th><th>Nguyên liệu</th><th>Loại</th><th>Lượng</th><th>Trước → Sau</th><th>Chứng từ / Lý do</th><th>Người tạo</th></tr></thead><tbody id="ledgerRows"></tbody></table></div>
+                        <p class="warehouse-scroll-hint">Vuốt ngang bảng để xem đầy đủ chứng từ và lý do.</p>
+                        <div class="warehouse-table-wrap" tabindex="0" role="region" aria-label="Bảng lịch sử biến động kho, có thể cuộn ngang"><table class="warehouse-table"><thead><tr><th>Thời điểm</th><th>Nguyên liệu</th><th>Loại</th><th>Lượng</th><th>Trước → Sau</th><th>Chứng từ / Lý do</th><th>Người tạo</th></tr></thead><tbody id="ledgerRows"></tbody></table></div>
                         <div class="warehouse-pagination"><button class="secondary-action" type="button" id="ledgerPrev">Trang trước</button><span id="ledgerPage"></span><button class="secondary-action" type="button" id="ledgerNext">Trang sau</button></div>
                     </section>
                 </section>
@@ -71,7 +89,7 @@
             <div class="dialog-actions"><button class="secondary-action" type="button" id="closeAdjust">Quay lại</button><button class="primary-action" type="submit" id="adjustSubmit">Xác nhận điều chỉnh</button></div>
         </form>
     </dialog>
-    <script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261110-current-screen"></script>
-    <script src="../js/common/warehouse-session.js"></script><script src="../js/common/warehouse-ui.js"></script><script src="../js/pages/inventory.js"></script>
+    <script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
+    <script src="../js/common/warehouse-session.js"></script><script src="../js/common/warehouse-ui.js"></script><script src="../js/pages/inventory.js?v=20261112-stitch-layout3"></script>
 </body>
 </html>

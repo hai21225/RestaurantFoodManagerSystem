@@ -5,8 +5,10 @@
     <title>Nguyên liệu &amp; công thức - Restaurant Food Manager</title>
     <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/recipes.css?v=20261101-f6-2">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/warehouse-sahara.css?v=20261112-stitch-layout3">
 </head>
-<body class="catalog-page">
+<body class="catalog-page service-workspace warehouse-sahara service-workspace--recipes">
 <div class="app-shell">
     <aside class="sidebar" aria-label="Điều hướng chính">
         <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
@@ -33,7 +35,7 @@
                     <h3>Kiểm tra thao tác vừa gửi</h3><p id="pendingSummary"></p><p>Đối chiếu danh mục và các phiên bản công thức trước khi thao tác tiếp. Không gửi lại yêu cầu chưa rõ kết quả.</p>
                     <div class="catalog-actions"><button id="reviewPending" class="secondary-action" type="button">Tải dữ liệu để đối chiếu</button><button id="acknowledgePending" class="secondary-action" type="button" hidden>Tôi đã đối chiếu xong</button></div>
                 </section>
-                <div id="catalogSummary" class="catalog-summary" aria-label="Tổng quan danh mục"></div>
+                <div id="catalogSummary" class="warehouse-inline-summary" aria-label="Tổng quan danh mục"></div>
                 <section id="ingredientsPanel" role="tabpanel" aria-labelledby="ingredientsTab">
                     <form id="ingredientFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc nguyên liệu">
                         <label class="form-field"><span>Tìm nguyên liệu</span><input id="ingredientSearch" type="search" placeholder="Tên hoặc đơn vị"></label>
@@ -46,14 +48,14 @@
                     </section>
                 </section>
                 <section id="recipesPanel" role="tabpanel" aria-labelledby="recipesTab" hidden>
-                    <form id="recipeFilters" class="panel catalog-toolbar" role="search" aria-label="Lọc công thức">
+
+                    <div class="catalog-recipe-layout">
+                        <section class="panel" aria-labelledby="recipeListTitle"><div class="panel-header"><h2 id="recipeListTitle">Món và kích cỡ</h2><span id="recipeCount"></span></div>                    <form id="recipeFilters" class="catalog-toolbar" role="search" aria-label="Lọc công thức">
                         <label class="form-field"><span>Tìm món / Công thức</span><input id="recipeSearch" type="search" placeholder="Tên món, công thức hoặc phiên bản"></label>
                         <label class="form-field"><span>Món ăn</span><select id="recipeFoodFilter"><option value="all">Tất cả món</option></select></label>
                         <label class="form-field"><span>Thiết lập</span><select id="recipeStateFilter"><option value="all">Tất cả kích cỡ</option><option value="configured" selected>Đã có công thức</option><option value="missing">Chưa có công thức</option></select></label>
-                    </form>
-                    <div class="catalog-recipe-layout">
-                        <section class="panel" aria-labelledby="recipeListTitle"><div class="panel-header"><h2 id="recipeListTitle">Món và kích cỡ</h2><span id="recipeCount"></span></div><div id="recipeRows" class="catalog-recipe-rows"></div></section>
-                        <section class="panel catalog-detail" aria-labelledby="recipeDetailTitle"><div class="panel-header"><h2 id="recipeDetailTitle">Chi tiết / Phiên bản</h2></div><div id="recipeDetail"></div></section>
+                    </form><div class="recipe-register-heading" aria-hidden="true"><span>Món / Kích cỡ</span><span>Công thức</span><span>Thao tác</span></div><div id="recipeRows" class="catalog-recipe-rows"></div></section>
+                        <section class="panel catalog-detail" id="recipeDetailPanel" aria-labelledby="recipeDetailTitle"><div class="panel-header"><h2 id="recipeDetailTitle">Định lượng &amp; phiên bản</h2><button id="closeRecipeDetail" class="secondary-action recipe-detail-close" type="button" aria-label="Đóng chi tiết công thức">×</button></div><div id="recipeDetail"></div></section>
                     </div>
                 </section>
             </section>
@@ -84,6 +86,6 @@
     <form id="stockStatusForm" class="dialog-form"><label class="form-field"><span>Tình trạng kho</span><select id="stockStatusValue"><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label><p class="catalog-caption">Đánh dấu tình trạng không đổi số lượng tồn và không tự bật bán lại món. Kiểm kê/điều chỉnh số lượng tại Kho.</p><p id="stockStatusMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="stockStatusDialog" type="button">Hủy</button><button id="stockStatusSubmit" class="primary-action" type="submit">Lưu tình trạng</button></div></form>
 </dialog>
 <dialog id="catalogConfirm" class="form-dialog" aria-labelledby="confirmTitle"><div class="form-dialog-header"><h2 id="confirmTitle">Xác nhận thao tác</h2><button class="dialog-close-button" data-close="catalogConfirm" type="button" aria-label="Đóng">×</button></div><form id="confirmForm" class="dialog-form"><p id="confirmText"></p><p id="confirmMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="catalogConfirm" type="button">Quay lại</button><button id="confirmSubmit" class="primary-action" type="submit">Xác nhận</button></div></form></dialog>
-<script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261110-current-screen"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261101-delete-visibility"></script>
+<script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261112-stitch-layout3-fix1"></script>
 </body>
 </html>

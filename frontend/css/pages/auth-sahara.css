@@ -1,0 +1,27 @@
+/* Authentication keeps the existing sign-in/setup logic and fields. */
+.service-workspace.login-page { padding-bottom: 0; }
+.service-workspace .login-topbar { background: var(--surface); border-bottom-color: var(--line); }
+.service-workspace .login-brand-mark { border-radius: 12px; background: var(--primary); color: white; }
+.service-workspace .login-card { border-radius: 18px; border-top: 4px solid var(--primary); padding: 32px; background: var(--surface); box-shadow: 0 12px 36px rgb(76 49 27 / 7%); }
+.service-workspace .login-heading h1 { font-size: 28px; }
+.service-workspace .login-heading > p:last-child { font-size: 15px; }
+.service-workspace .login-field input { border-radius: 10px; background: #fcf9f4; }
+.service-workspace .login-options { gap: 0 12px; }
+.service-workspace .login-submit { min-height: 48px; font-size: 15px; }
+.service-workspace .login-submit:disabled { color: var(--muted); background: var(--surface-strong); }
+.service-workspace .login-error { border-radius: 8px; }
+.service-workspace .login-password-toggle { border-radius: 8px; }
+.service-workspace .login-dialog { border-radius: 14px; }
+.service-workspace .setup-grid { gap: 18px; }
+.service-workspace .setup-grid .login-password-field { display: block; }
+.service-workspace .setup-grid .login-password-toggle { color: var(--primary-strong); }
+@media (max-width: 600px) {
+    .service-workspace .login-main { padding: 24px 16px; }
+    .service-workspace .login-card { padding: 24px; }
+    .service-workspace .login-heading h1 { font-size: 26px; }
+    .service-workspace .setup-grid { gap: 14px; }
+}
+@media (max-width: 360px) {
+    .service-workspace .login-main { padding: 20px 12px; }
+    .service-workspace .login-card { padding: 20px 16px; }
+}

@@ -75,6 +75,7 @@ async function openPage(role, apiFirst = false, options = {}) {
     const document = { documentElement:new Element(), body:new Element(), currentScript:{src:''},
         querySelector: selector => selector === '.main-nav' ? navigation : null,
         createElement: () => new Element(), addEventListener() {} };
+    if (options.service) document.body.className = 'service-workspace';
     let finishProfile;
     const context = vm.createContext({window, document, location:window.location, URL, Headers, Response, CustomEvent,
         fetch: () => new Promise(resolve => { finishProfile = resolve; })});
@@ -85,6 +86,7 @@ async function openPage(role, apiFirst = false, options = {}) {
     run('auth.js');
     for (const file of apiFirst ? ['api.js','navigation.js'] : ['navigation.js','api.js']) run(file);
     assert.equal(navigation.all().filter(item => item.classList.contains('nav-item') && !item.hidden).length, 0);
+    assert.equal(navigation.classList.contains('nav-service-direct'), false);
     finishProfile(new Response(JSON.stringify(user), {headers:{'content-type':'application/json'}}));
     await window.restaurantAuth.ready;
     if (options.inspect) return { navigation, window, media };
@@ -103,6 +105,23 @@ for (const [role, expected] of [
 }
 test('Admin nạp menu trước API vẫn có toàn bộ 17 mục sau bootstrap', async () => {
     assert.equal((await openPage('Admin')).length, 17);
+});
+
+test('Pilot Phục vụ có menu trực tiếp đúng quyền; Admin vẫn giữ đủ nhóm, trang cũ không đổi', async () => {
+    const waiter = await openPage('Waiter', true, { screen:'order', service:true, mobile:true, inspect:true });
+    assert.equal(waiter.navigation.classList.contains('nav-service-direct'), true);
+    assert.deepEqual(waiter.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Bàn ăn','Đặt món','Tài khoản']);
+    const admin = await openPage('Admin', true, { screen:'tables', service:true, mobile:true, inspect:true });
+    assert.equal(admin.navigation.classList.contains('nav-service-direct'), false);
+    assert.equal(admin.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).length, 17);
+    const old = await openPage('Waiter', true, { screen:'tables', mobile:true, inspect:true });
+    assert.equal(old.navigation.classList.contains('nav-service-direct'), false);
+});
+
+test('Pilot Tiện ích đơn của Thu ngân không mở thêm menu POS/Bếp', async () => {
+    const p = await openPage('Cashier', true, { screen:'order-tools', service:true, mobile:true, inspect:true });
+    assert.equal(p.navigation.classList.contains('nav-service-direct'), true);
+    assert.deepEqual(p.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Thanh toán','Tài khoản']);
 });
 test('thứ tự chuẩn auth → api → navigation vẫn giữ đủ màn Phục vụ', async () => {
     assert.deepEqual(await openPage('Waiter',true), ['Bàn ăn','Đặt món','Tài khoản']);
@@ -136,4 +155,45 @@ test('Đổi module quản trị ngay trong trang cập nhật nhãn thanh dư�
     p.window.location.search = '?tab=promotions';
     p.window.dispatchEvent(new CustomEvent('restaurant:admin-module-changed'));
     assert.equal(group.children[0].children[0].textContent, 'Khuyến mãi');
+});
+
+
+test('Liên kết pilot giữ phiên bản HTML khi chuyển màn và không thêm lựa chọn bàn ngầm', async () => {
+    const p = await openPage('Waiter',true,{screen:'order',service:true,inspect:true});
+    const links=p.navigation.all().filter(x=>x.classList.contains('nav-item')&&!x.hidden);
+    for(const label of ['Bàn ăn','Đặt món']) {
+        const target=new URL(links.find(x=>x.textContent===label).dataset.page);
+        assert.equal(target.searchParams.get('ui'),'20261112-print1');
+        assert.equal(target.searchParams.has('tableId'),false);
+        assert.equal(p.window.restaurantAuth.canAccessPage(target.href),true);
+    }
+    const account = new URL(links.find(x=>x.textContent==='Tài khoản').dataset.page);
+    assert.equal(account.pathname, '/pages/account.html');
+    assert.equal(account.searchParams.get('ui'), '20261112-print1');
+});
+
+test('Sahara Bếp/Thu ngân dùng tab trực tiếp và giữ đúng quyền sau chuẩn hóa URL', async () => {
+    for (const [role, expected] of [['Chef', ['Bếp', 'Tài khoản']], ['Cashier', ['Thanh toán', 'Tài khoản']]]) {
+        const p = await openPage(role, true, { service:true, mobile:true, inspect:true });
+        assert.equal(p.navigation.classList.contains('nav-service-direct'), true);
+        const visible = p.navigation.all().filter(x=>x.classList.contains('nav-item')&&!x.hidden);
+        assert.deepEqual(visible.map(x=>x.textContent), expected);
+        for (const link of visible) {
+            const target = new URL(link.dataset.page);
+            assert.equal(target.searchParams.get('ui'), '20261112-print1');
+            assert.equal(p.window.restaurantAuth.canAccessPage(target.href), true);
+        }
+    }
+});
+
+test('URL Sahara của kho/quản trị giữ module tab và không thêm lựa chọn đơn/bàn', async () => {
+    const p = await openPage('Admin', true, { service:true, inspect:true });
+    const links = p.navigation.all().filter(x=>x.classList.contains('nav-item')&&!x.hidden);
+    for (const label of ['Tổng quan','Kho hàng','Nhập hàng','Nguyên liệu / Công thức','Nhân viên','Báo cáo','Khuyến mãi']) {
+        const target = new URL(links.find(x=>x.textContent===label).dataset.page);
+        assert.equal(target.searchParams.get('ui'), '20261112-print1');
+        assert.equal(target.searchParams.has('tableId'), false);
+        assert.equal(target.searchParams.has('orderId'), false);
+        if (label === 'Khuyến mãi') assert.equal(target.searchParams.get('tab'), 'promotions');
+    }
 });

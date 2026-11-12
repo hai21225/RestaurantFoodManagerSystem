@@ -69,7 +69,7 @@
             if (module === "toppings" && !inactive) actions += `<button class="secondary-action" type="button" data-action="availability" data-id="${n}">${x.isAvailable ? "Báo tạm hết" : "Bật bán"}</button>`;
             if (module === "sizes" && !inactive && !x.isDefault) actions += `<button class="secondary-action" type="button" data-action="default" data-id="${n}">Đặt mặc định</button>`;
             if (module === "promotions") actions += `<button class="secondary-action" type="button" data-targets="${n}">Chọn phạm vi</button>`;
-            return `<article class="panel admin-record"><div class="panel-header"><h3>${esc(x[d.name] || d.title)}</h3>${d.singleton ? "" : `<span>#${n} · ${inactive ? "Ngừng dùng" : "Đang dùng"}</span>`}</div>${details(x)}<div class="admin-actions">${actions}</div></article>`;
+            return `<article class="admin-record admin-data-row" data-admin-module="${module}"><div class="admin-record-heading"><span class="admin-row-mark" aria-hidden="true">${esc(String(x[d.name] || d.title).trim().slice(0, 1).toLocaleUpperCase("vi"))}</span><div><h3>${esc(x[d.name] || d.title)}</h3>${d.singleton ? "" : `<span class="admin-row-status${inactive ? " is-inactive" : ""}">#${n} · ${inactive ? "Ngừng dùng" : "Đang dùng"}</span>`}</div></div><div class="admin-record-detail">${details(x)}</div><div class="admin-actions">${actions}</div></article>`;
         }).join("") : '<p class="empty-state">Không có mục phù hợp. Thử đổi bộ lọc hoặc thêm mới.</p>';
         $("adminRows").querySelectorAll("button").forEach((b) => { b.disabled = locked(); });
         $("adminPending").hidden = !session.pending;

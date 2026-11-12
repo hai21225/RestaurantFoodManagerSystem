@@ -164,12 +164,7 @@
             { label: "Ngừng bán", value: stoppedCount }
         ];
 
-        foodsSummary.innerHTML = summary.map((item) => `
-            <article class="foods-summary-card">
-                <span>${item.label}</span>
-                <strong>${item.value}</strong>
-            </article>
-        `).join("");
+        foodsSummary.innerHTML = summary.map((item) => `<span><strong>${item.value}</strong> ${item.label.toLocaleLowerCase("vi")}</span>`).join("");
     }
 
     function renderFilterOptions(container, items, activeValue) {

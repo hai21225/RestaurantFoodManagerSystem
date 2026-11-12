@@ -65,11 +65,20 @@
     const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
     const managementItems = items.slice(6);
     items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
+    // Nút Tổng quan đang chọn trong HTML cũ chưa có URL.
+    if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
+    // Giữ phiên bản HTML mới khi điều hướng từ trang đã được trình duyệt lưu đệm.
+    items.forEach((item) => {
+        if (!item.dataset.page) return;
+        const target = new URL(item.dataset.page, location.href);
+        if (/\/(index|pages\/(tables|order|order-tools|kitchen|payment|foods|inventory|purchases|recipes|administration|employees|roles|account|reports))\.html$/.test(target.pathname)) {
+            target.searchParams.set("ui", "20261112-print1");
+            item.dataset.page = target.href;
+        }
+    });
 
     const mobile = window.matchMedia("(max-width: 760px)");
     const groups = [];
-    // Trang chủ trước đây không có data-page; vẫn phải chọn được và đóng popup.
-    if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
 
     function setOpen(group, open) {
         open = !group.root.hidden && (group.single || open);
@@ -137,6 +146,9 @@
             group.toggle.hidden = group.single;
         });
         navigation.classList.toggle("nav-one-group", groups.filter((group) => !group.root.hidden).length === 1);
+        const visibleCount = items.filter((item) => !item.hidden).length;
+        navigation.classList.toggle("nav-service-direct", Boolean(document.body?.classList.contains("service-workspace"))
+            && auth?.isPageAllowed() && visibleCount >= 2 && visibleCount <= 4);
         applyLayout();
     }
     renderNavigation();

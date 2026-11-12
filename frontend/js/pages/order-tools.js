@@ -17,7 +17,7 @@
             expected = snapshot(o); $("billNote").value = o.note || "";
             $("moveTable").innerHTML = '<option value="">Chọn bàn trống</option>' + session.tables.filter((t) => t.isActive && t.status === "Available" && t.tableId !== o.tableId).map((t) => `<option value="${t.tableId}">Bàn ${esc(t.tableNumber)} · ${esc(t.areaName || "Chưa phân khu")} · ${t.capacity} chỗ</option>`).join("");
             $("promotionList").innerHTML = session.promotions.filter((p) => p.isActive).map((p) => `<option value="${p.id}" label="${esc(`${p.name} · ${p.discountType === "Percent" ? `${p.discountValue}%` : money(p.discountValue)} · ${String(p.startAt).slice(0, 10)}–${String(p.endAt).slice(0, 10)}`)}"></option>`).join("");
-            $("backToOrder").href = `order.html?tableId=${o.tableId}`;
+            $("backToOrder").href = `order.html?tableId=${o.tableId}&ui=20261112-print1`;
             $("goToPayment").href = `payment.html?orderId=${o.orderId}`;
         }
         $("promotionHint").textContent = auth.hasRole("Admin") ? "Chọn mã từ danh sách. Hệ thống kiểm tra thời hạn, phạm vi và điều kiện đơn rồi cập nhật số tiền." : "Hiện chưa có danh sách chọn khuyến mãi cho vai trò Phục vụ. Bạn có thể dùng mã do Quản trị cung cấp.";

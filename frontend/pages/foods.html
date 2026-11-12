@@ -8,8 +8,10 @@
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/foods.css?v=20261111-food-layout2">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/warehouse-sahara.css?v=20261112-stitch-layout3">
 </head>
-<body>
+<body class="service-workspace warehouse-sahara service-workspace--foods">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -68,9 +70,18 @@
                         </div>
                     </div>
 
-                    <div class="foods-summary" id="foodsSummary" aria-label="Thống kê món ăn"></div>
+                    <div class="warehouse-inline-summary" id="foodsSummary" aria-label="Thống kê món ăn"></div>
 
-                    <section class="panel foods-toolbar" aria-label="Bộ lọc món ăn">
+
+
+                    <div class="foods-layout">
+                        <section class="panel foods-table-panel" aria-labelledby="foods-table-title">
+                            <div class="panel-header">
+                                <h3 id="foods-table-title">Thực đơn</h3>
+                                <span id="visibleFoodCount">0 món</span>
+                            </div>
+
+                    <section class="foods-toolbar" aria-label="Bộ lọc món ăn">
                         <label class="search-box">
                             <span>Tìm món</span>
                             <input type="search" id="foodSearchInput" placeholder="Nhập tên món hoặc mã món">
@@ -86,14 +97,7 @@
                             <select id="statusFilters"></select>
                         </label>
                     </section>
-
-                    <div class="foods-layout">
-                        <section class="panel foods-table-panel" aria-labelledby="foods-table-title">
-                            <div class="panel-header">
-                                <h3 id="foods-table-title">Thực đơn</h3>
-                                <span id="visibleFoodCount">0 món</span>
-                            </div>
-
+                            <div class="food-register-heading" aria-hidden="true"><span>Món ăn</span><span>Danh mục</span><span>Giá bán</span><span>Trạng thái</span></div>
                             <p id="foodListNotice" class="ui-message" role="status"></p>
                             <div class="food-list" id="foodList"></div>
                         </section>
@@ -245,11 +249,11 @@
 
     <script src="../js/common/auth.js?v=20261105-role-access3"></script>
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
-    <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/common/food-units.js"></script>
     <script src="../js/common/food-sizes.js"></script>
     <script src="../js/data/foods.data.js?v=20261101-delete-visibility"></script>
-    <script src="../js/pages/foods.js?v=20261111-food-layout2"></script>
+    <script src="../js/pages/foods.js?v=20261112-stitch-layout3"></script>
 </body>
 </html>

@@ -34,10 +34,10 @@
             for (const id of ["tableSummary", "kitchenSummary"]) $(id).innerHTML = "";
             $("dashboardTableCount").textContent = "—"; $("queueCount").textContent = "—"; return;
         }
-        $("metricGrid").innerHTML = [["Doanh thu đã thu hôm nay", money(data.revenueToday), "Chỉ khoản đã thu; không gồm đã hoàn tiền."],
-            ["Đơn đã thu hôm nay", data.paidOrderCountToday, "Số đơn theo thời điểm thu tiền."], ["Đơn đang mở", data.openOrderCount, "Các đơn chưa thanh toán hoặc hủy."],
+        $("metricGrid").innerHTML = `<article class="dashboard-revenue-hero"><div><span>Doanh thu đã thu hôm nay</span><strong>${esc(money(data.revenueToday))}</strong><small>Chỉ khoản đã thu; không gồm đã hoàn tiền.</small></div><a href="pages/reports.html">Xem báo cáo chi tiết <span aria-hidden="true">↗</span></a></article><div class="dashboard-key-metrics">` +
+            [["Đơn đã thu hôm nay", data.paidOrderCountToday, "Theo thời điểm thu tiền"], ["Đơn đang mở", data.openOrderCount, "Chưa thanh toán hoặc hủy"],
             ["Nguyên liệu dưới ngưỡng", data.lowStockCount, "Xem thêm tình trạng hỏng/hết tại Kho."]]
-            .map(([label, value, note]) => `<article class="metric-card"><span>${label}</span><strong>${esc(value)}</strong><small>${note}</small></article>`).join("");
+            .map(([label, value, note]) => `<article class="dashboard-key-metric"><span>${label}</span><strong>${esc(value)}</strong><small>${note}</small></article>`).join("") + '</div>';
         $("tableSummary").innerHTML = [["Trống", data.tables.available], ["Có khách", data.tables.occupied], ["Bảo trì / Ngừng dùng", data.tables.maintenance]]
             .map(([label, value]) => `<span>${label}: <strong>${value}</strong></span>`).join("");
         $("kitchenSummary").innerHTML = [["Tổng phiếu mở", data.kitchen.open], ["Chờ nhận", data.kitchen.pending], ["Đã nhận / Đang làm", data.kitchen.preparing], ["Đã xong", data.kitchen.ready]]

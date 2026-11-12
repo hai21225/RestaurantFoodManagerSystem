@@ -197,7 +197,7 @@
                     <strong>${table.name}</strong>
                     <span class="status status-${table.status}">${table.statusLabel}</span>
                 </div>
-                <span class="table-area">${table.areaLabel}</span>
+                <span class="table-card-symbol" aria-hidden="true"><svg viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="14" y="10" width="36" height="28" rx="7"/><path d="M22 4v6m20-6v6M22 38v6m20-6v6M7 17h7M7 31h7m36-14h7m-7 14h7"/></svg></span><span class="table-area">${table.areaLabel}</span>
                 <span class="table-seats">${table.seats} chỗ</span>
             </button>
         `).join("");
@@ -293,7 +293,7 @@
             statusLabel: table.statusLabel
         }));
 
-        window.location.href = `order.html?tableId=${encodeURIComponent(table.id)}`;
+        window.location.href = `order.html?tableId=${encodeURIComponent(table.id)}&ui=20261112-print1`;
     }
 
     function openTableDetail() {

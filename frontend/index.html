@@ -9,8 +9,11 @@
     <link rel="stylesheet" href="css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="css/pages/dashboard.css">
     <link rel="stylesheet" href="css/pages/reports.css?v=20261101-f5-ui">
+
+<link rel="stylesheet" href="css/pages/service-workspace.css?v=20261112-stitch-layout3">
+<link rel="stylesheet" href="css/pages/management-sahara.css?v=20261112-stitch-layout3">
 </head>
-<body class="reporting-page">
+<body class="reporting-page service-workspace service-workspace--management">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -54,8 +57,8 @@
                 <section class="screen is-visible" id="dashboard-screen" aria-labelledby="dashboard-title">
                     <div class="section-heading">
                         <div>
-                            <p class="eyebrow">Tổng quan hôm nay</p>
-                            <h2 id="dashboard-title">Hoạt động hôm nay</h2>
+                            <p class="eyebrow">Hoạt động nhà hàng</p>
+                            <h2 id="dashboard-title">Hôm nay tại nhà hàng</h2>
                         </div>
                         <div class="reporting-actions"><button class="secondary-action" type="button" id="refreshDashboard">Làm mới</button><button class="secondary-action" type="button" id="createOrderButton">Tạo đơn mới</button><a class="primary-action" href="pages/reports.html">Xem báo cáo doanh thu →</a></div>
                     </div>
@@ -63,7 +66,18 @@
                     <p id="dashboardUpdated" class="reporting-caption"></p>
                     <div class="metric-grid" id="metricGrid" aria-label="Chỉ số tổng quan"></div>
                     <p id="dashboardEmpty" class="report-empty" hidden></p>
-                    <section class="panel kitchen-overview" aria-labelledby="kitchen-summary-title"><div class="panel-header"><h3 id="kitchen-summary-title">Phiếu bếp đang mở</h3><a href="pages/kitchen.html">Mở màn Bếp</a></div><div id="kitchenSummary" class="dashboard-counts"></div></section>
+                    <section class="dashboard-shortcuts" aria-labelledby="shortcutTitle">
+                        <div class="workspace-subheading"><h3 id="shortcutTitle">Truy cập nhanh</h3><span>Công việc thường dùng</span></div>
+                        <div class="shortcut-grid">
+                            <a class="workspace-shortcut" href="pages/tables.html"><span class="shortcut-symbol" aria-hidden="true">B</span><span><strong>Bàn &amp; đặt món</strong><small>Chọn bàn, mở đơn</small></span><span aria-hidden="true">↗</span></a>
+                            <a class="workspace-shortcut" href="pages/kitchen.html"><span class="shortcut-symbol" aria-hidden="true">K</span><span><strong>Phiếu bếp</strong><small>Nhận và xử lý món</small></span><span aria-hidden="true">↗</span></a>
+                            <a class="workspace-shortcut" href="pages/payment.html"><span class="shortcut-symbol" aria-hidden="true">₫</span><span><strong>Thu ngân</strong><small>Thanh toán, phiếu thu</small></span><span aria-hidden="true">↗</span></a>
+                            <a class="workspace-shortcut" href="pages/inventory.html"><span class="shortcut-symbol" aria-hidden="true">N</span><span><strong>Kho nguyên liệu</strong><small>Tồn kho và lịch sử</small></span><span aria-hidden="true">↗</span></a>
+                            <a class="workspace-shortcut" href="pages/purchases.html"><span class="shortcut-symbol" aria-hidden="true">+</span><span><strong>Nhập hàng</strong><small>Phiếu nhập, nhà cung cấp</small></span><span aria-hidden="true">↗</span></a>
+                            <a class="workspace-shortcut" href="pages/employees.html"><span class="shortcut-symbol" aria-hidden="true">NV</span><span><strong>Nhân viên</strong><small>Tài khoản và vai trò</small></span><span aria-hidden="true">↗</span></a>
+                        </div>
+                    </section>
+                    <section class="panel kitchen-overview" aria-labelledby="kitchen-summary-title"><div class="panel-header"><h3 id="kitchen-summary-title">Phiếu bếp đang mở</h3><a href="pages/kitchen.html">Mở màn Bếp →</a></div><div id="kitchenSummary" class="dashboard-counts"></div></section>
                     <div class="dashboard-layout">
                         <section class="panel table-panel" aria-labelledby="table-status-title">
                             <div class="panel-header">
@@ -97,8 +111,8 @@
 
     <script src="js/common/auth.js?v=20261105-role-access3"></script>
     <script src="js/common/api.js?v=20261105-role-access3"></script>
-    <script src="js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="js/common/reporting-session.js"></script>
-    <script src="js/pages/dashboard.js?v=20261101-f5-ui"></script>
+    <script src="js/pages/dashboard.js?v=20261112-stitch-layout3"></script>
 </body>
 </html>

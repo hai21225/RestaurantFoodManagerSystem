@@ -8,8 +8,9 @@
     <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/tables.css?v=20261110-tables-clean">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
 </head>
-<body>
+<body class="service-workspace service-workspace--tables">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -50,6 +51,17 @@
 
             <main class="content">
                 <section class="tables-screen" aria-labelledby="tables-title">
+                    <div class="tables-layout">
+                        <section class="panel table-board" aria-labelledby="tables-title">
+                            <div class="panel-header">
+                                <div class="table-board-title"><h2 id="tables-title">Sơ đồ bàn</h2><span id="visibleTableCount">0 bàn</span></div>
+                                <div class="heading-actions">
+                                    <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                                    <button class="secondary-action" type="button" id="manageTablesButton" hidden>Sửa bàn / Khu vực</button>
+                                    <button class="primary-action" type="button" id="addTableButton" hidden>Thêm bàn</button>
+                                </div>
+                            </div>
+                    <div class="service-table-overview">
                     <div class="tables-summary" id="tablesSummary" aria-label="Thống kê trạng thái bàn"></div>
 
                     <section class="panel tables-toolbar" aria-label="Bộ lọc bàn">
@@ -64,16 +76,8 @@
                         </label>
                     </section>
 
-                    <div class="tables-layout">
-                        <section class="panel table-board" aria-labelledby="tables-title">
-                            <div class="panel-header">
-                                <div class="table-board-title"><h2 id="tables-title">Danh sách bàn</h2><span id="visibleTableCount">0 bàn</span></div>
-                                <div class="heading-actions">
-                                    <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
-                                    <button class="secondary-action" type="button" id="manageTablesButton" hidden>Sửa bàn / Khu vực</button>
-                                    <button class="primary-action" type="button" id="addTableButton" hidden>Thêm bàn</button>
-                                </div>
-                            </div>
+                    </div>
+
                             <p id="tableListNotice" class="ui-message" role="status"></p>
                             <div class="restaurant-map" id="restaurantMap"></div>
                         </section>
@@ -146,9 +150,9 @@
 
     <script src="../js/common/auth.js?v=20261105-role-access3"></script>
     <script src="../js/common/api.js?v=20261105-role-access3"></script>
-    <script src="../js/common/navigation.js?v=20261110-current-screen"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/dialogs.js"></script>
     <script src="../js/data/tables.data.js?v=20261110-tables-clean"></script>
-    <script src="../js/pages/tables.js?v=20261110-tables-clean"></script>
+    <script src="../js/pages/tables.js?v=20261112-print1"></script>
 </body>
 </html>
