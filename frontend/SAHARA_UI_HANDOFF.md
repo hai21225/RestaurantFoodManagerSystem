@@ -142,7 +142,7 @@ Session nghiệp vụ/DTO/route không phải nơi sửa bố cục này.
 - Navbar: `navigation.js?v=20261112-service-nav10`.
 - HTML nghiệp vụ dùng `ui=20261112-print1`; bộ CSS bố cục vẫn có version
   `20261112-stitch-layout3`. Helper/CSS đồng hồ dùng `20261112-queue1`, JS Phục vụ/Bếp dùng `20261112-print1`;
-  CSS/renderer in dùng `20261112-print4`, controller in dùng `20261112-print2`.
+  CSS in dùng `20261112-print6`, renderer in dùng `20261112-print4`, controller in dùng `20261112-print2`.
   riêng `kitchen-queue.css` dùng `20261112-queue2` để sửa ancestor overflow cho thanh nhắc sticky.
   Riêng `recipes.js` và `purchases.js` dùng
   `20261112-stitch-layout3-fix1` cho sửa xử lý lỗi GET chi tiết.
@@ -318,3 +318,15 @@ Session nghiệp vụ/DTO/route không phải nơi sửa bố cục này.
   ngay dưới cỡ món, lấy `ticket.sentAt` như thẻ Bếp. Bỏ Giờ đặt món và dòng giờ gửi
   lặp ở phần mã phiếu; mỗi tờ cùng phiếu nguồn có chung mốc gửi. Không sửa backend;
   FE-C29 vẫn cần Hải cho giờ gọi/FIFO chi tiết, không chặn dòng giờ gửi trên giấy.
+
+- Phông chữ phiếu in `20261112-print5` chuyển toàn bộ sang Manrope local: bàn và
+  tên món/số phần đậm 800, cỡ và giá trị mã 700, giờ gửi 600; metadata căn hai cột,
+  footer thường 400. Đã xem trước website thật ở hai khổ × bốn cỡ màn hình, không
+  tràn ngang. Không đổi nội dung/API hoặc in máy thật; ghi chú chi tiết ở bàn giao
+  in Bếp mục 11, ảnh/log ngoài repo `_codex_runtime/kitchen-print-typography-20261112/`.
+
+- Phản hồi chữ còn không đều: `20261112-print6` thay hệ nhiều cỡ ở mục 11 bằng
+  đúng **11pt/13pt**, thường 400/đậm 700. Tên món/số phần/chữ phần và bàn 13pt;
+  thông tin còn lại kể cả footer 11pt. Đã kiểm tra mọi phần tử trên hai tờ thật
+  ở tám cấu hình, không tràn ngang. Không đổi nội dung/API hoặc in máy thật.
+  Chi tiết ở bàn giao Bếp mục 12; ảnh/log ngoài repo trong thư mục `even-sizes/`.

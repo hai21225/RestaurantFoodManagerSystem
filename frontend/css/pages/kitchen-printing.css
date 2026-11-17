@@ -15,39 +15,44 @@
 .kitchen-print-preview { background: #ece7df; padding: 16px; border-radius: 8px; margin-top: 12px; overflow: auto; }
 .kitchen-slip-batch { min-width: 0; }
 .kitchen-slip-batch > .kitchen-slip-summary { margin: 0 0 12px; color: #3a3028; font-size: 13px; text-align: center; }
-.kitchen-slip { box-sizing: border-box; width: 80mm; max-width: 100%; padding: 4mm; margin: 0 auto; border: 1px solid #ccc; background: #fff; color: #000; font: 10pt/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
+.kitchen-slip { --slip-font: Manrope, Arial, Helvetica, sans-serif; --slip-text-size: 11pt; --slip-heading-size: 13pt; box-sizing: border-box; width: 80mm; max-width: 100%; padding: 4mm; margin: 0 auto; border: 1px solid #ccc; background: #fff; color: #000; font: 400 var(--slip-text-size)/1.45 var(--slip-font); overflow-wrap: anywhere; }
 .kitchen-slip + .kitchen-slip { margin-top: 20px; }
 .kitchen-print-preview[data-paper-size="58"] .kitchen-slip { width: 58mm; }
-.kitchen-slip :is(h1, h2, h3, p, ul, ol, dl) { margin: 0; color: #000; font-family: Arial, sans-serif; }
+.kitchen-slip * { font-family: var(--slip-font); font-size: inherit; line-height: inherit; letter-spacing: normal; }
+.kitchen-slip :is(h1, h2, h3, p, ul, ol, dl) { margin: 0; color: #000; font-family: var(--slip-font); }
+.kitchen-slip :is(strong, b) { font-weight: 700; }
 .kitchen-slip .kitchen-slip-header { text-align: center; padding-bottom: 3mm; border-bottom: 2px solid #000; }
-.kitchen-slip .kitchen-slip-title { font-size: 14pt; font-weight: 700; }
-.kitchen-slip .kitchen-slip-table { display: block; font-size: 22pt; font-weight: 700; margin: 2mm 0; line-height: 1.15; }
-.kitchen-slip .kitchen-slip-position { font-size: 8pt; }
-.kitchen-slip .kitchen-slip-meta { font-size: 9pt; margin-top: 2mm; }
-.kitchen-slip .kitchen-slip-meta > div { margin: 1mm 0; }
-.kitchen-slip .kitchen-slip-meta dt, .kitchen-slip .kitchen-slip-meta dd { display: inline; margin: 0; }
-.kitchen-slip .kitchen-slip-meta dt { font-weight: 700; }
+.kitchen-slip .kitchen-slip-title { font-size: var(--slip-text-size); font-weight: 700; line-height: inherit; letter-spacing: normal; }
+.kitchen-slip .kitchen-slip-table { display: block; font-size: var(--slip-heading-size); font-weight: 700; margin: 2mm 0; }
+.kitchen-slip .kitchen-slip-position { font-weight: 400; }
+.kitchen-slip .kitchen-slip-meta { margin-top: 2mm; font-variant-numeric: tabular-nums; }
+.kitchen-slip .kitchen-slip-meta > div { display: grid; grid-template-columns: 20mm minmax(0, 1fr); gap: 2mm; align-items: baseline; margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-meta dt, .kitchen-slip .kitchen-slip-meta dd { display: block; min-width: 0; margin: 0; }
+.kitchen-slip .kitchen-slip-meta dt { font-weight: 400; }
+.kitchen-slip .kitchen-slip-meta dd { font-weight: 700; }
 .kitchen-slip .kitchen-slip-meta dt::after { content: ": "; }
 .kitchen-slip .kitchen-slip-closed { font-weight: 700; border: 2px solid #000; padding: 2mm; margin: 2mm 0; }
 .kitchen-slip .kitchen-slip-scope { border: 1px solid #000; padding: 2mm; margin: 3mm 0; font-weight: 700; text-align: center; }
-.kitchen-slip .kitchen-slip-reprint { border: 2px solid #000; padding: 2mm; margin-bottom: 3mm; font-size: 15pt; font-weight: 700; text-align: center; }
-.kitchen-slip .kitchen-slip-order-note { padding: 2mm 0; white-space: pre-wrap; font-weight: 700; }
+.kitchen-slip .kitchen-slip-reprint { border: 2px solid #000; padding: 2mm; margin-bottom: 3mm; font-size: var(--slip-heading-size); font-weight: 700; text-align: center; }
+.kitchen-slip .kitchen-slip-order-note { padding: 2mm 0; white-space: pre-wrap; font-weight: 400; }
 .kitchen-slip .kitchen-slip-items { padding: 0; list-style: none; }
 .kitchen-slip .kitchen-slip-item { padding: 3mm 0; border-bottom: 1px dashed #000; break-inside: avoid; }
-.kitchen-slip .kitchen-slip-item-heading { font-size: 16pt; line-height: 1.3; }
-.kitchen-slip .kitchen-slip-quantity { display: inline; font-size: inherit; font-weight: 700; }
-.kitchen-slip .kitchen-slip-quantity small { font-size: 11pt; }
-.kitchen-slip .kitchen-slip-item-name { display: inline; font-size: inherit; font-weight: 700; margin-left: 1.5mm; }
-.kitchen-slip .kitchen-slip-item-size { margin-top: 2mm; font-size: 12pt; font-weight: 700; }
-.kitchen-slip .kitchen-slip-sent-at { margin-top: 2mm; }
+.kitchen-slip .kitchen-slip-item-heading { font-size: var(--slip-heading-size); font-weight: 700; }
+.kitchen-slip .kitchen-slip-quantity { display: inline; font-weight: 700; }
+.kitchen-slip .kitchen-slip-quantity small { font-size: inherit; font-weight: inherit; }
+.kitchen-slip .kitchen-slip-item-name { display: inline; font-weight: 700; margin-left: 1.5mm; }
+.kitchen-slip .kitchen-slip-item-size { margin-top: 2mm; font-weight: 700; }
+.kitchen-slip .kitchen-slip-sent-at { margin-top: 2mm; font-weight: 400; font-variant-numeric: tabular-nums; }
+.kitchen-slip .kitchen-slip-sent-at small { font-size: inherit; font-weight: 400; }
 .kitchen-slip .kitchen-slip-item-flag { display: block; font-weight: 700; margin-top: 1mm; }
 .kitchen-slip .kitchen-slip-item:is(.is-done, .is-cancelled) .kitchen-slip-item-flag { border: 2px solid #000; padding: 1mm; }
 .kitchen-slip .kitchen-slip-item.is-cancelled .kitchen-slip-item-name { text-decoration: line-through; }
-.kitchen-slip .kitchen-slip-toppings { padding-left: 4mm; margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-toppings { margin: 2mm 0; font-weight: 400; }
 .kitchen-slip .kitchen-slip-toppings ul { padding-left: 4mm; }
-.kitchen-slip .kitchen-slip-item-note, .kitchen-slip-cancel-reason { white-space: pre-wrap; margin: 2mm 0; font-weight: 700; }
-.kitchen-slip .kitchen-slip-footer { font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 3mm; }
+.kitchen-slip .kitchen-slip-item-note, .kitchen-slip .kitchen-slip-cancel-reason { white-space: pre-wrap; margin: 2mm 0; font-weight: 700; }
+.kitchen-slip .kitchen-slip-footer { font-weight: 400; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 3mm; }
 .kitchen-slip .kitchen-slip-footer p { margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-footer :is(small, strong) { font-size: inherit; font-weight: 400; }
 .kitchen-slip .kitchen-slip-empty { padding: 4mm 0; }
 @media (max-width: 480px) {
     .kitchen-print-header, .kitchen-print-scroll, .kitchen-print-actions { padding: 12px; }
