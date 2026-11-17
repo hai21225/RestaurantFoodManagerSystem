@@ -258,7 +258,10 @@
         window.clearInterval(poll);
         window.clearInterval(preparationClock);
         // Bộ lọc nằm ngoài dialog: giữ focus tìm kiếm vẫn phải nhận được các món mới.
-        poll = window.setInterval(() => { if (!document.hidden && !dialog.open && !printView.isOpen() && !printView.isBusy() && !session.pending) refresh(true, null); }, 5000);
+        poll = window.setInterval(() => {
+            if (window.restaurantRealtime?.isConnected()) return;
+            if (!document.hidden && !dialog.open && !printView.isOpen() && !printView.isBusy() && !session.pending) refresh(true, null);
+        }, 15000);
         preparationClock = window.setInterval(() => { if (!document.hidden) renderPreparationTimes(); }, 1000);
     }
     startPolling();
@@ -273,6 +276,9 @@
     ["OrderCreated", "OrderItemsAdded", "OrderItemCancelled", "KitchenTicketStatusChanged",
         "KitchenItemStatusChanged", "KitchenItemReopened", "KitchenItemPreparedUpdated", "KitchenShortageReported"]
         .forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleRealtimeRefresh));
+    window.addEventListener("restaurant:realtime-connected", () => {
+        if (!session.busy && !session.loading && !dialog.open && !printView.isOpen() && !printView.isBusy() && !session.pending) refresh(true, null);
+    });
     window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
     window.addEventListener("pagehide", () => { window.clearInterval(poll); window.clearInterval(preparationClock); });
 })();

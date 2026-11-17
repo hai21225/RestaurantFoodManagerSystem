@@ -52,8 +52,8 @@ public class FoodToppingService
             ToppingName = x.ToppingName,
             ToppingPrice = x.ToppingPrice,
             IsActive = x.IsActive,
-            IsAvailable = x.IsAvailable
-
+            IsAvailable = x.IsAvailable,
+            StockQuantity = x.StockQuantity
         }).ToList();
     }
 

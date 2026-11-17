@@ -394,6 +394,10 @@
         }
     });
 
+    window.addEventListener("restaurant:realtime-connected", () => {
+        refresh();
+    });
+
     auth.ready.then((user) => {
         if (!user) return;
         if (isStaff()) {

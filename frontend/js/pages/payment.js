@@ -347,14 +347,20 @@
             run(refresh);
         });
     }
+    window.addEventListener("restaurant:realtime-connected", () => {
+        if (!session.hasAccess() || !auth.getToken() || locked() || $("confirmDialog").open || $("closeShiftDialog").open || state.printing) return;
+        state.lastRefresh = Date.now();
+        run(refresh);
+    });
     let poll;
     function startPoll() {
         window.clearInterval(poll);
         poll = window.setInterval(() => {
+            if (window.restaurantRealtime?.isConnected()) return;
             if (!session.hasAccess() || !auth.getToken() || document.hidden || locked() || $("confirmDialog").open || state.printing) return;
             if (Date.now() - state.lastRefresh < (session.pendingMomo() ? 2500 : 9500)) return;
             state.lastRefresh = Date.now(); run(refresh);
-        }, 3000);
+        }, 15000);
     }
     window.addEventListener("pagehide", () => window.clearInterval(poll)); window.addEventListener("pageshow", startPoll);
     auth.ready.then(() => run(async () => {

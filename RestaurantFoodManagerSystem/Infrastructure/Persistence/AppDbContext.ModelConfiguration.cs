@@ -93,6 +93,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.ToppingPrice).HasPrecision(18, 2);
                 entity.Property(x => x.IsActive).IsRequired();
                 entity.Property(x => x.IsAvailable).IsRequired();
+                entity.Property(x => x.StockQuantity);
                 entity.HasIndex(x => x.ToppingName).IsUnique().HasFilter(activeFilter);
             });
 

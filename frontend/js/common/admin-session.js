@@ -21,7 +21,7 @@
     const field = (name, label, type = "text", options = {}) => ({ name, label, type, ...options });
     const definitions = {
         categories: { title: "Danh mục món", id: "id", name: "name", path: "/categories", roles: ["Admin", "WarehouseManager"], fields: [field("name", "Tên danh mục", "text", { required: true, max: 100 }), field("description", "Mô tả", "textarea", { max: 500 }), field("displayOrder", "Thứ tự hiển thị", "integer", { min: -2147483648, max: 2147483647, value: 0 })] },
-        toppings: { title: "Topping", id: "toppingId", name: "toppingName", path: "/toppings", roles: ["Admin", "WarehouseManager"], fields: [field("toppingName", "Tên topping", "text", { required: true, max: 100 }), field("toppingPrice", "Giá topping (VND)", "number", { value: 0 }), field("isAvailable", "Đang bán", "checkbox", { value: true })] },
+        toppings: { title: "Topping", id: "toppingId", name: "toppingName", path: "/toppings", roles: ["Admin", "WarehouseManager"], fields: [field("toppingName", "Tên topping", "text", { required: true, max: 100 }), field("toppingPrice", "Giá topping (VND)", "number", { value: 0 }), field("stockQuantity", "Số lượng tồn kho", "integer", { min: 0, max: 2147483647, nullable: true, placeholder: "Để trống = không giới hạn" }), field("isAvailable", "Đang bán", "checkbox", { value: true })] },
         sizes: { title: "Kích cỡ món", id: "sizeId", name: "sizeName", roles: ["Admin", "WarehouseManager"], food: true, fields: [field("sizeName", "Tên kích cỡ", "text", { required: true, max: 50, value: "Vừa" }), field("sizePrice", "Giá bán (VND)", "number", { value: 0 }), field("isDefault", "Kích cỡ mặc định", "checkbox")] },
         links: { title: "Topping của món", id: "toppingId", name: "toppingName", roles: ["Admin", "WarehouseManager"], food: true, fields: [field("toppingId", "Topping cần gán", "topping", { required: true })] },
         areas: { title: "Khu vực bàn", id: "areaId", name: "areaName", path: "/table-areas", roles: ["Admin"], fields: [field("areaName", "Tên khu vực", "text", { required: true, max: 100 }), field("description", "Mô tả", "textarea", { max: 500 }), field("displayOrder", "Thứ tự hiển thị", "integer", { min: -2147483648, max: 2147483647, value: 0 })] },
@@ -122,7 +122,7 @@
             for (const f of this.definition.fields) {
                 const v = data[f.name];
                 out[f.name] = f.type === "checkbox" ? v === true || v === "on"
-                    : ["number", "integer"].includes(f.type) ? number(v, f.min ?? 0, f.max ?? Number.MAX_SAFE_INTEGER, f.type === "integer")
+                    : ["number", "integer"].includes(f.type) ? (f.nullable && (v === "" || v == null) ? null : number(v, f.min ?? 0, f.max ?? Number.MAX_SAFE_INTEGER, f.type === "integer"))
                     : f.type === "area" ? v === "" || v == null ? null : number(v, 1, 2147483647, true)
                     : f.type === "topping" ? number(v, 1, 2147483647, true)
                     : text(v, f.max || 500, f.required);

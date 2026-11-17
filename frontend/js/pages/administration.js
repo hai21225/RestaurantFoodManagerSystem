@@ -26,7 +26,7 @@
             input = `<select name="${f.name}"${f.required ? " required" : ""}>${opts}</select>`;
         } else {
             if (f.type === "datetime-local") value = String(value).replace(/[zZ]$/, "").slice(0, 19);
-            input = `<input name="${f.name}" type="${f.type === "integer" ? "number" : f.type}" value="${esc(value)}"${f.required ? " required" : ""}${f.type === "datetime-local" ? ' step="1"' : ""}${f.max && f.type === "text" ? ` maxlength="${f.max}"` : ""}${["number", "integer"].includes(f.type) ? ` min="${f.min ?? 0}" max="${f.max ?? 9007199254740991}" step="${f.type === "integer" ? "1" : "0.01"}" required` : ""}>`;
+            input = `<input name="${f.name}" type="${f.type === "integer" ? "number" : f.type}" value="${esc(value)}"${f.required ? " required" : ""}${f.type === "datetime-local" ? ' step="1"' : ""}${f.max && f.type === "text" ? ` maxlength="${f.max}"` : ""}${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}${["number", "integer"].includes(f.type) ? ` min="${f.min ?? 0}" max="${f.max ?? 9007199254740991}" step="${f.type === "integer" ? "1" : "0.01"}"${f.nullable ? "" : " required"}` : ""}>`;
         }
         return `<label class="admin-field">${title}${input}</label>`;
     }
@@ -35,7 +35,8 @@
         if (module === "links") return `${money(item.toppingPrice)} · ${item.isAvailable ? "Đang bán" : "Tạm hết"}`;
         const lines = session.definition.fields.filter((f) => f.name !== session.definition.name).map((f) => {
             let value = item[f.name];
-            if (value == null || value === "") value = "—";
+            if (f.name === "stockQuantity") value = value == null ? "Không giới hạn" : value === 0 ? "Hết hàng (0)" : `Còn ${value}`;
+            else if (value == null || value === "") value = "—";
             else if (f.type === "checkbox") value = value ? "Có" : "Không";
             else if (["sizePrice", "toppingPrice", "minimumOrderAmount", "maxDiscountAmount"].includes(f.name)) value = money(value);
             else if (f.type === "area") value = item.areaName || "Chưa phân khu";

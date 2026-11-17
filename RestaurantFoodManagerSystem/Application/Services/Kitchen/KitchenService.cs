@@ -246,8 +246,16 @@ public sealed partial class KitchenService
             }
         }
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
@@ -389,8 +397,16 @@ public sealed partial class KitchenService
                 ? reasonCode
                 : null);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
@@ -475,8 +491,16 @@ public sealed partial class KitchenService
             kitchenOrder.CompletedAt = null;
         }
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await BroadcastKitchenEventAsync(
             "KitchenItemReopened",
             order.OrderId,
@@ -612,8 +636,16 @@ public sealed partial class KitchenService
             allowReopen: false,
             ct);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await BroadcastKitchenEventAsync(
             "KitchenItemPreparedUpdated",
             order.OrderId,
@@ -811,8 +843,16 @@ public sealed partial class KitchenService
             ct,
             reasonCode);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
@@ -855,6 +895,36 @@ public sealed partial class KitchenService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for order {OrderId}", eventName, orderId);
+        }
+    }
+
+    private async Task BroadcastToppingsUpdatedAsync(
+        IReadOnlyCollection<Topping> toppings,
+        CancellationToken ct)
+    {
+        if (_hub is null || toppings.Count == 0) return;
+
+        foreach (var topping in toppings)
+        {
+            try
+            {
+                await _hub.Clients.All.SendAsync(
+                    "ToppingUpdated",
+                    new ToppingResponseDto
+                    {
+                        ToppingId = topping.ToppingId,
+                        ToppingName = topping.ToppingName,
+                        ToppingPrice = topping.ToppingPrice,
+                        IsActive = topping.IsActive,
+                        IsAvailable = topping.IsAvailable,
+                        StockQuantity = topping.StockQuantity
+                    },
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to broadcast ToppingUpdated for topping {ToppingId}", topping.ToppingId);
+            }
         }
     }
 

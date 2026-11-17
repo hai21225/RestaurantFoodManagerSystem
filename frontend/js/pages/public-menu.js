@@ -95,7 +95,10 @@
             const imgUrl = safeImageUrl(food.foodImageUrl);
             const sizesHtml = (food.sizes || []).map((s) => `<span class="v2-chip">${esc(s.sizeName)}: <strong>${money(s.sizePrice)}</strong></span>`).join("");
             const toppingsHtml = (food.toppings || []).length
-                ? `<div class="v2-chip-list">${food.toppings.map((t) => `<span class="v2-chip">+ ${esc(t.toppingName)} (${money(t.toppingPrice)})</span>`).join("")}</div>`
+                ? `<div class="v2-chip-list">${food.toppings.map((t) => {
+                    const stockText = t.stockQuantity === 0 ? " · Hết hàng" : t.stockQuantity != null ? ` · Còn ${t.stockQuantity}` : "";
+                    return `<span class="v2-chip">+ ${esc(t.toppingName)} (${money(t.toppingPrice)})${esc(stockText)}</span>`;
+                }).join("")}</div>`
                 : "";
             return `<article class="v2-food-card">
                 <div class="v2-food-head">

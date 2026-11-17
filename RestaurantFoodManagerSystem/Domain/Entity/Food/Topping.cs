@@ -5,4 +5,5 @@
     public decimal ToppingPrice { get; set; }
     public bool IsActive { get; set; }
     public bool IsAvailable { get; set; }
+    public int? StockQuantity { get; set; }
 }

@@ -303,7 +303,12 @@
         const selected = food.sizes.find((size) => size.isDefault) || food.sizes[0];
         $("#sizeOptions").innerHTML = food.sizes.map((size) => `<label class="size-option"><input type="radio" name="sizeId" value="${size.sizeId}" ${size.sizeId === selected.sizeId ? "checked" : ""} required><strong>${escapeHtml(size.sizeName)}</strong><span>${money(size.sizePrice)}</span></label>`).join("");
         $("#toppingOptions").hidden = !food.toppings.length;
-        $("#toppingChoices").innerHTML = food.toppings.map((topping) => `<label><input type="checkbox" name="toppingId" value="${topping.toppingId}"> ${escapeHtml(topping.toppingName)} · ${money(topping.toppingPrice)}</label>`).join("");
+        $("#toppingChoices").innerHTML = food.toppings.map((topping) => {
+            const outOfStock = topping.stockQuantity !== null && topping.stockQuantity !== undefined && topping.stockQuantity <= 0;
+            const disabled = !topping.isAvailable || outOfStock;
+            const stockText = outOfStock ? "Hết hàng" : topping.stockQuantity != null ? `Còn ${topping.stockQuantity}` : (!topping.isAvailable ? "Tạm hết" : "");
+            return `<label${disabled ? ' style="opacity:0.6"' : ""}><input type="checkbox" name="toppingId" value="${topping.toppingId}"${disabled ? " disabled" : ""}> ${escapeHtml(topping.toppingName)} · ${money(topping.toppingPrice)}${stockText ? ` <small>(${escapeHtml(stockText)})</small>` : ""}</label>`;
+        }).join("");
         $("#sizeDialogMessage").textContent = "";
         dishDialog.showModal();
         $("#dishQuantity").focus();
@@ -391,6 +396,13 @@
     });
     $("#foodSearchInput").addEventListener("input", (event) => { state.search = normalizeSearch(event.target.value); renderFoods(); });
     $("#foodGrid").addEventListener("click", (event) => { const button = event.target.closest("[data-food-id]"); if (button) openDish(Number(button.dataset.foodId)); });
+    function getCartToppingUsage(toppingId) {
+        return state.cart.reduce((sum, item) => {
+            const entry = item.toppings?.find((t) => t.toppingId === toppingId);
+            return sum + (entry ? item.quantity * (entry.quantity || 1) : 0);
+        }, 0);
+    }
+
     $("#dishForm").addEventListener("submit", (event) => {
         event.preventDefault();
         if (locked() || !state.dish || !event.target.reportValidity()) return;
@@ -399,6 +411,20 @@
         const data = new FormData(event.target);
         const sizeId = Number(data.get("sizeId"));
         const toppings = data.getAll("toppingId").map((id) => ({ toppingId: Number(id), quantity: 1 })).sort((a, b) => a.toppingId - b.toppingId);
+        for (const entry of toppings) {
+            const topping = state.dish.toppings.find((t) => t.toppingId === entry.toppingId);
+            if (!topping || !topping.isAvailable || (topping.stockQuantity !== null && topping.stockQuantity !== undefined && topping.stockQuantity <= 0)) {
+                $("#sizeDialogMessage").textContent = `Topping "${topping?.toppingName || "đã chọn"}" hiện đã hết hàng.`;
+                return;
+            }
+            if (topping.stockQuantity != null) {
+                const used = getCartToppingUsage(entry.toppingId);
+                if (used + quantity > topping.stockQuantity) {
+                    $("#sizeDialogMessage").textContent = `Topping "${topping.toppingName}" chỉ còn ${topping.stockQuantity} (trong giỏ đã có ${used}).`;
+                    return;
+                }
+            }
+        }
         const existing = state.cart.find((item) => item.sizeId === sizeId && JSON.stringify(item.toppings) === JSON.stringify(toppings) && !item.note);
         if (existing && existing.quantity + quantity > 2147483647) { $("#sizeDialogMessage").textContent = "Số phần vượt quá giới hạn."; return; }
         if (existing) existing.quantity += quantity;
@@ -410,9 +436,23 @@
         const button = event.target.closest("[data-cart-index]");
         if (!button || locked()) return;
         const index = Number(button.dataset.cartIndex);
+        const delta = Number(button.dataset.delta);
         const item = state.cart[index];
-        const next = item.quantity + Number(button.dataset.delta);
+        const next = item.quantity + delta;
         if (next > 2147483647) return;
+        if (delta > 0 && item.toppings?.length) {
+            const food = findFood(item.sizeId);
+            for (const entry of item.toppings) {
+                const topping = food?.toppings?.find((t) => t.toppingId === entry.toppingId);
+                if (topping && topping.stockQuantity != null) {
+                    const used = getCartToppingUsage(entry.toppingId);
+                    if (used + delta * (entry.quantity || 1) > topping.stockQuantity) {
+                        message(`Topping "${topping.toppingName}" chỉ còn ${topping.stockQuantity}.`, true);
+                        return;
+                    }
+                }
+            }
+        }
         if (next <= 0) state.cart.splice(index, 1); else item.quantity = next;
         renderCart();
     });
@@ -480,9 +520,10 @@
         window.clearInterval(poll);
         window.clearInterval(preparationClock);
         poll = window.setInterval(() => {
+            if (window.restaurantRealtime?.isConnected()) return;
             if (!document.hidden && session.isOpen() && !dialog.open && !dishDialog.open && !$("#orderHistoryDialog").open
                 && !document.activeElement?.closest("input, textarea, select")) refresh(true);
-        }, 5000);
+        }, 15000);
         preparationClock = window.setInterval(() => { if (!document.hidden) renderPreparationTimes(); }, 1000);
     }
     startPolling();
@@ -496,6 +537,10 @@
     };
     ["OrderItemsAdded", "OrderItemQuantityAdjusted", "OrderItemCancelled", "KitchenTicketStatusChanged", "KitchenItemStatusChanged", "OrderStatusChanged", "OrderPaid"]
         .forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleRealtimeRefresh));
+    window.restaurantRealtime?.on("ToppingUpdated", () => { loadMenu(); });
+    window.addEventListener("restaurant:realtime-connected", () => {
+        if (!session.busy && !session.loading && !dialog.open && !dishDialog.open && !$("#orderHistoryDialog").open) refresh(true);
+    });
     window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
     window.addEventListener("pagehide", () => { window.clearInterval(poll); window.clearInterval(preparationClock); });
 })();

@@ -648,4 +648,7 @@
         "ReservationCancelled",
         "ReservationNoShow"
     ].forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleTableRefresh));
+    window.addEventListener("restaurant:realtime-connected", () => {
+        if (!tableDialog.open && !tableLifecycleDialog.open) loadTables();
+    });
 })();

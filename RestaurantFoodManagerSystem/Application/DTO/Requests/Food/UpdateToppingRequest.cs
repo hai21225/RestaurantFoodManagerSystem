@@ -9,4 +9,7 @@ public class UpdateToppingRequest
     public decimal ToppingPrice { get; set; }
 
     public bool IsAvailable { get; set; }
+
+    [Range(0, int.MaxValue)]
+    public int? StockQuantity { get; set; }
 }

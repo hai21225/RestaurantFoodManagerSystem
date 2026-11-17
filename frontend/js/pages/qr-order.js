@@ -235,6 +235,20 @@
         }
     }
 
+    async function loadMenu() {
+        try {
+            const menu = await api.get("/menu");
+            state.categories = (Array.isArray(menu) ? menu : []).map((c) => ({ id: String(c.categoryId), name: c.categoryName }));
+            state.foods = (Array.isArray(menu) ? menu : []).flatMap((c) =>
+                (c.foods || []).filter((f) => (f.sizes || []).length).map((f) => ({ ...f, categoryId: String(c.categoryId) }))
+            );
+            renderCategories();
+            renderMenu();
+        } catch (_) {
+            // Keep existing menu if transient error
+        }
+    }
+
     async function loadInitialData() {
         try {
             const [tables, menu] = await Promise.all([
@@ -272,11 +286,16 @@
             </label>`).join("");
         const toppings = food.toppings || [];
         $("#qrToppingWrap").hidden = !toppings.length;
-        $("#qrToppingOptions").innerHTML = toppings.map((t) => `
-            <label class="v2-table-item">
-                <span><input type="checkbox" name="toppingId" value="${t.toppingId}"> ${esc(t.toppingName)}</span>
+        $("#qrToppingOptions").innerHTML = toppings.map((t) => {
+            const outOfStock = t.stockQuantity !== null && t.stockQuantity !== undefined && t.stockQuantity <= 0;
+            const disabled = !t.isAvailable || outOfStock;
+            const stockLabel = outOfStock ? "Hết hàng" : t.stockQuantity != null ? `Còn ${t.stockQuantity}` : (!t.isAvailable ? "Tạm hết" : "");
+            return `
+            <label class="v2-table-item"${disabled ? ' style="opacity:0.6"' : ""}>
+                <span><input type="checkbox" name="toppingId" value="${t.toppingId}"${disabled ? " disabled" : ""}> ${esc(t.toppingName)}${stockLabel ? ` <small>(${esc(stockLabel)})</small>` : ""}</span>
                 <strong>+${money(t.toppingPrice)}</strong>
-            </label>`).join("");
+            </label>`;
+        }).join("");
         $("#qrDishDialog").showModal();
     }
 
@@ -326,6 +345,13 @@
 
     $("#closeQrDishBtn").addEventListener("click", () => $("#qrDishDialog").close());
 
+    function getQrCartToppingUsage(toppingId) {
+        return state.cart.reduce((sum, item) => {
+            const has = item.toppings?.some((t) => t.toppingId === toppingId);
+            return sum + (has ? item.quantity : 0);
+        }, 0);
+    }
+
     $("#qrDishForm").addEventListener("submit", (event) => {
         event.preventDefault();
         const food = state.activeDish;
@@ -335,6 +361,19 @@
         const toppingIds = Array.from(event.target.querySelectorAll('input[name="toppingId"]:checked')).map((el) => Number(el.value));
         const selectedToppings = (food.toppings || []).filter((t) => toppingIds.includes(t.toppingId));
         const quantity = Math.max(1, Number($("#qrDishQty").value) || 1);
+        for (const t of selectedToppings) {
+            if (!t.isAvailable || (t.stockQuantity !== null && t.stockQuantity !== undefined && t.stockQuantity <= 0)) {
+                showNotice(`Topping "${t.toppingName}" hiện đã hết hàng.`, "error");
+                return;
+            }
+            if (t.stockQuantity != null) {
+                const used = getQrCartToppingUsage(t.toppingId);
+                if (used + quantity > t.stockQuantity) {
+                    showNotice(`Topping "${t.toppingName}" chỉ còn ${t.stockQuantity} (trong giỏ đã có ${used}).`, "error");
+                    return;
+                }
+            }
+        }
         const note = $("#qrDishNote").value.trim();
         const unitPrice = size.sizePrice + selectedToppings.reduce((sum, t) => sum + t.toppingPrice, 0);
 
@@ -358,9 +397,23 @@
         if (!btn) return;
         const idx = Number(btn.dataset.cartIdx);
         const delta = Number(btn.dataset.delta);
-        if (!state.cart[idx]) return;
-        state.cart[idx].quantity += delta;
-        if (state.cart[idx].quantity <= 0) state.cart.splice(idx, 1);
+        const cartItem = state.cart[idx];
+        if (!cartItem) return;
+        if (delta > 0 && cartItem.toppings?.length) {
+            const food = state.foods.find((f) => f.foodId === cartItem.foodId);
+            for (const entry of cartItem.toppings) {
+                const topping = food?.toppings?.find((t) => t.toppingId === entry.toppingId);
+                if (topping && topping.stockQuantity != null) {
+                    const used = getQrCartToppingUsage(entry.toppingId);
+                    if (used + delta > topping.stockQuantity) {
+                        showNotice(`Topping "${topping.toppingName}" chỉ còn ${topping.stockQuantity}.`, "error");
+                        return;
+                    }
+                }
+            }
+        }
+        cartItem.quantity += delta;
+        if (cartItem.quantity <= 0) state.cart.splice(idx, 1);
         renderCart();
     });
 
@@ -420,6 +473,13 @@
         if (/order|kitchen|table/i.test(evtName)) {
             loadMyOrders();
         }
+        if (/topping/i.test(evtName)) {
+            loadMenu();
+        }
+    });
+
+    window.addEventListener("restaurant:realtime-connected", () => {
+        loadMyOrders();
     });
 
     auth.ready.then(() => {

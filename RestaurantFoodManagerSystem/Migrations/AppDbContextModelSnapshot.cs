@@ -1433,6 +1433,9 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("StockQuantity")
+                        .HasColumnType("int");
+
                     b.Property<string>("ToppingName")
                         .IsRequired()
                         .HasMaxLength(100)

@@ -202,6 +202,8 @@ public sealed partial class OrderService
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
         var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
+        await OrderCancellation.DeductToppingStockAsync(
+            _db, AggregateToppingRequirements(preparedItems), ct);
 
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
@@ -260,8 +262,10 @@ public sealed partial class OrderService
         // P1a: ghi ledger kho theo từng dòng món để huỷ món/đơn hoàn đúng phần đã trừ.
         ApplyItemStock(itemRequirements, orderItems, stockDeltas, order.OrderId, createdBy);
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         await BroadcastOrderEventAsync(
             "OrderCreated",
@@ -331,6 +335,8 @@ public sealed partial class OrderService
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
         var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
+        await OrderCancellation.DeductToppingStockAsync(
+            _db, AggregateToppingRequirements(preparedItems), ct);
 
         var changedBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
@@ -368,8 +374,10 @@ public sealed partial class OrderService
             _lifecycle.RecordOrderNote(order, changedBy, "Added items (new kitchen round)");
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         await BroadcastOrderEventAsync(
             "OrderItemsAdded",
@@ -579,6 +587,15 @@ public sealed partial class OrderService
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefault();
 
+            var toppingSourceId = (pendingCandidate ?? source).Id;
+            var extraToppingUnits = (await _db.OrderItemToppings
+                    .AsNoTracking()
+                    .Where(x => x.OrderItemId == toppingSourceId)
+                    .ToListAsync(ct))
+                .GroupBy(x => x.ToppingId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Quanlity) * added);
+            await OrderCancellation.DeductToppingStockAsync(_db, extraToppingUnits, ct);
+
             if (pendingCandidate is not null)
             {
                 // Món vẫn chưa bếp bắt đầu ⇒ gộp chung vào dòng Pending, không tạo dòng mới.
@@ -743,6 +760,8 @@ public sealed partial class OrderService
                         {
                             await OrderCancellation.ReturnStockForItemAsync(
                                 _db, order.OrderId, line, remainingConsumption, changedBy, now, ct);
+                            await OrderCancellation.ReturnToppingStockForQuantityAsync(
+                                _db, line.Id, line.Quanlity, ct);
                         }
                         else
                         {
@@ -788,6 +807,8 @@ public sealed partial class OrderService
                         {
                             await OrderItemMutations.ReturnStockForPartialItemAsync(
                                 _db, order.OrderId, line, take, remainingConsumption, changedBy, now, ct);
+                            await OrderCancellation.ReturnToppingStockForQuantityAsync(
+                                _db, line.Id, take, ct);
                         }
                         else
                         {
@@ -876,8 +897,10 @@ public sealed partial class OrderService
             _lifecycle.RecordOrderNote(order, changedBy, quantityNote);
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
@@ -1362,8 +1385,10 @@ public sealed partial class OrderService
             }
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
@@ -1458,8 +1483,10 @@ public sealed partial class OrderService
             ct,
             reasonCode);
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
@@ -1746,6 +1773,63 @@ public sealed partial class OrderService
         catch (Exception ex)
         {
             _logger.LogWarning(ex, "Failed to broadcast TableStatusChanged for table {TableId}", tableId);
+        }
+    }
+
+    private static Dictionary<int, int> AggregateToppingRequirements(
+        IReadOnlyList<PreparedOrderItem> items)
+    {
+        var totals = new Dictionary<int, int>();
+        foreach (var item in items)
+        {
+            foreach (var topping in item.Toppings)
+            {
+                var needed = item.Quanlity * topping.Quanlity;
+                if (needed <= 0)
+                {
+                    continue;
+                }
+
+                totals[topping.ToppingId] = totals.GetValueOrDefault(topping.ToppingId) + needed;
+            }
+        }
+        return totals;
+    }
+
+    private List<Topping> CollectChangedToppings() =>
+        _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
+    private async Task BroadcastToppingsUpdatedAsync(
+        IReadOnlyCollection<Topping> toppings,
+        CancellationToken ct)
+    {
+        if (_hub is null || toppings.Count == 0) return;
+
+        foreach (var topping in toppings)
+        {
+            try
+            {
+                await _hub.Clients.All.SendAsync(
+                    "ToppingUpdated",
+                    new ToppingResponseDto
+                    {
+                        ToppingId = topping.ToppingId,
+                        ToppingName = topping.ToppingName,
+                        ToppingPrice = topping.ToppingPrice,
+                        IsActive = topping.IsActive,
+                        IsAvailable = topping.IsAvailable,
+                        StockQuantity = topping.StockQuantity
+                    },
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to broadcast ToppingUpdated for topping {ToppingId}", topping.ToppingId);
+            }
         }
     }
 }
