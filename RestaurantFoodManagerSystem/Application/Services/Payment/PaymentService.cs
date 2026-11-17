@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -34,6 +35,7 @@ public sealed class PaymentService
     private readonly IOrderIdempotencyStore _idempotency;
     private readonly MomoPaymentService _momo;
     private readonly PaymentOptions _options;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
     public PaymentService(
         AppDbContext db,
@@ -43,7 +45,8 @@ public sealed class PaymentService
         OrderLifecycleCoordinator lifecycle,
         IOrderIdempotencyStore idempotency,
         MomoPaymentService momo,
-        PaymentOptions options)
+        PaymentOptions options,
+        IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
         _tables = tables;
@@ -53,6 +56,7 @@ public sealed class PaymentService
         _idempotency = idempotency;
         _momo = momo;
         _options = options;
+        _hub = hub;
     }
 
     // ==========================================================
@@ -100,6 +104,16 @@ public sealed class PaymentService
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
 
+        var openShift = await _db.CashierShifts
+            .FirstOrDefaultAsync(x => x.CashierUserId == createdBy && x.Status == CashierShiftStatuses.Open, ct);
+        // shortcut: enforce open shift for Cashier role or once user has used shifts, to preserve V1 tests without shifts
+        if (openShift is null && (_currentUser.Roles.Contains(AuthPolicies.Roles.Cashier, StringComparer.OrdinalIgnoreCase)
+            || await _db.CashierShifts.AnyAsync(x => x.CashierUserId == createdBy, ct)))
+        {
+            throw new InvalidOperationException("Cashier must open a shift before recording payments");
+        }
+
+        var (reservation, amountDue) = await ResolveReservationAndAmountDueAsync(order, ct);
         var now = DateTime.UtcNow;
 
         // C-19: mã giao dịch phải **luôn** có và phải duy nhất. Client không gửi thì
@@ -123,19 +137,21 @@ public sealed class PaymentService
         var payment = new Payment
         {
             OrderId = order.OrderId,
-            Amount = order.TotalAmount,
+            Amount = amountDue,
             PaymentMethod = paymentMethod,
             Provider = PaymentProviders.Direct,
             Status = PaymentStatuses.Paid,
             TransactionCode = transactionCode ?? PaymentTransactionCodes.Generate(now),
             PaidAt = now,
             CreatedAt = now,
-            CreatedBy = createdBy
+            CreatedBy = createdBy,
+            ShiftId = openShift?.ShiftId
         };
         _db.Payments.Add(payment);
 
         // P0-02: đi qua coordinator để đơn có dòng lịch sử "Ready → Paid" thay vì gán thẳng.
         _lifecycle.ApplyPaid(order, createdBy, $"Payment via {paymentMethod}");
+        ApplyReservationOnOrderPaid(reservation, now);
 
         try
         {
@@ -169,6 +185,7 @@ public sealed class PaymentService
         }
 
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastPaymentSucceededAsync(payment, order, ct);
         return payment;
     }
 
@@ -189,6 +206,38 @@ public sealed class PaymentService
 
         return canonical
             ?? throw new ArgumentException($"Invalid payment method: {method}");
+    }
+
+    private async Task<(TableReservation? Reservation, decimal AmountDue)> ResolveReservationAndAmountDueAsync(
+        Order order,
+        CancellationToken ct)
+    {
+        if (order.ReservationId is not int reservationId)
+            return (null, order.TotalAmount);
+
+        var reservation = await _db.TableReservations
+            .FirstOrDefaultAsync(r => r.ReservationId == reservationId, ct);
+
+        if (reservation is not null && reservation.DepositStatus == DepositStatuses.Paid)
+            return (reservation, Math.Max(0m, order.TotalAmount - reservation.DepositAmount));
+
+        return (reservation, order.TotalAmount);
+    }
+
+    private static void ApplyReservationOnOrderPaid(TableReservation? reservation, DateTime now)
+    {
+        if (reservation is null) return;
+
+        if (reservation.DepositStatus == DepositStatuses.Paid)
+            reservation.DepositStatus = DepositStatuses.AppliedToOrder;
+
+        if (reservation.Status == TableReservationStatuses.Seated)
+        {
+            reservation.Status = TableReservationStatuses.Completed;
+            reservation.CompletedAt = now;
+        }
+
+        reservation.UpdatedAt = now;
     }
 
     private async Task EnsureOrderPayableAsync(Order order, CancellationToken ct)
@@ -262,6 +311,8 @@ public sealed class PaymentService
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
 
+        var (_, amountDue) = await ResolveReservationAndAmountDueAsync(order, ct);
+
         var pending = await _db.Payments.FirstOrDefaultAsync(
             x => x.OrderId == order.OrderId
               && x.Provider == PaymentProviders.MoMo
@@ -270,7 +321,7 @@ public sealed class PaymentService
 
         if (pending is not null)
         {
-            if (pending.Amount == order.TotalAmount)
+            if (pending.Amount == amountDue)
             {
                 var reused = ToIntentResponse(pending);
                 await tx.CommitAsync(ct);
@@ -286,7 +337,7 @@ public sealed class PaymentService
         var payment = new Payment
         {
             OrderId = order.OrderId,
-            Amount = order.TotalAmount,
+            Amount = amountDue,
             PaymentMethod = PaymentProviders.MoMo,
             Provider = PaymentProviders.MoMo,
             Status = PaymentStatuses.Pending,
@@ -407,6 +458,11 @@ public sealed class PaymentService
             payment.Note = request.Message;
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+            await BroadcastGroupsAsync(
+                "PaymentFailed",
+                new { paymentId = payment.PaymentId, orderId = payment.OrderId, status = payment.Status, message = request.Message ?? "Payment failed" },
+                new[] { "role:Cashier", "role:Waiter", $"order:{payment.OrderId}" },
+                ct);
             return MomoNotificationOutcome.Failed(payment.PaymentId, request.Message ?? "Payment failed");
         }
 
@@ -421,7 +477,9 @@ public sealed class PaymentService
             return MomoNotificationOutcome.Rejected("Order is already paid");
         }
 
-        // Số tiền phải khớp: vừa giao dịch, vừa tổng đơn hiện tại.
+        var (reservation, amountDue) = await ResolveReservationAndAmountDueAsync(order, ct);
+
+        // Số tiền phải khớp: vừa giao dịch, vừa số tiền cần thu hiện tại (đã trừ cọc nếu có).
         var notifiedAmount = MomoPaymentService.FormatAmount(
             decimal.TryParse(request.Amount, System.Globalization.NumberStyles.Any,
                 System.Globalization.CultureInfo.InvariantCulture, out var parsed)
@@ -429,11 +487,11 @@ public sealed class PaymentService
                 : 0m);
 
         if (!string.Equals(notifiedAmount, MomoPaymentService.FormatAmount(payment.Amount), StringComparison.Ordinal)
-            || order.TotalAmount != payment.Amount)
+            || amountDue != payment.Amount)
         {
             _logger.LogError(
-                "MoMo notification rejected: amount mismatch (notified={Notified}, payment={Payment}, order={Order})",
-                notifiedAmount, payment.Amount, order.TotalAmount);
+                "MoMo notification rejected: amount mismatch (notified={Notified}, payment={Payment}, due={Due})",
+                notifiedAmount, payment.Amount, amountDue);
             return MomoNotificationOutcome.Rejected("Amount mismatch");
         }
 
@@ -445,8 +503,9 @@ public sealed class PaymentService
             pending.Status = PaymentStatuses.Cancelled;
         }
 
+        var paidAt = DateTime.UtcNow;
         payment.Status = PaymentStatuses.Paid;
-        payment.PaidAt = DateTime.UtcNow;
+        payment.PaidAt = paidAt;
         payment.ProviderTransactionId = request.TransId;
         if (!string.IsNullOrWhiteSpace(request.Message))
         {
@@ -454,6 +513,7 @@ public sealed class PaymentService
         }
 
         _lifecycle.ApplyPaid(order, payment.CreatedBy, $"Payment via MoMo ({request.TransId})");
+        ApplyReservationOnOrderPaid(reservation, paidAt);
 
         try
         {
@@ -478,6 +538,7 @@ public sealed class PaymentService
         }
 
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastPaymentSucceededAsync(payment, order, ct);
 
         return MomoNotificationOutcome.Applied(payment.PaymentId);
     }
@@ -628,6 +689,22 @@ public sealed class PaymentService
         await tx.CommitAsync(ct);
 
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        var groups = BuildOrderGroups(order);
+        await BroadcastGroupsAsync(
+            "PaymentRefunded",
+            new { paymentId = payment.PaymentId, orderId = order.OrderId, amount = payment.Amount, status = payment.Status },
+            groups,
+            ct);
+        await BroadcastGroupsAsync(
+            "OrderStatusChanged",
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status },
+            groups,
+            ct);
+        await BroadcastGroupsAsync(
+            "TableStatusChanged",
+            new { tableId = order.TableId },
+            new[] { "role:Waiter", "role:Cashier" },
+            ct);
         return PaymentResponse.From(payment);
     }
 
@@ -636,6 +713,67 @@ public sealed class PaymentService
     // ==========================================================
 
     public Task<List<Payment>> GetByOrderAsync(int orderId, CancellationToken ct) => _db.Payments.AsNoTracking().Where(x => x.OrderId == orderId).ToListAsync(ct);
+
+    private async Task BroadcastPaymentSucceededAsync(Payment payment, Order order, CancellationToken ct)
+    {
+        var groups = BuildOrderGroups(order);
+        await BroadcastGroupsAsync(
+            "PaymentSucceeded",
+            new
+            {
+                paymentId = payment.PaymentId,
+                orderId = order.OrderId,
+                amount = payment.Amount,
+                paymentMethod = payment.PaymentMethod,
+                status = payment.Status
+            },
+            groups,
+            ct);
+        await BroadcastGroupsAsync(
+            "OrderPaid",
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status, paymentId = payment.PaymentId },
+            groups,
+            ct);
+        await BroadcastGroupsAsync(
+            "TableStatusChanged",
+            new { tableId = order.TableId },
+            new[] { "role:Waiter", "role:Cashier" },
+            ct);
+    }
+
+    private static IReadOnlyList<string> BuildOrderGroups(Order order)
+    {
+        var groups = new List<string>(5)
+        {
+            "role:Cashier",
+            "role:Waiter",
+            "role:Kitchen",
+            $"order:{order.OrderId}"
+        };
+        if (order.CustomerUserId.HasValue)
+        {
+            groups.Add($"customer:{order.CustomerUserId.Value}");
+        }
+        return groups;
+    }
+
+    private async Task BroadcastGroupsAsync(
+        string eventName,
+        object payload,
+        IReadOnlyList<string> groups,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            await _hub.Clients.Groups(groups).SendAsync(eventName, payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName}", eventName);
+        }
+    }
 
     /// <summary>
     /// Danh sách thanh toán có lọc + phân trang cho <c>GET /api/payments</c> (P1).

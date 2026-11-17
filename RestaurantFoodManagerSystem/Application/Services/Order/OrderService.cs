@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -11,6 +12,7 @@ public sealed partial class OrderService
     private readonly IOrderIdempotencyStore _idempotency;
     private readonly OrderLifecycleCoordinator _lifecycle;
     private readonly RestaurantSettingsService _settings;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
     public OrderService(
         AppDbContext db,
@@ -19,7 +21,8 @@ public sealed partial class OrderService
         ILogger<OrderService> logger,
         IOrderIdempotencyStore idempotency,
         OrderLifecycleCoordinator lifecycle,
-        RestaurantSettingsService settings)
+        RestaurantSettingsService settings,
+        IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
         _tables = tables;
@@ -28,6 +31,7 @@ public sealed partial class OrderService
         _idempotency = idempotency;
         _lifecycle = lifecycle;
         _settings = settings;
+        _hub = hub;
     }
 
     /// <summary>
@@ -73,6 +77,11 @@ public sealed partial class OrderService
             newNote is null ? "Cleared bill note" : $"Updated bill note: {newNote}");
 
         await _db.SaveChangesAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status, note = order.Note },
+            ct);
         return true;
     }
 
@@ -120,6 +129,12 @@ public sealed partial class OrderService
         if (string.Equals(table.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Table is under maintenance");
 
+        var isCustomerCaller = IsCustomerOnlyCaller();
+        if (isCustomerCaller)
+        {
+            EnsureCustomerQrToken(table, request.TableQrToken);
+        }
+
         // Completed chỉ là bếp/khách đã xong món; bàn chỉ được trả về trống sau khi Paid
         // (hoặc Cancelled). Vì vậy Completed vẫn phải chặn tạo đơn mới trên cùng bàn.
         var tableHasOpenOrder = await _db.Orders.AnyAsync(
@@ -130,10 +145,65 @@ public sealed partial class OrderService
         if (tableHasOpenOrder)
             throw new InvalidOperationException("Table already has an open order");
 
+        var now = DateTime.UtcNow;
+        TableReservation? reservation = null;
+        if (request.ReservationId is int reservationId)
+        {
+            reservation = await _db.TableReservations
+                .FirstOrDefaultAsync(r => r.ReservationId == reservationId, ct);
+            if (reservation is null)
+                throw new KeyNotFoundException("Reservation not found");
+            if (reservation.TableId != request.TableId)
+                throw new InvalidOperationException("Reservation does not belong to this table");
+            if (reservation.Status is not (TableReservationStatuses.Confirmed or TableReservationStatuses.Seated))
+                throw new InvalidOperationException($"Reservation is {reservation.Status} and cannot be used for ordering");
+            if (isCustomerCaller && reservation.CustomerUserId != _currentUser.UserId)
+                throw new UnauthorizedAccessException("You do not have access to this reservation");
+        }
+        else
+        {
+            var seatedReservation = !isCustomerCaller
+                ? await _db.TableReservations
+                    .OrderByDescending(r => r.SeatedAt ?? r.UpdatedAt)
+                    .FirstOrDefaultAsync(
+                        r => r.TableId == request.TableId
+                          && r.Status == TableReservationStatuses.Seated
+                          && r.OrderId == null,
+                        ct)
+                : await _db.TableReservations
+                    .OrderByDescending(r => r.SeatedAt ?? r.UpdatedAt)
+                    .FirstOrDefaultAsync(
+                        r => r.TableId == request.TableId
+                          && r.Status == TableReservationStatuses.Seated
+                          && r.OrderId == null
+                          && r.CustomerUserId == _currentUser.UserId,
+                        ct);
+
+            if (seatedReservation is not null)
+            {
+                reservation = seatedReservation;
+            }
+            else
+            {
+                var windowEnd = now.AddHours(2);
+                var hasUpcomingReservation = await _db.TableReservations.AnyAsync(
+                    r => r.TableId == request.TableId
+                      && (r.Status == TableReservationStatuses.Pending
+                          || r.Status == TableReservationStatuses.Confirmed
+                          || r.Status == TableReservationStatuses.Seated)
+                      && r.ReservedFrom <= windowEnd,
+                    ct);
+                if (hasUpcomingReservation)
+                    throw new InvalidOperationException("Table is reserved for an upcoming booking");
+            }
+        }
+
         var preparedItems = await PrepareItemsAsync(request.Items, ct);
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
         var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
+        await OrderCancellation.DeductToppingStockAsync(
+            _db, AggregateToppingRequirements(preparedItems), ct);
 
         var createdBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.CreatedBy, _logger, nameof(request.CreatedBy), ct);
@@ -141,14 +211,27 @@ public sealed partial class OrderService
         {
             TableId = request.TableId,
             CreatedBy = createdBy,
+            CustomerUserId = isCustomerCaller ? _currentUser.UserId : reservation?.CustomerUserId,
+            ReservationId = reservation?.ReservationId,
             Status = OrderStatuses.Pending,
             // Đợt 3 / B3: ghi chú cho cả hoá đơn (tuỳ chọn khi tạo đơn).
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
+
+        if (reservation is not null)
+        {
+            reservation.OrderId = order.OrderId;
+            if (reservation.Status == TableReservationStatuses.Confirmed)
+            {
+                reservation.Status = TableReservationStatuses.Seated;
+                reservation.SeatedAt ??= now;
+            }
+            reservation.UpdatedAt = now;
+        }
 
         var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, createdBy, ct);
         order.Subtotal = orderItems.Sum(x => x.UnitPrice * x.Quanlity);
@@ -179,9 +262,24 @@ public sealed partial class OrderService
         // P1a: ghi ledger kho theo từng dòng món để huỷ món/đơn hoàn đúng phần đã trừ.
         ApplyItemStock(itemRequirements, orderItems, stockDeltas, order.OrderId, createdBy);
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderCreated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                customerUserId = order.CustomerUserId
+            },
+            ct);
+        await BroadcastTableStatusChangedAsync(order.TableId, ct);
         return order;
     }
 
@@ -214,6 +312,18 @@ public sealed partial class OrderService
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.TableId == order.TableId, ct);
 
+        if (IsCustomerOnlyCaller())
+        {
+            if (table is null || !table.IsActive ||
+                string.Equals(table.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Valid active table QR token is required");
+
+            EnsureCustomerQrToken(table, request.TableQrToken);
+
+            if (order.CustomerUserId.HasValue && order.CustomerUserId != _currentUser.UserId)
+                throw new UnauthorizedAccessException("You do not have access to this order");
+        }
+
         if (table is null || !table.IsActive ||
             !string.Equals(table.Status, RestaurantTableStatuses.Occupied, StringComparison.OrdinalIgnoreCase))
         {
@@ -225,6 +335,8 @@ public sealed partial class OrderService
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
         var requirements = AggregateRequirements(itemRequirements);
         var stockDeltas = await PrepareStockDeltasAsync(requirements, ct);
+        await OrderCancellation.DeductToppingStockAsync(
+            _db, AggregateToppingRequirements(preparedItems), ct);
 
         var changedBy = await _currentUser.ResolveExistingActorAsync(
             _db, request.ChangedBy, _logger, nameof(request.ChangedBy), ct, order.CreatedBy);
@@ -262,9 +374,23 @@ public sealed partial class OrderService
             _lifecycle.RecordOrderNote(order, changedBy, "Added items (new kitchen round)");
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderItemsAdded",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                addedCount = orderItems.Count
+            },
+            ct);
         return true;
     }
 
@@ -461,6 +587,15 @@ public sealed partial class OrderService
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefault();
 
+            var toppingSourceId = (pendingCandidate ?? source).Id;
+            var extraToppingUnits = (await _db.OrderItemToppings
+                    .AsNoTracking()
+                    .Where(x => x.OrderItemId == toppingSourceId)
+                    .ToListAsync(ct))
+                .GroupBy(x => x.ToppingId)
+                .ToDictionary(g => g.Key, g => g.Sum(x => x.Quanlity) * added);
+            await OrderCancellation.DeductToppingStockAsync(_db, extraToppingUnits, ct);
+
             if (pendingCandidate is not null)
             {
                 // Món vẫn chưa bếp bắt đầu ⇒ gộp chung vào dòng Pending, không tạo dòng mới.
@@ -625,6 +760,8 @@ public sealed partial class OrderService
                         {
                             await OrderCancellation.ReturnStockForItemAsync(
                                 _db, order.OrderId, line, remainingConsumption, changedBy, now, ct);
+                            await OrderCancellation.ReturnToppingStockForQuantityAsync(
+                                _db, line.Id, line.Quanlity, ct);
                         }
                         else
                         {
@@ -670,6 +807,8 @@ public sealed partial class OrderService
                         {
                             await OrderItemMutations.ReturnStockForPartialItemAsync(
                                 _db, order.OrderId, line, take, remainingConsumption, changedBy, now, ct);
+                            await OrderCancellation.ReturnToppingStockForQuantityAsync(
+                                _db, line.Id, take, ct);
                         }
                         else
                         {
@@ -758,11 +897,30 @@ public sealed partial class OrderService
             _lifecycle.RecordOrderNote(order, changedBy, quantityNote);
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderItemQuantityAdjusted",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                orderItemId = itemId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                quantity = targetQuantity
+            },
+            ct);
 
         return true;
     }
@@ -1227,11 +1385,29 @@ public sealed partial class OrderService
             }
         }
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderItemCancelled",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                orderItemId = itemId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount
+            },
+            ct);
 
         return true;
     }
@@ -1307,11 +1483,22 @@ public sealed partial class OrderService
             ct,
             reasonCode);
 
+        var changedToppings = CollectChangedToppings();
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderStatusChanged",
+            order,
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status },
+            ct);
 
         return true;
     }
@@ -1386,6 +1573,19 @@ public sealed partial class OrderService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                discountAmount = order.DiscountAmount,
+                promotionId = order.PromotionId
+            },
+            ct);
         return true;
     }
 
@@ -1461,6 +1661,13 @@ public sealed partial class OrderService
 
         await _tables.RefreshStatusForTableAsync(previousTableId, ct);
         await _tables.RefreshStatusForTableAsync(request.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderTableChanged",
+            order,
+            new { orderId = order.OrderId, previousTableId, tableId = order.TableId },
+            ct);
+        await BroadcastTableStatusChangedAsync(previousTableId, ct);
+        await BroadcastTableStatusChangedAsync(request.TableId, ct);
         return true;
     }
 
@@ -1507,6 +1714,122 @@ public sealed partial class OrderService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                discountAmount = order.DiscountAmount,
+                promotionId = order.PromotionId
+            },
+            ct);
         return true;
+    }
+
+    private async Task BroadcastOrderEventAsync(
+        string eventName,
+        Order order,
+        object payload,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        var groups = new List<string>(5)
+        {
+            "role:Kitchen",
+            "role:Waiter",
+            "role:Cashier",
+            $"order:{order.OrderId}"
+        };
+        if (order.CustomerUserId.HasValue)
+        {
+            groups.Add($"customer:{order.CustomerUserId.Value}");
+        }
+
+        try
+        {
+            await _hub.Clients.Groups(groups).SendAsync(eventName, payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for order {OrderId}", eventName, order.OrderId);
+        }
+    }
+
+    private async Task BroadcastTableStatusChangedAsync(int tableId, CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            await _hub.Clients
+                .Groups("role:Waiter", "role:Cashier")
+                .SendAsync("TableStatusChanged", new { tableId }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast TableStatusChanged for table {TableId}", tableId);
+        }
+    }
+
+    private static Dictionary<int, int> AggregateToppingRequirements(
+        IReadOnlyList<PreparedOrderItem> items)
+    {
+        var totals = new Dictionary<int, int>();
+        foreach (var item in items)
+        {
+            foreach (var topping in item.Toppings)
+            {
+                var needed = item.Quanlity * topping.Quanlity;
+                if (needed <= 0)
+                {
+                    continue;
+                }
+
+                totals[topping.ToppingId] = totals.GetValueOrDefault(topping.ToppingId) + needed;
+            }
+        }
+        return totals;
+    }
+
+    private List<Topping> CollectChangedToppings() =>
+        _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
+    private async Task BroadcastToppingsUpdatedAsync(
+        IReadOnlyCollection<Topping> toppings,
+        CancellationToken ct)
+    {
+        if (_hub is null || toppings.Count == 0) return;
+
+        foreach (var topping in toppings)
+        {
+            try
+            {
+                await _hub.Clients.All.SendAsync(
+                    "ToppingUpdated",
+                    new ToppingResponseDto
+                    {
+                        ToppingId = topping.ToppingId,
+                        ToppingName = topping.ToppingName,
+                        ToppingPrice = topping.ToppingPrice,
+                        IsActive = topping.IsActive,
+                        IsAvailable = topping.IsAvailable,
+                        StockQuantity = topping.StockQuantity
+                    },
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to broadcast ToppingUpdated for topping {ToppingId}", topping.ToppingId);
+            }
+        }
     }
 }

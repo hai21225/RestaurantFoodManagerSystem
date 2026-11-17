@@ -30,6 +30,8 @@ public sealed class OrderCreatedResponse
     public decimal? PromotionDiscountValue { get; set; }
 
     public int CreatedBy { get; set; }
+    public int? CustomerUserId { get; set; }
+    public int? ReservationId { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 
@@ -48,6 +50,8 @@ public sealed class OrderCreatedResponse
         PromotionDiscountType = x.PromotionDiscountType,
         PromotionDiscountValue = x.PromotionDiscountValue,
         CreatedBy = x.CreatedBy,
+        CustomerUserId = x.CustomerUserId,
+        ReservationId = x.ReservationId,
         CreatedAt = x.CreatedAt,
         UpdatedAt = x.UpdatedAt
     };

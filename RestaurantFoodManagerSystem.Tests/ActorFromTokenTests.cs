@@ -63,7 +63,7 @@ public sealed class ActorFromTokenTests : TestBase
         var table = SeedTable();
         var bodyActor = SeedUser();
         var tokenActor = SeedUser();
-        var order = SeedOrder(table.TableId, bodyActor.Id, status: "SentToKitchen");
+        var order = SeedOrder(table.TableId, bodyActor.Id, status: OrderStatuses.Ready);
         CurrentUser.UserId = tokenActor.Id;
 
         var payment = await Payments.CreateAsync(new CreatePaymentRequest

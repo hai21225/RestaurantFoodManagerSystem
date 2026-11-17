@@ -21,6 +21,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.UserFullName).IsRequired().HasMaxLength(150);
                 entity.Property(x => x.UserEmail).IsRequired().HasMaxLength(150);
                 entity.Property(x => x.UserPhone).IsRequired().HasMaxLength(20);
+                entity.Property(x => x.TokenVersion).IsRequired().HasDefaultValue(1);
                 entity.HasIndex(x => x.UserName).IsUnique();
                 entity.HasIndex(x => x.UserEmail).IsUnique();
             });
@@ -92,6 +93,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.ToppingPrice).HasPrecision(18, 2);
                 entity.Property(x => x.IsActive).IsRequired();
                 entity.Property(x => x.IsAvailable).IsRequired();
+                entity.Property(x => x.StockQuantity);
                 entity.HasIndex(x => x.ToppingName).IsUnique().HasFilter(activeFilter);
             });
 
@@ -122,7 +124,9 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.Capacity).IsRequired();
                 entity.Property(x => x.Status).IsRequired().HasMaxLength(50);
                 entity.Property(x => x.IsActive).IsRequired();
+                entity.Property(x => x.QrToken).HasMaxLength(100);
                 entity.HasIndex(x => x.TableNumber).IsUnique().HasFilter(activeFilter);
+                entity.HasIndex(x => x.QrToken).IsUnique().HasFilter(isSqlServer ? "[QrToken] IS NOT NULL" : "\"QrToken\" IS NOT NULL");
                 entity.HasIndex(x => x.AreaId);
                 entity.HasOne(x => x.Area).WithMany().HasForeignKey(x => x.AreaId).OnDelete(DeleteBehavior.SetNull);
                 ConfigureRowVersion(entity);
@@ -155,8 +159,12 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.UpdatedAt).IsRequired();
                 entity.HasOne<RestaurantTable>().WithMany().HasForeignKey(x => x.TableId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<Users>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Users>().WithMany().HasForeignKey(x => x.CustomerUserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<TableReservation>().WithMany().HasForeignKey(x => x.ReservationId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasIndex(x => x.TableId);
                 entity.HasIndex(x => x.CreatedBy);
+                entity.HasIndex(x => x.CustomerUserId);
+                entity.HasIndex(x => x.ReservationId);
                 entity.HasIndex(x => x.Status);
                 entity.HasIndex(x => x.PromotionId);
                 ConfigureRowVersion(entity);
@@ -319,9 +327,11 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.RefundedAt);
                 entity.HasOne<Order>().WithMany().HasForeignKey(x => x.OrderId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne<Users>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<CashierShift>().WithMany().HasForeignKey(x => x.ShiftId).OnDelete(DeleteBehavior.NoAction);
                 entity.HasIndex(x => x.OrderId).IsUnique().HasFilter(isSqlServer ? "[Status] = 'Paid'" : "\"Status\" = 'Paid'");
                 entity.HasIndex(x => x.TransactionCode).IsUnique().HasFilter(isSqlServer ? "[TransactionCode] <> ''" : "\"TransactionCode\" <> ''");
                 entity.HasIndex(x => x.RequestId);
+                entity.HasIndex(x => x.ShiftId);
             });
 
             modelBuilder.Entity<Promotion>(entity =>
@@ -456,6 +466,71 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
                 entity.Property(x => x.Quanlity).HasPrecision(18, 3);
                 entity.HasOne<Recipe>().WithMany().HasForeignKey(x => x.RecipeId).OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne<Ingredient>().WithMany().HasForeignKey(x => x.IngredientId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<IdempotencyKey>(entity =>
+            {
+                entity.ToTable("idempotency_keys");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).ValueGeneratedOnAdd();
+                entity.Property(x => x.Scope).IsRequired().HasMaxLength(100);
+                entity.Property(x => x.Key).IsRequired().HasMaxLength(200);
+                entity.Property(x => x.RequestFingerprint).IsRequired().HasMaxLength(128);
+                entity.Property(x => x.Status).IsRequired().HasMaxLength(20);
+                entity.Property(x => x.ResponseJson);
+                entity.Property(x => x.StatusCode);
+                entity.Property(x => x.CreatedAt).IsRequired();
+                entity.Property(x => x.ExpiresAt).IsRequired();
+                entity.HasIndex(x => new { x.Scope, x.Key }).IsUnique();
+                entity.HasIndex(x => x.ExpiresAt);
+            });
+
+            modelBuilder.Entity<TableReservation>(entity =>
+            {
+                entity.ToTable("table_reservations");
+                entity.HasKey(x => x.ReservationId);
+                entity.Property(x => x.CustomerName).IsRequired().HasMaxLength(150);
+                entity.Property(x => x.CustomerPhone).IsRequired().HasMaxLength(20);
+                entity.Property(x => x.PartySize).IsRequired();
+                entity.Property(x => x.ReservedFrom).IsRequired();
+                entity.Property(x => x.ReservedTo).IsRequired();
+                entity.Property(x => x.Status).IsRequired().HasMaxLength(30);
+                entity.Property(x => x.DepositAmount).HasPrecision(18, 2);
+                entity.Property(x => x.DepositStatus).IsRequired().HasMaxLength(30);
+                entity.Property(x => x.DepositTransactionCode).HasMaxLength(100);
+                entity.Property(x => x.Note).HasMaxLength(500);
+                entity.Property(x => x.CancelReason).HasMaxLength(500);
+                entity.Property(x => x.CreatedAt).IsRequired();
+                entity.Property(x => x.UpdatedAt).IsRequired();
+                entity.HasOne<RestaurantTable>().WithMany().HasForeignKey(x => x.TableId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne<Users>().WithMany().HasForeignKey(x => x.CustomerUserId).OnDelete(DeleteBehavior.SetNull);
+                entity.HasIndex(x => new { x.TableId, x.ReservedFrom, x.ReservedTo });
+                entity.HasIndex(x => x.CustomerUserId);
+                entity.HasIndex(x => x.Status);
+                entity.HasIndex(x => x.OrderId);
+                ConfigureRowVersion(entity);
+            });
+
+            modelBuilder.Entity<CashierShift>(entity =>
+            {
+                entity.ToTable("cashier_shifts");
+                entity.HasKey(x => x.ShiftId);
+                entity.Property(x => x.OpenedAt).IsRequired();
+                entity.Property(x => x.OpeningCash).HasPrecision(18, 2);
+                entity.Property(x => x.ExpectedCash).HasPrecision(18, 2);
+                entity.Property(x => x.ActualCash).HasPrecision(18, 2);
+                entity.Property(x => x.Variance).HasPrecision(18, 2);
+                entity.Property(x => x.Status).IsRequired().HasMaxLength(20);
+                entity.Property(x => x.CashTotal).HasPrecision(18, 2);
+                entity.Property(x => x.CardTotal).HasPrecision(18, 2);
+                entity.Property(x => x.MomoTotal).HasPrecision(18, 2);
+                entity.Property(x => x.OtherTotal).HasPrecision(18, 2);
+                entity.Property(x => x.RefundTotal).HasPrecision(18, 2);
+                entity.Property(x => x.Note).HasMaxLength(500);
+                entity.HasOne<Users>().WithMany().HasForeignKey(x => x.CashierUserId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasIndex(x => x.CashierUserId).IsUnique().HasFilter(isSqlServer ? "[Status] = 'Open'" : "\"Status\" = 'Open'");
+                entity.HasIndex(x => x.Status);
+                ConfigureRowVersion(entity);
             });
         }
 

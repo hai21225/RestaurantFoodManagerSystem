@@ -19,6 +19,7 @@ public sealed class PaymentResponse
     public DateTime? PaidAt { get; set; }
 
     public int CreatedBy { get; set; }
+    public int? ShiftId { get; set; }
 
     /// <summary>Nơi thu tiền đi qua: <c>Cash</c>, <c>MoMo</c>…</summary>
     public string Provider { get; set; } = string.Empty;
@@ -51,6 +52,7 @@ public sealed class PaymentResponse
         TransactionCode = x.TransactionCode,
         PaidAt = x.PaidAt,
         CreatedBy = x.CreatedBy,
+        ShiftId = x.ShiftId,
         Provider = x.Provider,
         RequestId = x.RequestId,
         ProviderTransactionId = x.ProviderTransactionId,

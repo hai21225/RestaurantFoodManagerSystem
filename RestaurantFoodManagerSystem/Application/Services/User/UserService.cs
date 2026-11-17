@@ -1,14 +1,17 @@
 using System.Net.Mail;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class UserService
 {
     private readonly AppDbContext _db;
+    private readonly IMemoryCache? _cache;
 
-    public UserService(AppDbContext db)
+    public UserService(AppDbContext db, IMemoryCache? cache = null)
     {
         _db = db;
+        _cache = cache;
     }
 
     public async Task<UserDto?> FindUserByUsernameAsync(string username, CancellationToken ct = default)
@@ -62,19 +65,33 @@ public class UserService
             FullName = user.UserFullName,
             Phone = user.UserPhone,
             IsActive = user.IsActive,
+            TokenVersion = user.TokenVersion,
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
     }
 
     /// <summary>
-    /// Danh sách nhân viên kèm tên role (GĐ6/A2) — phục vụ <c>GET /api/users</c>.
+    /// Danh sách nhân viên/khách hàng kèm tên role (GĐ6/A2, V2) — phục vụ <c>GET /api/users</c>.
     /// Đọc 3 bảng rồi ghép trong bộ nhớ để tránh N+1.
     /// </summary>
-    public async Task<List<UserListItemResponse>> GetAllWithRolesAsync(CancellationToken ct = default)
+    public Task<List<UserListItemResponse>> GetAllWithRolesAsync(CancellationToken ct = default) =>
+        GetAllWithRolesAsync(null, null, null, null, ct);
+
+    public async Task<List<UserListItemResponse>> GetAllWithRolesAsync(
+        string? userType,
+        string? role,
+        bool? isActive,
+        string? search,
+        CancellationToken ct = default)
     {
-        var users = await _db.Users
-            .AsNoTracking()
+        var query = _db.Users.AsNoTracking();
+        if (isActive.HasValue)
+        {
+            query = query.Where(u => u.IsActive == isActive.Value);
+        }
+
+        var users = await query
             .OrderBy(u => u.Id)
             .ToListAsync(ct);
 
@@ -89,7 +106,11 @@ public class UserService
                 g => g.Key,
                 g => g.Select(x => x.RoleName).OrderBy(name => name).ToList());
 
-        return users.Select(u => new UserListItemResponse
+        var normalizedType = userType?.Trim();
+        var normalizedRole = role?.Trim();
+        var normalizedSearch = search?.Trim();
+
+        IEnumerable<UserListItemResponse> items = users.Select(u => new UserListItemResponse
         {
             UserId = u.Id,
             UserName = u.UserName ?? string.Empty,
@@ -98,7 +119,58 @@ public class UserService
             Phone = u.UserPhone ?? string.Empty,
             IsActive = u.IsActive,
             Roles = rolesByUser.TryGetValue(u.Id, out var roles) ? roles : []
-        }).ToList();
+        });
+
+        if (string.Equals(normalizedType, "customer", StringComparison.OrdinalIgnoreCase))
+        {
+            items = items.Where(x => x.Roles.Contains(AuthPolicies.Roles.Customer, StringComparer.OrdinalIgnoreCase));
+        }
+        else if (string.Equals(normalizedType, "staff", StringComparison.OrdinalIgnoreCase))
+        {
+            items = items.Where(x => !x.Roles.Contains(AuthPolicies.Roles.Customer, StringComparer.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedRole))
+        {
+            items = items.Where(x => x.Roles.Contains(normalizedRole, StringComparer.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(normalizedSearch))
+        {
+            items = items.Where(x =>
+                x.UserName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.FullName.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Email.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                x.Phone.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return items.ToList();
+    }
+
+    public async Task<CustomerSummaryResponse?> GetCustomerSummaryAsync(int userId, CancellationToken ct = default)
+    {
+        if (!await _db.Users.AsNoTracking().AnyAsync(u => u.Id == userId, ct))
+        {
+            return null;
+        }
+
+        var orderCount = await _db.Orders.AsNoTracking()
+            .CountAsync(o => o.CustomerUserId == userId && o.Status != OrderStatuses.Cancelled, ct);
+
+        var totalSpent = await _db.Orders.AsNoTracking()
+            .Where(o => o.CustomerUserId == userId && o.Status == OrderStatuses.Paid)
+            .SumAsync(o => (decimal?)o.TotalAmount, ct) ?? 0m;
+
+        var reservationCount = await _db.TableReservations.AsNoTracking()
+            .CountAsync(r => r.CustomerUserId == userId, ct);
+
+        return new CustomerSummaryResponse
+        {
+            UserId = userId,
+            OrderCount = orderCount,
+            TotalSpent = totalSpent,
+            ReservationCount = reservationCount
+        };
     }
 
     /// <summary>
@@ -188,8 +260,10 @@ public class UserService
             }
 
             user.IsActive = isActive;
+            user.TokenVersion++;
             user.UpdatedAt = DateTime.UtcNow;
             await _db.SaveChangesAsync(ct);
+            _cache?.Remove($"auth:user:{user.Id}");
         }
 
         return await GetProfileAsync(userId, ct)

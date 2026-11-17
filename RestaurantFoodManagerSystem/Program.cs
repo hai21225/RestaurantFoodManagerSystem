@@ -1,6 +1,8 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.IdentityModel.Tokens;
 using RestaurantFoodManagerSystem.Api.Filters;
 using RestaurantFoodManagerSystem.Infrastructure.Auth;
@@ -10,6 +12,7 @@ using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 public partial class Program {
     private static async Task Main(string[] args)
     {
+        LoadDotEnv();
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
@@ -31,7 +34,8 @@ public partial class Program {
                         "http://localhost:5501",
                         "http://localhost:3000")
                     .AllowAnyHeader()
-                    .AllowAnyMethod();
+                    .AllowAnyMethod()
+                    .AllowCredentials();
             });
         });
 
@@ -77,6 +81,7 @@ public partial class Program {
 
         // GĐ6 (lát 6b): JWT authentication + policy phân quyền. Enforcement bật/tắt bằng Auth:Enforce
         // (dev mặc định false ⇒ [Authorize] chưa chặn cho tới khi frontend gửi Bearer token).
+        builder.Services.AddMemoryCache();
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
@@ -94,6 +99,56 @@ public partial class Program {
                     // Khi chưa cấu hình khóa (dev), đừng đòi token phải ký để tránh lỗi "no keys".
                     RequireSignedTokens = !string.IsNullOrWhiteSpace(jwtOptions.Key),
                     ClockSkew = TimeSpan.FromMinutes(1),
+                };
+
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+                        if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/restaurant"))
+                        {
+                            context.Token = accessToken;
+                        }
+                        return Task.CompletedTask;
+                    },
+                    OnTokenValidated = async context =>
+                    {
+                        var subRaw = context.Principal?.FindFirst("sub")?.Value
+                            ?? context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                        var tvRaw = context.Principal?.FindFirst("tv")?.Value;
+                        if (!int.TryParse(subRaw, out var userId) || userId <= 0 || !int.TryParse(tvRaw, out var tokenVersion))
+                        {
+                            context.Fail("Token revoked or user inactive");
+                            return;
+                        }
+
+                        var cache = context.HttpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                        var cacheKey = $"auth:user:{userId}";
+                        if (!cache.TryGetValue(cacheKey, out (bool IsActive, int TokenVersion) state))
+                        {
+                            var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                            var user = await db.Users.AsNoTracking()
+                                .Where(u => u.Id == userId)
+                                .Select(u => new { u.IsActive, u.TokenVersion })
+                                .FirstOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                            if (user is null)
+                            {
+                                context.Fail("Token revoked or user inactive");
+                                return;
+                            }
+
+                            state = (user.IsActive, user.TokenVersion);
+                            cache.Set(cacheKey, state, TimeSpan.FromSeconds(30));
+                        }
+
+                        if (!state.IsActive || state.TokenVersion != tokenVersion)
+                        {
+                            context.Fail("Token revoked or user inactive");
+                        }
+                    }
                 };
             });
 
@@ -130,6 +185,10 @@ public partial class Program {
         builder.Services.AddScoped<RecipeService>();
         builder.Services.AddScoped<KitchenService>();
         builder.Services.AddScoped<ReportService>();
+        builder.Services.AddScoped<ReservationService>();
+        builder.Services.AddScoped<CashierShiftService>();
+        builder.Services.AddHostedService<IdempotencyCleanupService>();
+        builder.Services.AddSignalR();
 
 
 
@@ -156,15 +215,13 @@ public partial class Program {
 
         // Phải đứng trước UseAuthentication/UseAuthorization để preflight và header
         // Authorization của request cross-origin được xử lý.
-        if (app.Environment.IsDevelopment())
-        {
-            app.UseCors("FrontendPolicy");
-        }
+        app.UseCors("FrontendPolicy");
 
         app.UseAuthentication();
         app.UseAuthorization();
 
         app.MapControllers();
+        app.MapHub<RestaurantHub>("/hubs/restaurant");
 
 
 
@@ -178,6 +235,51 @@ public partial class Program {
         await DatabaseInitializer.InitializeAsync(app.Services, databaseInitOptions);
 
         app.Run();
+    }
+
+    private static void LoadDotEnv()
+    {
+        var paths = new[]
+        {
+            Path.Combine(Directory.GetCurrentDirectory(), ".env"),
+            Path.Combine(AppContext.BaseDirectory, ".env")
+        };
+
+        foreach (var path in paths.Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            if (!File.Exists(path))
+            {
+                continue;
+            }
+
+            foreach (var rawLine in File.ReadAllLines(path))
+            {
+                var line = rawLine.Trim();
+                if (string.IsNullOrEmpty(line) || line.StartsWith('#'))
+                {
+                    continue;
+                }
+
+                var idx = line.IndexOf('=');
+                if (idx <= 0)
+                {
+                    continue;
+                }
+
+                var key = line[..idx].Trim();
+                var val = line[(idx + 1)..].Trim();
+                if (val.Length >= 2 &&
+                    ((val[0] == '"' && val[^1] == '"') || (val[0] == '\'' && val[^1] == '\'')))
+                {
+                    val = val[1..^1];
+                }
+
+                if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
+                {
+                    Environment.SetEnvironmentVariable(key, val);
+                }
+            }
+        }
     }
 }
 

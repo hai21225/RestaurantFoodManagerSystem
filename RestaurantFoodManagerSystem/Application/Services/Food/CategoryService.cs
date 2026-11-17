@@ -33,12 +33,21 @@ public class CategoryService
 
 
     // SEARCH BY NAME
-    public async Task<List<CategoryDTO>> GetCategoriesByNameAsync(string name, CancellationToken ct = default)
+    public async Task<List<CategoryDTO>> GetCategoriesByNameAsync(
+        string name,
+        bool includeInactive = true,
+        CancellationToken ct = default)
     {
-        var categories = await _db.Categories
+        var query = _db.Categories
             .AsNoTracking()
-            .Where(c => c.CategoryName.Contains(name))
-            .ToListAsync(ct);
+            .Where(c => c.CategoryName.Contains(name));
+
+        if (!includeInactive)
+        {
+            query = query.Where(c => c.IsActive);
+        }
+
+        var categories = await query.ToListAsync(ct);
 
         return categories.Select(category => new CategoryDTO
         {
@@ -53,11 +62,17 @@ public class CategoryService
 
 
     // GET ALL
-    public async Task<List<CategoryDTO>> GetAllCategoriesAsync(CancellationToken ct = default)
+    public async Task<List<CategoryDTO>> GetAllCategoriesAsync(
+        bool includeInactive = true,
+        CancellationToken ct = default)
     {
-        var categories = await _db.Categories
-            .AsNoTracking()
-            .ToListAsync(ct);
+        var query = _db.Categories.AsNoTracking();
+        if (!includeInactive)
+        {
+            query = query.Where(c => c.IsActive);
+        }
+
+        var categories = await query.ToListAsync(ct);
 
         return categories.Select(category => new CategoryDTO
         {

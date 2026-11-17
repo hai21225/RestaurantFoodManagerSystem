@@ -477,6 +477,17 @@
 }
 
 @media (max-width: 480px) {
+    .kitchen-item-actions .ticket-action,
+    .kitchen-screen .segment-button,
+    #kitchenSearch {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    #kitchenActionDialog input:not([type="checkbox"]),
+    #kitchenActionDialog textarea,
+    #kitchenActionDialog select { font-size: 16px; }
+
     .ticket-action {
         width: 100%;
     }

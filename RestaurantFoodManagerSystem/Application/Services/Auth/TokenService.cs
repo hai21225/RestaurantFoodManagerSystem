@@ -50,6 +50,7 @@ public class TokenService
             new(JwtRegisteredClaimNames.Name, user.FullName ?? string.Empty),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(JwtRegisteredClaimNames.Iat, EpochTime.GetIntDate(now).ToString(), ClaimValueTypes.Integer64),
+            new("tv", user.TokenVersion.ToString()),
         };
 
         if (roles != null)

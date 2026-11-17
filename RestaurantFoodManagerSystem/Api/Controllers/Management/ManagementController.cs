@@ -163,10 +163,21 @@ public sealed class ManagementController : ControllerBase
     public async Task<List<PromotionResponse>> Promotions(
         [FromQuery] bool includeInactive,
         [FromServices] PromotionService s,
+        CancellationToken ct) =>
+        await ToPromotionResponsesAsync(await s.GetAllAsync(includeInactive, ct), s, ct);
+
+    [Authorize(Policy = AuthPolicies.PosOrCashier)]
+    [HttpGet("promotions/active")]
+    public async Task<List<PromotionResponse>> ActivePromotions(
+        [FromServices] PromotionService s,
+        CancellationToken ct) =>
+        await ToPromotionResponsesAsync(await s.GetActiveValidAsync(ct), s, ct);
+
+    private static async Task<List<PromotionResponse>> ToPromotionResponsesAsync(
+        List<Promotion> promotions,
+        PromotionService s,
         CancellationToken ct)
     {
-        var promotions = await s.GetAllAsync(includeInactive, ct);
-
         // C-18: target của khuyến mãi (món/danh mục được áp giảm). Đọc 1 lần cho cả danh sách.
         var targets = await s.GetTargetsAsync(
             promotions.Select(x => x.Id).ToList(), ct);

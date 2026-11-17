@@ -95,13 +95,29 @@ public class UsersController : ControllerBase
         return Ok(new { message = "Password reset successfully" });
     }
 
-    // GET: /api/users  (GĐ6/A2) — danh sách nhân viên kèm role.
+    // GET: /api/users  (GĐ6/A2, V2) — danh sách nhân viên/khách hàng kèm role & bộ lọc.
     [Authorize(Policy = AuthPolicies.AdminOnly)]
     [HttpGet]
-    public async Task<IActionResult> GetAll(CancellationToken ct)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? userType = null,
+        [FromQuery] string? role = null,
+        [FromQuery] bool? isActive = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
-        var employees = await _userService.GetAllWithRolesAsync(ct);
+        var employees = await _userService.GetAllWithRolesAsync(userType, role, isActive, search, ct);
         return Ok(employees);
+    }
+
+    // GET: /api/users/{id}/customer-summary  (V2) — thống kê đơn & đặt bàn của khách.
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
+    [HttpGet("{id:int}/customer-summary")]
+    public async Task<IActionResult> GetCustomerSummary(int id, CancellationToken ct = default)
+    {
+        var summary = await _userService.GetCustomerSummaryAsync(id, ct);
+        return summary is null
+            ? NotFound(new { message = "User not found" })
+            : Ok(summary);
     }
 
     // POST: /api/users  (GĐ6/A2) — tạo nhân viên, gán role ngay nếu có roleName.

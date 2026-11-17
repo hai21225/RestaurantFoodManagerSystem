@@ -32,11 +32,44 @@
     const tableLifecycleNotice = document.querySelector("#tableLifecycleNotice");
     const tableLifecycleMessage = document.querySelector("#tableLifecycleMessage");
     const tableLifecycleConfirm = document.querySelector("#tableLifecycleConfirm");
+    const auth = window.restaurantAuth;
+    const canManageTables = () => auth.isPageAllowed() && auth.hasRole("Admin");
+    const canPlaceOrder = () => auth.isPageAllowed() && auth.hasRole("Admin", "Waiter");
+
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+    const depositLabels = {
+        None: "Không cần cọc",
+        Pending: "Chờ đặt cọc",
+        Paid: "Đã đặt cọc",
+        AppliedToOrder: "Đã trừ vào hóa đơn",
+        Refunded: "Đã hoàn cọc",
+        Forfeited: "Mất cọc"
+    };
+
+    function formatReservationTime(value) {
+        if (!value) return "—";
+        const parsed = new Date(value);
+        if (Number.isNaN(parsed.getTime())) return String(value);
+        return parsed.toLocaleString("vi-VN", {
+            day: "2-digit", month: "2-digit",
+            hour: "2-digit", minute: "2-digit",
+            hourCycle: "h23"
+        });
+    }
+
+    function isReservationOverdue(reservation) {
+        if (!reservation) return false;
+        if (reservation.isOverdue === true) return true;
+        if (!reservation.reservedTo) return false;
+        const toMs = Date.parse(reservation.reservedTo);
+        return Number.isFinite(toMs) && Date.now() > toMs;
+    }
 
     function normalizeStatus(status, isActive) {
         if (!isActive) return { value: "deleted", label: "Đã xóa" };
         const value = String(status || "").toLowerCase();
-        if (value === "occupied") return { value: "serving", label: "Đang sử dụng" };
+        if (value === "occupied") return { value: "serving", label: "Có khách" };
+        if (value === "reserved") return { value: "reserved", label: "Đang có khách giữ" };
         if (value === "maintenance") return { value: "inactive", label: "Bảo trì" };
         return { value: "empty", label: "Trống" };
     }
@@ -98,13 +131,10 @@
                     area: table.areaId ? String(table.areaId) : "unassigned",
                     areaLabel: table.areaName || "Chưa phân khu",
                     seats: table.capacity,
-                    guestCount: 0,
-                    orderCode: "",
-                    totalAmount: 0,
-                    updatedAt: "",
                     isActive: table.isActive,
                     status: status.value,
-                    statusLabel: status.label
+                    statusLabel: status.label,
+                    activeReservation: table.activeReservation || null
                 };
             });
 
@@ -131,12 +161,9 @@
         }
     }
 
-    function formatCurrency(value) {
-        return `${value.toLocaleString("vi-VN")}đ`;
-    }
-
     function getFilteredTables() {
         return tablesData.tables.filter((table) => {
+            if (!canManageTables() && !table.isActive) return false;
             const matchArea = state.area === "all" || table.area === state.area;
             const matchStatus = state.status === "active" ? table.isActive : state.status === "all" || table.status === state.status;
 
@@ -146,9 +173,9 @@
 
     function renderSummary() {
         const summary = [
-            { label: "Bàn đang dùng", value: tablesData.tables.filter((table) => table.isActive).length },
-            { label: "Bàn trống", value: tablesData.tables.filter((table) => table.status === "empty").length },
-            { label: "Đang sử dụng", value: tablesData.tables.filter((table) => table.status === "serving").length },
+            { label: "Trống", value: tablesData.tables.filter((table) => table.status === "empty").length },
+            { label: "Có khách", value: tablesData.tables.filter((table) => table.status === "serving").length },
+            { label: "Đang giữ", value: tablesData.tables.filter((table) => table.status === "reserved").length },
             { label: "Bảo trì", value: tablesData.tables.filter((table) => table.status === "inactive").length }
         ];
 
@@ -160,32 +187,20 @@
         `).join("");
     }
 
-    function renderFilterButtons(container, items, activeValue, onClick) {
+    function renderFilterOptions(container, items, activeValue) {
+        const escape = (value) => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
         container.innerHTML = items.map((item) => `
-            <button
-                class="segment-button${item.value === activeValue ? " is-active" : ""}"
-                type="button"
-                data-value="${item.value}"
-            >
-                ${item.label}
-            </button>
+            <option value="${escape(item.value)}">${escape(item.label)}</option>
         `).join("");
-
-        container.querySelectorAll(".segment-button").forEach((button) => {
-            button.addEventListener("click", () => onClick(button.dataset.value));
-        });
+        container.value = activeValue;
     }
 
     function renderFilters() {
-        renderFilterButtons(areaFilters, tablesData.areas, state.area, (value) => {
-            state.area = value;
-            render();
-        });
+        renderFilterOptions(areaFilters, tablesData.areas, state.area);
 
-        renderFilterButtons(statusFilters, tablesData.statuses, state.status, (value) => {
-            state.status = value;
-            render();
-        });
+        const statuses = canManageTables() ? tablesData.statuses
+            : tablesData.statuses.filter((item) => !["all", "deleted"].includes(item.value));
+        renderFilterOptions(statusFilters, statuses, state.status);
     }
 
     function renderTableCards() {
@@ -197,31 +212,35 @@
         if (!filteredTables.length) {
             restaurantMap.innerHTML = `
                 <div class="empty-state">
-                    <strong>Chưa có dữ liệu bàn</strong>
-                    <span>Dữ liệu bàn sẽ hiển thị tại đây sau khi kết nối nguồn dữ liệu thật.</span>
+                    <strong>Không có bàn phù hợp</strong>
+                    <span>Thử chọn khu vực hoặc trạng thái khác.</span>
                 </div>
             `;
             return;
         }
 
-        restaurantMap.innerHTML = filteredTables.map((table) => `
+        restaurantMap.innerHTML = filteredTables.map((table) => {
+            const res = table.status === "reserved" ? table.activeReservation : null;
+            const overdue = isReservationOverdue(res);
+            const resNote = res
+                ? `<span class="table-card-res-note">${escapeHtml(res.customerName || "Khách đặt")} · ${escapeHtml(formatReservationTime(res.reservedFrom))}</span>${overdue ? '<span class="table-card-overdue">Quá giờ hẹn</span>' : ""}`
+                : "";
+            return `
             <button
                 class="restaurant-table-card status-${table.status}${table.id === state.selectedTableId ? " is-selected" : ""}"
                 type="button"
                 data-table-id="${table.id}"
             >
                 <div class="table-card-header">
-                    <strong>${table.name}</strong>
-                    <span class="status status-${table.status}">${table.statusLabel}</span>
+                    <strong>${escapeHtml(table.name)}</strong>
+                    <span class="status status-${table.status}">${escapeHtml(table.statusLabel)}</span>
                 </div>
-                <span class="table-area">${table.areaLabel}</span>
-                <span class="table-seats">${table.seats} chỗ - ${table.guestCount || 0} khách</span>
-                <div class="table-card-footer">
-                    <span class="table-order-code">${table.orderCode || "Chưa có đơn"}</span>
-                    <span class="table-time">${table.updatedAt}</span>
-                </div>
+                <span class="table-card-symbol" aria-hidden="true"><svg viewBox="0 0 64 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="14" y="10" width="36" height="28" rx="7"/><path d="M22 4v6m20-6v6M22 38v6m20-6v6M7 17h7M7 31h7m36-14h7m-7 14h7"/></svg></span><span class="table-area">${escapeHtml(table.areaLabel)}</span>
+                <span class="table-seats">${table.seats} chỗ</span>
+                ${resNote}
             </button>
-        `).join("");
+        `;
+        }).join("");
 
         restaurantMap.querySelectorAll("[data-table-id]").forEach((button) => {
             button.addEventListener("click", () => {
@@ -245,37 +264,81 @@
         selectedTableStatus.textContent = table.statusLabel;
         const isActive = table.isActive;
         const isMaintenance = table.status === "inactive";
-        const canOrder = isActive && !isMaintenance;
-        const canChangeState = isActive && table.status !== "serving";
+        const isReserved = table.status === "reserved";
+        const res = isReserved ? table.activeReservation : null;
+        const overdue = isReservationOverdue(res);
+        const canOrder = canPlaceOrder() && isActive && !isMaintenance && !isReserved;
+        const canChangeState = canManageTables() && isActive && table.status !== "serving" && !isReserved;
         const orderAction = canOrder
             ? `<button class="primary-action" type="button" data-action="order-table">
                     ${table.status === "empty" ? "Đặt món cho bàn này" : "Xem / thêm món"}
                </button>`
             : "";
-        const maintenanceAction = isActive && table.status === "empty"
+        const reservationActions = canPlaceOrder() && isActive && isReserved && res
+            ? `<button class="primary-action" type="button" data-action="seat-reservation" data-reservation-id="${res.reservationId}">
+                    Xác nhận khách tới
+               </button>
+               <button class="secondary-action" type="button" data-action="noshow-reservation" data-reservation-id="${res.reservationId}"
+                    ${overdue ? "" : 'disabled title="Chưa quá giờ hẹn, không thể trả bàn sớm"'}>
+                    Quá giờ — Trả bàn thủ công
+               </button>`
+            : "";
+        const maintenanceAction = !canManageTables() ? "" : isActive && table.status === "empty"
             ? `<button class="secondary-action" type="button" data-action="maintenance-table">Bảo trì</button>`
             : isActive && isMaintenance
                 ? `<button class="secondary-action" type="button" data-action="end-maintenance">Kết thúc bảo trì</button>`
                 : "";
-        const lifecycleAction = !isActive
+        const lifecycleAction = !canManageTables() ? "" : !isActive
             ? `<button class="primary-action" type="button" data-action="restore-table">Khôi phục bàn</button>`
             : `<button class="danger-action" type="button" data-action="delete-table"
-                    ${canChangeState ? "" : "disabled title=\"Bàn đang có đơn chưa thanh toán\""}>
+                    ${canChangeState ? "" : `disabled title="${isReserved ? "Bàn đang có lịch đặt giữ chỗ" : "Bàn đang có đơn chưa thanh toán"}"`}>
                     Xóa bàn
                </button>`;
         const actionHint = !isActive
             ? '<p class="table-action-hint">Bàn đang ngừng sử dụng. Khôi phục để phục vụ lại.</p>'
             : table.status === "serving"
                 ? '<p class="table-action-hint">Bàn chỉ trở về trống sau khi thanh toán hoặc hủy đơn.</p>'
-                : isMaintenance
-                    ? '<p class="table-action-hint">Bàn đang bảo trì và không nhận đơn mới.</p>'
-                    : "";
+                : isReserved
+                    ? `<p class="table-action-hint">${overdue
+                        ? "Đã quá giờ hẹn. Có thể xác nhận khách tới hoặc bấm trả bàn thủ công."
+                        : "Bàn đang được giữ cho khách đặt trước (khóa mở đơn vãng lai). Chưa quá giờ hẹn, không thể trả bàn sớm."}</p>`
+                    : isMaintenance
+                        ? '<p class="table-action-hint">Bàn đang bảo trì và không nhận đơn mới.</p>'
+                        : "";
+
+        const depositText = res ? (depositLabels[res.depositStatus] || res.depositStatus || "—") : "";
+        const depositAmountText = res && res.depositAmount > 0 ? ` (${Number(res.depositAmount).toLocaleString("vi-VN")}đ)` : "";
+        const reservationSection = res
+            ? `<div class="reservation-detail-box">
+                    <div class="reservation-detail-row">
+                        <strong>Lịch đặt #${res.reservationId}</strong>
+                        <span>${res.partySize} khách</span>
+                    </div>
+                    <div class="reservation-detail-row">
+                        <span>Khách hàng</span>
+                        <strong>${escapeHtml(res.customerName || "—")}</strong>
+                    </div>
+                    <div class="reservation-detail-row">
+                        <span>Số điện thoại</span>
+                        <strong>${escapeHtml(res.customerPhone || "—")}</strong>
+                    </div>
+                    <div class="reservation-detail-row">
+                        <span>Giờ hẹn</span>
+                        <strong>${escapeHtml(formatReservationTime(res.reservedFrom))} → ${escapeHtml(formatReservationTime(res.reservedTo))}</strong>
+                    </div>
+                    <div class="reservation-detail-row">
+                        <span>Tiền cọc</span>
+                        <strong>${escapeHtml(depositText)}${escapeHtml(depositAmountText)}</strong>
+                    </div>
+                    ${overdue ? '<div class="reservation-overdue-alert">Đã quá giờ hẹn — Có thể trả bàn thủ công nếu khách không tới.</div>' : ""}
+               </div>`
+            : "";
 
         selectedTable.innerHTML = `
             <div class="table-detail-body">
                 <div class="detail-title">
-                    <strong>${table.name}</strong>
-                    <span>${table.areaLabel}</span>
+                    <strong>${escapeHtml(table.name)}</strong>
+                    <span>${escapeHtml(table.areaLabel)}</span>
                 </div>
 
                 <div class="detail-grid">
@@ -284,21 +347,16 @@
                         <strong>${table.seats}</strong>
                     </div>
                     <div class="detail-item">
-                        <span>Khách hiện tại</span>
-                        <strong>${table.guestCount}</strong>
-                    </div>
-                    <div class="detail-item">
-                        <span>Mã đơn</span>
-                        <strong>${table.orderCode || "Chưa có"}</strong>
-                    </div>
-                    <div class="detail-item">
-                        <span>Tạm tính</span>
-                        <strong>${formatCurrency(table.totalAmount)}</strong>
+                        <span>Trạng thái</span>
+                        <strong>${escapeHtml(table.statusLabel)}</strong>
                     </div>
                 </div>
 
+                ${reservationSection}
+
                 <div class="detail-actions">
                     ${orderAction}
+                    ${reservationActions}
                     ${maintenanceAction}
                     ${lifecycleAction}
                 </div>
@@ -310,7 +368,7 @@
     function saveSelectedTableForOrder() {
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
 
-        if (!table) {
+        if (!canPlaceOrder() || !table?.isActive || table.status === "inactive" || table.status === "reserved") {
             return;
         }
 
@@ -318,13 +376,11 @@
             id: table.id,
             name: table.name,
             areaLabel: table.areaLabel,
-            guestCount: table.guestCount || 0,
-            orderCode: table.orderCode || "",
             status: table.status,
             statusLabel: table.statusLabel
         }));
 
-        window.location.href = `order.html?tableId=${encodeURIComponent(table.id)}`;
+        window.location.href = `order.html?tableId=${encodeURIComponent(table.id)}&ui=20261112-print1`;
     }
 
     function openTableDetail() {
@@ -338,6 +394,7 @@
     let lifecycleMode = "delete";
 
     function openTableLifecycleDialog(mode) {
+        if (!canManageTables()) return;
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
         if (!table) {
             return;
@@ -393,8 +450,11 @@
     }
 
     refreshTablesButton.addEventListener("click", loadTables);
+    areaFilters.addEventListener("change", () => { state.area = areaFilters.value; render(); });
+    statusFilters.addEventListener("change", () => { state.status = statusFilters.value; render(); });
 
     addTableButton.addEventListener("click", () => {
+        if (!canManageTables()) return;
         tableForm.reset();
         tableForm.elements.capacity.value = "4";
         populateAreaOptions();
@@ -419,6 +479,7 @@
 
     tableForm.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!canManageTables()) return;
         tableFormMessage.textContent = "";
 
         if (!tableForm.checkValidity()) {
@@ -451,12 +512,48 @@
 
     closeTableDetailButton.addEventListener("click", closeTableDetail);
 
-    selectedTable.addEventListener("click", (event) => {
+    selectedTable.addEventListener("click", async (event) => {
         if (event.target.closest('[data-action="order-table"]')) {
             saveSelectedTableForOrder();
+            return;
         }
 
-        const action = event.target.closest("[data-action]")?.dataset.action;
+        const btn = event.target.closest("[data-action]");
+        const action = btn?.dataset.action;
+        if (action === "seat-reservation" || action === "noshow-reservation") {
+            if (!canPlaceOrder() || btn.disabled) return;
+            const reservationId = Number(btn.dataset.reservationId);
+            if (!reservationId) return;
+            const notice = document.getElementById("tableListNotice");
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "Đang xử lý...";
+            try {
+                if (action === "seat-reservation") {
+                    await window.restaurantApi.post(`/reservations/${reservationId}/seat`);
+                    if (notice) {
+                        notice.textContent = `Đã xác nhận khách tới cho lịch #${reservationId}. Bàn đã chuyển sang phục vụ.`;
+                        notice.className = "ui-message";
+                    }
+                } else {
+                    await window.restaurantApi.post(`/reservations/${reservationId}/no-show`);
+                    if (notice) {
+                        notice.textContent = `Đã đánh dấu quá giờ và trả bàn thủ công cho lịch #${reservationId}.`;
+                        notice.className = "ui-message";
+                    }
+                }
+                await loadTables();
+            } catch (error) {
+                if (notice) {
+                    notice.textContent = error.message || "Không thể cập nhật trạng thái đặt bàn.";
+                    notice.className = "ui-message is-error";
+                }
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+            return;
+        }
+
         if (action === "delete-table") {
             openTableLifecycleDialog("delete");
         } else if (action === "restore-table") {
@@ -469,6 +566,7 @@
     });
 
     tableLifecycleConfirm.addEventListener("click", async () => {
+        if (!canManageTables()) return;
         const table = tablesData.tables.find((item) => item.id === state.selectedTableId);
         if (!table) {
             return;
@@ -513,10 +611,44 @@
     });
 
     const manageTablesButton = document.getElementById("manageTablesButton");
-    const updateTableManagement = () => { manageTablesButton.hidden = !window.restaurantAuth.hasRole("Admin"); };
-    manageTablesButton.addEventListener("click", () => { if (window.restaurantAuth.hasRole("Admin")) window.location.href = "administration.html?tab=tables"; });
+    const updateTableManagement = () => {
+        const allowed = canManageTables();
+        manageTablesButton.hidden = !allowed;
+        addTableButton.hidden = !allowed;
+        if (!allowed) {
+            tableDialog.close();
+            tableLifecycleDialog.close();
+            if (["all", "deleted"].includes(state.status)) state.status = "active";
+        }
+        render();
+    };
+    manageTablesButton.addEventListener("click", () => { if (canManageTables()) window.location.href = "administration.html?tab=tables"; });
     window.addEventListener("restaurant:auth-changed", updateTableManagement);
+    window.addEventListener("restaurant:page-access-changed", updateTableManagement);
+    auth.ready.then(updateTableManagement);
     updateTableManagement();
     render();
     loadTables();
+    let realtimeTimer = null;
+    const scheduleTableRefresh = () => {
+        if (realtimeTimer) return;
+        realtimeTimer = window.setTimeout(() => {
+            realtimeTimer = null;
+            if (!tableDialog.open && !tableLifecycleDialog.open) loadTables();
+        }, 150);
+    };
+    [
+        "TableStatusChanged",
+        "OrderCreated",
+        "OrderPaid",
+        "OrderTableChanged",
+        "ReservationCreated",
+        "ReservationConfirmed",
+        "ReservationSeated",
+        "ReservationCancelled",
+        "ReservationNoShow"
+    ].forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleTableRefresh));
+    window.addEventListener("restaurant:realtime-connected", () => {
+        if (!tableDialog.open && !tableLifecycleDialog.open) loadTables();
+    });
 })();

@@ -111,9 +111,20 @@ public static class BasicDataSeeder
                 Capacity = t.Capacity,
                 Status = "Available",
                 AreaId = areaIds[t.AreaIndex],
-                IsActive = true
+                IsActive = true,
+                QrToken = Guid.NewGuid().ToString("N")
             });
         }
+
+        var seededNumbers = tables.Select(t => t.Number).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var tablesMissingQr = await db.RestaurantTables
+            .Where(t => t.IsActive && seededNumbers.Contains(t.TableNumber) && (t.QrToken == null || t.QrToken == string.Empty))
+            .ToListAsync(ct);
+        foreach (var table in tablesMissingQr)
+        {
+            table.QrToken = Guid.NewGuid().ToString("N");
+        }
+
         await db.SaveChangesAsync(ct);
     }
 

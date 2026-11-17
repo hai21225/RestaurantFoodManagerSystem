@@ -87,8 +87,11 @@ public sealed class ConcurrencyAndQueryGuardTests : TestBase
         var category = SeedCategory();
         var food1 = SeedFood(category.CategoryId);
         var food2 = SeedFood(category.CategoryId);
-        SeedSize(food1.FoodId, 50m, name: "M");
-        SeedSize(food2.FoodId, 60m, name: "L");
+        var size1 = SeedSize(food1.FoodId, 50m, name: "M");
+        var size2 = SeedSize(food2.FoodId, 60m, name: "L");
+        var ingredient = SeedIngredient(10m);
+        SeedRecipe(size1.SizeId, (ingredient.IngredientId, 1m));
+        SeedRecipe(size2.SizeId, (ingredient.IngredientId, 1m));
         var topping1 = SeedTopping();
         var topping2 = SeedTopping();
         Db.FoodToppings.Add(new FoodTopping { FoodId = food1.FoodId, ToppingId = topping1.ToppingId });
@@ -132,7 +135,8 @@ public sealed class ConcurrencyAndQueryGuardTests : TestBase
         using var db = NewContext(new CommandWatchInterceptor(state));
         var all = await new RestaurantTableService(db).GetAllRestaurantTablesAsync(CancellationToken.None);
 
-        Assert.Equal(2, state.Commands.Count);
+        // 3 batched queries: tables (+Area), occupied orders, and active reservations (no N+1).
+        Assert.Equal(3, state.Commands.Count);
         Assert.Equal("Available", all.Single(x => x.TableId == free.TableId).Status);
         Assert.Equal("Occupied", all.Single(x => x.TableId == busy1.TableId).Status);
         Assert.Equal("Occupied", all.Single(x => x.TableId == busy2.TableId).Status);

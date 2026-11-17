@@ -7,6 +7,7 @@
     public string UserEmail { get; set; }=string.Empty;
     public string UserPhone { get; set; } = string.Empty;
     public bool IsActive { get; set; }
+    public int TokenVersion { get; set; } = 1;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set;}
 

@@ -35,6 +35,6 @@ public sealed class MenuService
                 Sizes = sizesByFood[f.FoodId].Select(s => new { s.SizeId, s.SizeName, s.SizePrice, s.IsDefault }),
                 Toppings = toppings.Where(t =>
                         toppingIdsByFood.TryGetValue(f.FoodId, out var linkedIds) && linkedIds.Contains(t.ToppingId))
-                    .Select(t => new { t.ToppingId, t.ToppingName, t.ToppingPrice }) }) });
+                    .Select(t => new { t.ToppingId, t.ToppingName, t.ToppingPrice, t.IsAvailable, t.StockQuantity }) }) });
     }
 }

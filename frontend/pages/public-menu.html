@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thực đơn &amp; Bàn trống - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/v2-customer.css?v=20261117-v2fix1">
+    <script src="../js/common/auth.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/pages/public-menu.js?v=20261117-v2fix1" defer></script>
+</head>
+<body class="service-workspace service-workspace--public-menu">
+    <div class="v2-public-shell">
+        <header class="v2-public-topbar">
+            <a class="v2-public-brand" href="public-menu.html">
+                <span class="v2-public-brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>Thực đơn &amp; Tình trạng bàn</span>
+                </div>
+            </a>
+            <div class="v2-public-actions" id="publicHeaderActions">
+                <a class="secondary-action" href="login.html">Đăng nhập</a>
+                <a class="primary-action" href="register.html">Đăng ký đặt bàn</a>
+            </div>
+        </header>
+
+        <main class="v2-public-main">
+            <section id="promoSection" class="panel" aria-labelledby="promoHeading" hidden>
+                <div class="panel-header">
+                    <h2 id="promoHeading">Khuyến mãi đang áp dụng</h2>
+                </div>
+                <div id="promoBanner" class="v2-promo-banner"></div>
+            </section>
+
+            <p id="publicNotice" class="v2-notice" role="status" hidden></p>
+
+            <div class="v2-section-grid">
+                <section class="panel" aria-labelledby="menuHeading">
+                    <div class="panel-header">
+                        <div>
+                            <h1 id="menuHeading">Thực đơn nhà hàng</h1>
+                            <span id="menuCount">Đang tải…</span>
+                        </div>
+                        <input id="menuSearch" class="v2-search-input" type="search"
+                            placeholder="Tìm món (VD: bo, bll, tom me)" autocomplete="off"
+                            aria-label="Tìm món ăn">
+                    </div>
+
+                    <div id="categoryTabs" class="v2-pill-list" role="tablist" aria-label="Danh mục món"></div>
+                    <div id="menuGrid" class="v2-menu-grid"></div>
+                </section>
+
+                <aside class="panel" aria-labelledby="tablesHeading">
+                    <div class="panel-header">
+                        <div>
+                            <h2 id="tablesHeading">Bàn trống hiện tại</h2>
+                            <span id="tableSummaryCount">0 bàn</span>
+                        </div>
+                    </div>
+
+                    <div class="v2-field">
+                        <label for="areaFilter">Khu vực</label>
+                        <select id="areaFilter">
+                            <option value="all">Tất cả khu vực</option>
+                        </select>
+                    </div>
+
+                    <div id="publicTableList" class="v2-table-list"></div>
+
+                    <div class="v2-actions-row" style="margin-top: 16px;">
+                        <a class="primary-action" href="register.html" id="reserveCtaLink">Đăng ký đặt bàn</a>
+                        <a class="secondary-action" href="login.html" id="loginCtaLink">Đăng nhập</a>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

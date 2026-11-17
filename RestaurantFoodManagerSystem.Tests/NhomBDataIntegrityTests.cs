@@ -42,7 +42,7 @@ public sealed class NhomBDataIntegrityTests : TestBase
     public async Task Payment_RejectsZeroTotalOrder()
     {
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 0m);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 0m, status: OrderStatuses.Ready);
 
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(
             new CreatePaymentRequest { OrderId = order.OrderId, PaymentMethod = "Cash", CreatedBy = s.Staff.Id },
@@ -50,7 +50,7 @@ public sealed class NhomBDataIntegrityTests : TestBase
 
         Assert.Equal("Order total must be greater than zero", ex.Message);
         Assert.Empty(Db.Payments);
-        Assert.Equal("Pending", Db.Orders.Single(x => x.OrderId == order.OrderId).Status);
+        Assert.Equal(OrderStatuses.Ready, Db.Orders.Single(x => x.OrderId == order.OrderId).Status);
     }
 
     private static Payment NewPaidPayment(int orderId, decimal amount, int createdBy, string code, string status = "Paid") =>

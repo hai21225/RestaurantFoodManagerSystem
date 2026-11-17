@@ -9,16 +9,18 @@
     function message(text = "", error = false) { $("toolsNotice").textContent = text; $("toolsNotice").classList.toggle("is-error", error); }
     function render(fill = false) {
         const o = session.order;
+        $("backToOrder").hidden = !auth.canAccessPage(new URL("order.html", location.href).href);
+        $("goToPayment").hidden = !auth.canAccessPage(new URL("payment.html", location.href).href);
         $("toolsTitle").textContent = o ? `Đơn #${o.orderId} · Bàn ${session.tables.find((t) => t.tableId === o.tableId)?.tableNumber || o.tableId}` : "Chưa chọn đơn";
         $("toolsSummary").innerHTML = o ? `<dl class="admin-details">${[["Trạng thái", ({ Pending: "Chờ xử lý", SentToKitchen: "Đã gửi bếp", Preparing: "Đang chế biến", Ready: "Chờ thanh toán", Completed: "Hoàn tất", Paid: "Đã thu", Cancelled: "Đã hủy" })[o.status] || o.status], ["Tạm tính", money(o.subtotal)], ["Giảm giá", money(o.discountAmount)], ["VAT", money(o.taxAmount)], ["Phí dịch vụ", money(o.serviceChargeAmount)], ["Tổng đơn", money(o.totalAmount)], ["Khuyến mãi", o.promotionId ? `#${o.promotionId} · ${o.promotionDiscountType === "Percent" ? `${o.promotionDiscountValue}%` : money(o.promotionDiscountValue)}` : "Chưa áp dụng"], ["Ghi chú hóa đơn", o.note || "—"]].map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl>` : '<p class="admin-context">Mở từ một đơn tại màn Đặt món để xem thông tin.</p>';
         if (fill && o) {
             expected = snapshot(o); $("billNote").value = o.note || "";
             $("moveTable").innerHTML = '<option value="">Chọn bàn trống</option>' + session.tables.filter((t) => t.isActive && t.status === "Available" && t.tableId !== o.tableId).map((t) => `<option value="${t.tableId}">Bàn ${esc(t.tableNumber)} · ${esc(t.areaName || "Chưa phân khu")} · ${t.capacity} chỗ</option>`).join("");
             $("promotionList").innerHTML = session.promotions.filter((p) => p.isActive).map((p) => `<option value="${p.id}" label="${esc(`${p.name} · ${p.discountType === "Percent" ? `${p.discountValue}%` : money(p.discountValue)} · ${String(p.startAt).slice(0, 10)}–${String(p.endAt).slice(0, 10)}`)}"></option>`).join("");
-            $("backToOrder").href = `order.html?tableId=${o.tableId}`;
+            $("backToOrder").href = `order.html?tableId=${o.tableId}&ui=20261112-print1`;
             $("goToPayment").href = `payment.html?orderId=${o.orderId}`;
         }
-        $("promotionHint").textContent = auth.hasRole("Admin") ? "Chọn mã từ danh sách. Hệ thống kiểm tra thời hạn, phạm vi và điều kiện đơn rồi cập nhật số tiền." : "Hiện chưa có danh sách chọn khuyến mãi cho vai trò Phục vụ. Bạn có thể dùng mã do Quản trị cung cấp.";
+        $("promotionHint").textContent = "Chọn mã từ danh sách khuyến mãi đang hiệu lực. Hệ thống kiểm tra thời hạn, phạm vi và điều kiện đơn rồi cập nhật số tiền.";
         for (const form of [$("noteForm"), $("moveForm"), $("promotionForm")]) form.querySelectorAll("input,textarea,select,button").forEach((e) => { e.disabled = !!locked(); });
         $("removePromotion").disabled = !!locked() || !o?.promotionId;
         $("toolsRefresh").disabled = session.busy || session.loading;

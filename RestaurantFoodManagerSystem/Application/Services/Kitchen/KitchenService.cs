@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -11,6 +12,7 @@ public sealed partial class KitchenService
     private readonly OrderLifecycleCoordinator _lifecycle;
     private readonly ILogger<KitchenService> _logger;
     private readonly RestaurantSettingsService _settings;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
     public KitchenService(
         AppDbContext db,
@@ -18,7 +20,8 @@ public sealed partial class KitchenService
         ICurrentUser currentUser,
         OrderLifecycleCoordinator lifecycle,
         ILogger<KitchenService> logger,
-        RestaurantSettingsService settings)
+        RestaurantSettingsService settings,
+        IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
         _tables = tables;
@@ -26,6 +29,7 @@ public sealed partial class KitchenService
         _lifecycle = lifecycle;
         _logger = logger;
         _settings = settings;
+        _hub = hub;
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int id, KitchenStatusRequest request, CancellationToken ct)
@@ -109,6 +113,13 @@ public sealed partial class KitchenService
                 ki.Status = KitchenStatuses.Preparing;
             }
         }
+        else if (KitchenStatuses.IsDone(status))
+        {
+            foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsCancelled(x.Status) && !KitchenStatuses.IsDone(x.Status)))
+            {
+                ki.Status = status;
+            }
+        }
 
         // C-10: history order khi bếp huỷ phải giữ lý do thật, không chỉ "Updated from kitchen".
         var historyNote = isCancelling
@@ -134,6 +145,17 @@ public sealed partial class KitchenService
                     var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
                     OrderItemMutations.RecordItemHistory(
                         _db, oi, linkedKi?.Id, oldItemStatus, KitchenStatuses.Preparing, changedBy, now, historyNote);
+                }
+            }
+            else if (KitchenStatuses.IsDone(status))
+            {
+                foreach (var oi in ticketOrderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status) && !KitchenStatuses.IsDone(x.Status)))
+                {
+                    var oldItemStatus = oi.Status;
+                    oi.Status = status;
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    OrderItemMutations.RecordItemHistory(
+                        _db, oi, linkedKi?.Id, oldItemStatus, status, changedBy, now, historyNote);
                 }
             }
 
@@ -224,14 +246,28 @@ public sealed partial class KitchenService
             }
         }
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         }
+
+        await BroadcastKitchenEventAsync(
+            "KitchenTicketStatusChanged",
+            kitchenOrder.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = kitchenOrder.OrderId, status = kitchenOrder.Status },
+            ct);
 
         return true;
     }
@@ -361,14 +397,28 @@ public sealed partial class KitchenService
                 ? reasonCode
                 : null);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (order is not null &&
             string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
         {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         }
+
+        await BroadcastKitchenEventAsync(
+            "KitchenItemStatusChanged",
+            kitchenOrder.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = kitchenOrder.OrderId, kitchenItemId = item.Id, orderItemId = item.OrderItemId, status = item.Status },
+            ct);
 
         return true;
     }
@@ -441,8 +491,21 @@ public sealed partial class KitchenService
             kitchenOrder.CompletedAt = null;
         }
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
+        await BroadcastKitchenEventAsync(
+            "KitchenItemReopened",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, status = kitchenItem.Status },
+            ct);
         return true;
     }
 
@@ -509,6 +572,11 @@ public sealed partial class KitchenService
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+            await BroadcastKitchenEventAsync(
+                "KitchenItemPreparedUpdated",
+                order.OrderId,
+                new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity },
+                ct);
             return true;
         }
 
@@ -568,8 +636,21 @@ public sealed partial class KitchenService
             allowReopen: false,
             ct);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
+        await BroadcastKitchenEventAsync(
+            "KitchenItemPreparedUpdated",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity },
+            ct);
         return true;
     }
 
@@ -762,13 +843,89 @@ public sealed partial class KitchenService
             ct,
             reasonCode);
 
+        var changedToppings = _db.ChangeTracker
+            .Entries<Topping>()
+            .Where(e => e.State == EntityState.Modified)
+            .Select(e => e.Entity)
+            .ToList();
+
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+
+        await BroadcastToppingsUpdatedAsync(changedToppings, ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
 
+        await BroadcastKitchenEventAsync(
+            "KitchenShortageReported",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity, reasonCode },
+            ct);
+
         return true;
+    }
+
+    private async Task BroadcastKitchenEventAsync(
+        string eventName,
+        int orderId,
+        object payload,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            var customerUserId = await _db.Orders
+                .AsNoTracking()
+                .Where(x => x.OrderId == orderId)
+                .Select(x => x.CustomerUserId)
+                .FirstOrDefaultAsync(ct);
+
+            var groups = new List<string>(4) { "role:Kitchen", "role:Waiter", $"order:{orderId}" };
+            if (customerUserId.HasValue)
+            {
+                groups.Add($"customer:{customerUserId.Value}");
+            }
+
+            await _hub.Clients
+                .Groups(groups)
+                .SendAsync(eventName, payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for order {OrderId}", eventName, orderId);
+        }
+    }
+
+    private async Task BroadcastToppingsUpdatedAsync(
+        IReadOnlyCollection<Topping> toppings,
+        CancellationToken ct)
+    {
+        if (_hub is null || toppings.Count == 0) return;
+
+        foreach (var topping in toppings)
+        {
+            try
+            {
+                await _hub.Clients.All.SendAsync(
+                    "ToppingUpdated",
+                    new ToppingResponseDto
+                    {
+                        ToppingId = topping.ToppingId,
+                        ToppingName = topping.ToppingName,
+                        ToppingPrice = topping.ToppingPrice,
+                        IsActive = topping.IsActive,
+                        IsAvailable = topping.IsAvailable,
+                        StockQuantity = topping.StockQuantity
+                    },
+                    ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to broadcast ToppingUpdated for topping {ToppingId}", topping.ToppingId);
+            }
+        }
     }
 
     private sealed record MutableKitchenItemContext(

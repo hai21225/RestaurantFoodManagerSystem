@@ -4,12 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chọn bàn - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css">
-    <link rel="stylesheet" href="../css/layout.css?v=20261101-mobile-nav">
-    <link rel="stylesheet" href="../css/components.css">
-    <link rel="stylesheet" href="../css/pages/tables.css">
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/tables.css?v=20261110-tables-clean">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <style>
+        .tables-summary { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+        .restaurant-table-card.status-reserved { background: #fff7e6; border-color: #f59e0b; }
+        .status.status-reserved { background: #fef3c7; color: #92400e; }
+        .table-card-res-note { font-size: 12px; color: #92400e; line-height: 1.35; }
+        .table-card-overdue { display: inline-block; padding: 2px 6px; border-radius: 999px; background: #fde8e8; color: #9b1c1c; font-size: 11px; font-weight: 700; }
+        .reservation-detail-box { display: grid; gap: 8px; padding: 12px; border: 1px solid #f59e0b; border-radius: 8px; background: #fffbeb; font-size: 13px; }
+        .reservation-detail-box strong { color: #92400e; }
+        .reservation-detail-row { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .reservation-overdue-alert { padding: 6px 10px; border-radius: 6px; background: #fde8e8; color: #9b1c1c; font-weight: 700; font-size: 12px; }
+    </style>
 </head>
-<body>
+<body class="service-workspace service-workspace--tables">
     <div class="app-shell">
         <aside class="sidebar" aria-label="Điều hướng chính">
             <div class="brand">
@@ -50,38 +62,33 @@
 
             <main class="content">
                 <section class="tables-screen" aria-labelledby="tables-title">
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">Sơ đồ bàn</p>
-                            <h2 id="tables-title">Bàn đang phục vụ</h2>
-                        </div>
-                        <div class="heading-actions">
-                            <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
-                            <button class="secondary-action" type="button" id="manageTablesButton">Sửa bàn / Khu vực</button>
-                            <button class="primary-action" type="button" id="addTableButton">Thêm bàn</button>
-                        </div>
-                    </div>
-
+                    <div class="tables-layout">
+                        <section class="panel table-board" aria-labelledby="tables-title">
+                            <div class="panel-header">
+                                <div class="table-board-title"><h2 id="tables-title">Sơ đồ bàn</h2><span id="visibleTableCount">0 bàn</span></div>
+                                <div class="heading-actions">
+                                    <button class="secondary-action" type="button" id="refreshTablesButton">Làm mới</button>
+                                    <button class="secondary-action" type="button" id="manageTablesButton" hidden>Sửa bàn / Khu vực</button>
+                                    <button class="primary-action" type="button" id="addTableButton" hidden>Thêm bàn</button>
+                                </div>
+                            </div>
+                    <div class="service-table-overview">
                     <div class="tables-summary" id="tablesSummary" aria-label="Thống kê trạng thái bàn"></div>
 
                     <section class="panel tables-toolbar" aria-label="Bộ lọc bàn">
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Khu vực</span>
-                            <div class="segmented-control" id="areaFilters"></div>
-                        </div>
+                            <select id="areaFilters"></select>
+                        </label>
 
-                        <div class="filter-group">
+                        <label class="filter-group">
                             <span>Trạng thái</span>
-                            <div class="segmented-control" id="statusFilters"></div>
-                        </div>
+                            <select id="statusFilters"></select>
+                        </label>
                     </section>
 
-                    <div class="tables-layout">
-                        <section class="panel table-board" aria-labelledby="table-board-title">
-                            <div class="panel-header">
-                                <h3 id="table-board-title">Danh sách bàn</h3>
-                                <span id="visibleTableCount">0 bàn</span>
-                            </div>
+                    </div>
+
                             <p id="tableListNotice" class="ui-message" role="status"></p>
                             <div class="restaurant-map" id="restaurantMap"></div>
                         </section>
@@ -152,11 +159,12 @@
         </div>
     </dialog>
 
-    <script src="../js/common/auth.js?v=20261101-f67"></script>
-    <script src="../js/common/navigation.js?v=20261101-f67"></script>
-    <script src="../js/common/api.js"></script>
+    <script src="../js/common/auth.js?v=20261117-v2fix1"></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1"></script>
+    <script src="../js/common/realtime.js"></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/dialogs.js"></script>
-    <script src="../js/data/tables.data.js?v=20261101-delete-visibility"></script>
-    <script src="../js/pages/tables.js?v=20261101-f67"></script>
+    <script src="../js/data/tables.data.js?v=20261117-res-sync1"></script>
+    <script src="../js/pages/tables.js?v=20261117-res-sync1"></script>
 </body>
 </html>

@@ -14,11 +14,14 @@
         operator.appendChild(sessionMessage);
         function renderOperator() {
             const user = auth.getUser();
-            const roleNames = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho" };
+            const roleNames = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho", Customer: "Khách hàng" };
             operator.querySelector(".operator-role").textContent = (user?.roles || []).map((role) => roleNames[role] || role).join(", ") || "Chưa có vai trò";
             operator.querySelector("strong").textContent = user?.fullName || user?.userName || "Chưa đăng nhập";
             logout.hidden = !user;
-            sessionMessage.textContent = "";
+            if (auth.isPageAllowed()) {
+                const notice = window.sessionStorage.getItem("restaurant.accessNotice");
+                if (notice) { sessionMessage.textContent = notice; window.sessionStorage.removeItem("restaurant.accessNotice"); }
+            }
         }
         window.addEventListener("restaurant:auth-changed", renderOperator);
         window.addEventListener("restaurant:auth-error", (event) => { sessionMessage.textContent = event.detail; });
@@ -30,16 +33,45 @@
         return;
     }
 
-    const catalogUrl = new URL("../../pages/recipes.html", document.currentScript.src);
-    const catalogItem = document.createElement("button");
-    catalogItem.type = "button"; catalogItem.className = "nav-item nav-catalog";
-    catalogItem.dataset.page = catalogUrl.href; catalogItem.textContent = "Nguyên liệu / Công thức";
-    if (window.location.pathname === catalogUrl.pathname) catalogItem.classList.add("is-active");
+    const orderNavItem = navigation.querySelector('[data-page="order.html"]') || navigation.querySelector('[data-page$="/order.html"]');
+    if (orderNavItem) {
+        orderNavItem.hidden = true;
+        orderNavItem.remove?.();
+    }
+
+    function createNavButton(relativePath, label, extraClass, customerOnly = false) {
+        const targetUrl = new URL(relativePath, document.currentScript.src);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = extraClass ? `nav-item ${extraClass}` : "nav-item";
+        button.dataset.page = targetUrl.href;
+        if (customerOnly) button.dataset.customerOnly = "true";
+        button.textContent = label;
+        if (window.location.pathname === targetUrl.pathname) button.classList.add("is-active");
+        return button;
+    }
+
+    const tablesItem = navigation.querySelector('[data-page$="tables.html"]');
+    const reservationsItem = createNavButton("../../pages/reservations.html", "Đặt bàn", "nav-reservations");
+    const qrOrderItem = createNavButton("../../pages/qr-order.html", "Gọi món QR", "nav-qr-order", true);
+    const publicMenuItem = createNavButton("../../pages/public-menu.html", "Thực đơn", "nav-public-menu", true);
+    if (tablesItem) {
+        tablesItem.after(reservationsItem);
+        reservationsItem.after(qrOrderItem);
+        qrOrderItem.after(publicMenuItem);
+    } else {
+        navigation.append(reservationsItem, qrOrderItem, publicMenuItem);
+    }
+
+    const catalogItem = createNavButton("../../pages/recipes.html", "Nguyên liệu / Công thức", "nav-catalog");
     const inventoryItem = navigation.querySelector('[data-page$="inventory.html"]');
     if (inventoryItem) inventoryItem.after(catalogItem); else navigation.appendChild(catalogItem);
-    const renderCatalogEntry = () => { catalogItem.hidden = !auth?.hasRole("WarehouseManager", "Admin"); };
-    renderCatalogEntry(); auth?.ready?.then(renderCatalogEntry);
-    window.addEventListener("restaurant:auth-changed", renderCatalogEntry);
+
+    const employeesItem = navigation.querySelector('[data-page$="employees.html"]');
+    if (!navigation.querySelector('[data-page$="customers.html"]')) {
+        const customersItem = createNavButton("../../pages/customers.html", "Khách hàng");
+        if (employeesItem) employeesItem.after(customersItem); else navigation.appendChild(customersItem);
+    }
 
     const adminModules = [
         { tab: "categories", label: "Danh mục / Topping", modules: ["categories", "toppings", "sizes", "links"], roles: ["Admin", "WarehouseManager"] },
@@ -59,36 +91,32 @@
             item.classList.toggle("is-active", active);
             if (active) item.setAttribute("aria-current", "page"); else item.removeAttribute("aria-current");
         });
-        const visible = () => { item.hidden = !auth?.hasRole(...entry.roles); };
-        visible(); auth?.ready?.then(visible); window.addEventListener("restaurant:auth-changed", visible);
         navigation.appendChild(item);
     });
-    if (/\/order-tools\.html$/.test(location.pathname)) navigation.querySelector('[data-page="order.html"]')?.classList.add("is-active");
-    const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
-    const reportsItem = items.find((item) => /(?:^|\/)reports\.html$/.test(item.dataset.page || ""));
-    const managementItems = items.slice(6);
-
-    // Nhân viên/vai trò theo đúng policy AdminOnly, không hiện nút quản trị cho vai trò khác.
-    const staffItems = items.filter((item) => /(?:^|\/)(?:employees|roles)\.html$/.test(item.dataset.page || ""));
-    const renderStaffEntries = () => staffItems.forEach((item) => { item.hidden = !auth?.hasRole("Admin"); });
-    renderStaffEntries(); auth?.ready?.then(renderStaffEntries);
-    window.addEventListener("restaurant:auth-changed", renderStaffEntries);
-
-    // Báo cáo thuộc nhóm Quản trị, chỉ hiển thị cho Admin.
-    if (reportsItem) {
-        const renderReportsEntry = () => { reportsItem.hidden = !auth?.hasRole("Admin"); };
-        renderReportsEntry();
-        auth?.ready?.then(renderReportsEntry);
-        window.addEventListener("restaurant:auth-changed", renderReportsEntry);
-    }
+    if (/\/(order|order-tools)\.html$/.test(location.pathname)) navigation.querySelector('[data-page$="tables.html"]')?.classList.add("is-active");
+    const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"))
+        .filter((item) => !/(?:^|\/)order\.html(?:$|\?)/.test(item.dataset.page || ""));
+    const splitIndex = items.findIndex((item) => /\/employees\.html(?:$|\?)/.test(item.dataset.page || ""));
+    const overviewEnd = splitIndex > 0 ? splitIndex : 6;
+    const managementItems = items.slice(overviewEnd);
     items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
+    // Nút Tổng quan đang chọn trong HTML cũ chưa có URL.
+    if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
+    // Giữ phiên bản HTML mới khi điều hướng từ trang đã được trình duyệt lưu đệm.
+    items.forEach((item) => {
+        if (!item.dataset.page) return;
+        const target = new URL(item.dataset.page, location.href);
+        if (/\/(index|pages\/(tables|reservations|qr-order|public-menu|order|order-tools|kitchen|payment|foods|inventory|purchases|recipes|administration|employees|customers|roles|account|reports))\.html$/.test(target.pathname)) {
+            target.searchParams.set("ui", "20261112-print1");
+            item.dataset.page = target.href;
+        }
+    });
 
     const mobile = window.matchMedia("(max-width: 760px)");
     const groups = [];
-    // Trang chủ trước đây không có data-page; vẫn phải chọn được và đóng popup.
-    if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
 
     function setOpen(group, open) {
+        open = !group.root.hidden && (group.single || open);
         group.root.classList.toggle("is-open", open);
         group.toggle.setAttribute("aria-expanded", String(open));
         group.submenu.hidden = !open;
@@ -115,7 +143,7 @@
         submenu.setAttribute("role", "group"); submenu.setAttribute("aria-label", `Các mục ${title}`);
         entries.forEach((item) => submenu.appendChild(item));
         root.append(toggle, submenu); navigation.appendChild(root);
-        const group = { root, toggle, submenu, entries, alwaysDesktop }; groups.push(group);
+        const group = { root, toggle, submenu, entries, alwaysDesktop, title, name }; groups.push(group);
         toggle.addEventListener("click", () => {
             if (!mobile.matches && alwaysDesktop) return;
             const open = !root.classList.contains("is-open");
@@ -124,19 +152,72 @@
         });
     }
 
-    createGroup("Tổng quan", "nav-overview", items.slice(0, 6), true);
+    createGroup("Tổng quan", "nav-overview", items.slice(0, overviewEnd), true);
     if (managementItems.length) createGroup("Quản trị", "nav-management", managementItems);
 
     function applyLayout() {
         // Đổi kích thước/xoay màn hình: không để hai popup chồng lên nhau hoặc giữ menu bị ẩn.
-        groups.forEach((group) => setOpen(group, !mobile.matches && (group.alwaysDesktop || group.entries.some((item) => item.classList.contains("is-active")))));
+        groups.forEach((group) => {
+            const visible = group.entries.filter((item) => !item.hidden);
+            const active = visible.find((item) => item.classList.contains("is-active"));
+            const personalOnly = visible.length === 1 && new URL(visible[0].dataset.page, location.href).pathname.endsWith("/account.html");
+            const isCustomerOnly = auth?.hasRole("Customer") && !auth?.hasRole("Admin") && !auth?.hasRole("Waiter") && !auth?.hasRole("Cashier");
+            const title = personalOnly
+                ? "Tài khoản"
+                : auth?.hasRole("Admin")
+                    ? group.title
+                    : group.alwaysDesktop
+                        ? (isCustomerOnly ? "Khách hàng" : "Công việc")
+                        : "Quản lý kho";
+            // Thanh dưới trên điện thoại cho biết màn đang mở; popup vẫn chứa cả nhóm.
+            group.name.textContent = mobile.matches && active ? active.textContent.trim() : title;
+            group.submenu.setAttribute("aria-label", `Các mục ${title}`);
+            group.toggle.classList.toggle("is-active", Boolean(active));
+            setOpen(group, !mobile.matches && (group.alwaysDesktop || Boolean(active)));
+        });
     }
-    applyLayout();
+    function renderNavigation() {
+        items.forEach((item) => {
+            const customerOnly = item.dataset.customerOnly === "true";
+            item.hidden = !auth?.isPageAllowed()
+                || (customerOnly && !auth.hasRole("Customer"))
+                || !auth.canAccessPage(new URL(item.dataset.page, location.href).href);
+        });
+        groups.forEach((group) => {
+            const visible = group.entries.filter((item) => !item.hidden);
+            group.root.hidden = !visible.length;
+            group.single = visible.length === 1;
+            group.root.classList.toggle("nav-group-single", group.single);
+            group.toggle.hidden = group.single;
+        });
+        navigation.classList.toggle("nav-one-group", groups.filter((group) => !group.root.hidden).length === 1);
+        const visibleCount = items.filter((item) => !item.hidden).length;
+        navigation.classList.toggle("nav-service-direct", Boolean(document.body?.classList.contains("service-workspace"))
+            && auth?.isPageAllowed() && visibleCount >= 2 && visibleCount <= 4);
+        applyLayout();
+    }
+    renderNavigation();
+    auth?.ready?.then(() => { renderNavigation(); if (operator && auth) renderOperatorAfterReady(); });
+    function renderOperatorAfterReady() {
+        const notice = window.sessionStorage.getItem("restaurant.accessNotice");
+        if (notice && auth.isPageAllowed()) {
+            operator.querySelector(".operator-session-message").textContent = notice;
+            window.sessionStorage.removeItem("restaurant.accessNotice");
+        }
+    }
+    window.addEventListener("restaurant:auth-changed", renderNavigation);
+    // Bàn/Bếp cũ nạp navigation trước api.js, khi đó auth.ready chưa được tạo.
+    // Luôn cập nhật sau lúc bootstrap thực sự chốt quyền, kể cả thứ tự script cũ.
+    window.addEventListener("restaurant:page-access-changed", () => {
+        renderNavigation();
+        if (operator && auth) renderOperatorAfterReady();
+    });
     mobile.addEventListener("change", applyLayout);
+    window.addEventListener("restaurant:admin-module-changed", applyLayout);
 
     navigation.addEventListener("click", (event) => {
         const item = event.target.closest(".nav-item[data-page]");
-        if (!item || !navigation.contains(item) || item.hidden || item.disabled) return;
+        if (!item || !navigation.contains(item) || item.hidden || item.disabled || !auth?.canAccessPage(new URL(item.dataset.page, location.href).href)) return;
         closeMenus();
         const targetUrl = new URL(item.dataset.page, window.location.href).href;
         if (targetUrl !== window.location.href) window.location.href = targetUrl;
@@ -148,7 +229,7 @@
 
     document.addEventListener("keydown", (event) => {
         if (event.key !== "Escape") return;
-        const open = groups.find((group) => group.root.classList.contains("is-open") && (mobile.matches || !group.alwaysDesktop));
+        const open = groups.find((group) => !group.single && group.root.classList.contains("is-open") && (mobile.matches || !group.alwaysDesktop));
         if (open) { closeMenus(); open.toggle.focus(); }
     });
 })();

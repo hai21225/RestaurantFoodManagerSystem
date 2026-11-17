@@ -128,6 +128,8 @@ internal static class OrderCancellation
                 remainingConsumption ??= await LoadOrderRemainingAsync(db, orderId, ct);
                 await ReturnStockForItemAsync(
                     db, orderId, orderItem, remainingConsumption, changedBy, now, ct);
+                await ReturnToppingStockForQuantityAsync(
+                    db, orderItem.Id, orderItem.Quanlity, ct);
             }
             else
             {
@@ -175,6 +177,83 @@ internal static class OrderCancellation
         if (kitchenItem is not null && !KitchenStatuses.IsTerminal(kitchenItem.Status))
         {
             kitchenItem.Status = KitchenStatuses.Cancelled;
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra và trừ tồn kho topping (nếu <c>StockQuantity != null</c>) trong cùng transaction.
+    /// </summary>
+    public static async Task DeductToppingStockAsync(
+        AppDbContext db,
+        IReadOnlyDictionary<int, int> toppingUnitsById,
+        CancellationToken ct)
+    {
+        if (toppingUnitsById.Count == 0)
+        {
+            return;
+        }
+
+        var toppings = await db.Toppings
+            .Where(t => toppingUnitsById.Keys.Contains(t.ToppingId) && t.StockQuantity != null)
+            .ToListAsync(ct);
+
+        foreach (var topping in toppings)
+        {
+            var needed = toppingUnitsById[topping.ToppingId];
+            if (needed <= 0)
+            {
+                continue;
+            }
+
+            if (topping.StockQuantity!.Value < needed)
+            {
+                throw new InvalidOperationException(
+                    $"Topping '{topping.ToppingName}' chỉ còn {topping.StockQuantity.Value} phần.");
+            }
+
+            topping.StockQuantity -= needed;
+        }
+    }
+
+    /// <summary>
+    /// Hoàn tồn kho topping (nếu <c>StockQuantity != null</c>) cho số phần món <c>Pending</c> bị huỷ/giảm.
+    /// </summary>
+    public static async Task ReturnToppingStockForQuantityAsync(
+        AppDbContext db,
+        int orderItemId,
+        int itemQuantity,
+        CancellationToken ct)
+    {
+        if (itemQuantity <= 0 || orderItemId <= 0)
+        {
+            return;
+        }
+
+        var itemToppings = await db.OrderItemToppings
+            .AsNoTracking()
+            .Where(x => x.OrderItemId == orderItemId)
+            .ToListAsync(ct);
+
+        if (itemToppings.Count == 0)
+        {
+            return;
+        }
+
+        var restoreByToppingId = itemToppings
+            .GroupBy(x => x.ToppingId)
+            .ToDictionary(g => g.Key, g => g.Sum(x => x.Quanlity) * itemQuantity);
+
+        var toppings = await db.Toppings
+            .Where(t => restoreByToppingId.Keys.Contains(t.ToppingId) && t.StockQuantity != null)
+            .ToListAsync(ct);
+
+        foreach (var topping in toppings)
+        {
+            var restored = restoreByToppingId[topping.ToppingId];
+            if (restored > 0)
+            {
+                topping.StockQuantity += restored;
+            }
         }
     }
 

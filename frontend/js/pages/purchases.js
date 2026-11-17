@@ -5,6 +5,14 @@
     const { $, esc, quantity, money, time, locked } = ui;
     const labels = { Draft: "Nháp", Received: "Đã nhận hàng", Cancelled: "Đã hủy" };
     let supplierEdit = null, confirmation = null, optionsReady = false;
+    function setWorkspace(view) {
+        const suppliers = view === "suppliers";
+        $("purchasesWorkspace").hidden = suppliers; $("suppliersWorkspace").hidden = !suppliers;
+        for (const [id, active] of [["purchasesTab", !suppliers], ["suppliersTab", suppliers]]) {
+            $(id).setAttribute("aria-selected", String(active)); $(id).tabIndex = active ? 0 : -1;
+        }
+        if (suppliers) $("purchaseDetailPanel").classList.remove("is-open");
+    }
     function monthOf(value) {
         if (!value) return "";
         const date = new Date(/[zZ]$|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`);
@@ -19,18 +27,17 @@
         $("purchaseCount").textContent = `${purchases.length} phiếu`;
         $("purchaseSummary").innerHTML = [["Phiếu nháp", session.purchases.filter((p) => p.status === "Draft").length], ["Đã nhận hàng", session.purchases.filter((p) => p.status === "Received").length],
             ["Đã hủy", session.purchases.filter((p) => p.status === "Cancelled").length], ["NCC đang hợp tác", session.suppliers.filter((s) => s.isActive).length]]
-            .map(([label, value]) => `<article class="summary-tile"><span>${label}</span><strong>${value}</strong></article>`).join("");
-        $("purchaseList").className = "warehouse-cards";
-        $("purchaseList").innerHTML = purchases.length ? purchases.map((p) => `<article class="warehouse-card${session.purchase?.id === p.id ? " is-selected" : ""}">
-            <div><strong>Phiếu #${p.id}</strong><span>${esc(supplierName(p.supplierId))}</span><span>Tạo: ${time(p.orderedAt)}</span></div><div><strong>${esc(labels[p.status] || p.status)}</strong><span>${money(p.totalAmount)}</span></div>
-            <button class="secondary-action" type="button" data-purchase="${p.id}"${locked() ? " disabled" : ""}>Xem phiếu #${p.id}</button></article>`).join("") : '<p class="warehouse-empty">Không có phiếu nhập phù hợp.</p>';
+            .map(([label, value]) => `<span><strong>${value}</strong> ${label.toLocaleLowerCase("vi")}</span>`).join("");
+        $("purchaseList").className = "purchase-register";
+        $("purchaseList").innerHTML = purchases.length ? purchases.map((p) => `<button class="purchase-register-row${session.purchase?.id === p.id ? " is-selected" : ""}" type="button" data-purchase="${p.id}" aria-pressed="${session.purchase?.id === p.id}"${locked() ? " disabled" : ""}>
+            <span class="purchase-row-identity"><strong>Phiếu #${p.id}</strong><span>${esc(supplierName(p.supplierId))}</span><small>${time(p.orderedAt)}</small></span><span class="purchase-state state-${esc(p.status)}">${esc(labels[p.status] || p.status)}</span><strong class="purchase-row-total">${money(p.totalAmount)}</strong><span class="warehouse-row-arrow" aria-hidden="true">›</span></button>`).join("") : '<p class="warehouse-empty">Không có phiếu nhập phù hợp.</p>';
         const p = session.purchase;
         $("purchaseDetail").innerHTML = p ? `<div class="warehouse-detail-heading"><strong>Phiếu #${p.id} · ${esc(labels[p.status] || p.status)}</strong><span>${esc(p.supplierName)} · Người tạo #${p.createdBy}</span><span>Tạo: ${time(p.orderedAt)} · Nhận: ${time(p.receivedAt)}</span></div>
             <div class="warehouse-table-wrap"><table class="warehouse-table"><thead><tr><th>Nguyên liệu</th><th>Số lượng</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>${p.items.map((i) => `<tr><td>${esc(i.ingredientName)}</td><td>${quantity(i.quantity)} ${esc(i.unit)}</td><td>${money(i.unitPrice)}</td><td>${money(i.totalPrice)}</td></tr>`).join("")}</tbody></table></div>
             <p class="warehouse-total">Tổng phiếu: <strong>${money(p.totalAmount)}</strong></p>
             <div class="warehouse-actions"><button class="primary-action" type="button" data-receive="${p.id}"${locked() || p.status !== "Draft" ? " disabled" : ""}>Xác nhận nhận hàng</button><button class="secondary-action" type="button" data-cancel-purchase="${p.id}"${locked() || p.status !== "Draft" ? " disabled" : ""}>Hủy phiếu</button></div>
             ${p.status === "Received" ? `<p><a href="inventory.html?referenceType=PurchaseOrder&amp;referenceId=${p.id}">Xem biến động kho của phiếu #${p.id}</a></p>` : `<p class="warehouse-hint">${p.status === "Draft" ? "Phiếu nháp chưa cộng kho. Chỉ xác nhận nhận hàng khi đã kiểm tra đủ hàng thực tế." : p.status === "Cancelled" ? "Phiếu đã hủy, không cộng tồn kho." : "Trạng thái phiếu chưa được hỗ trợ thao tác tại màn hình này."}</p>`}`
-            : '<p class="warehouse-empty">Chọn một phiếu để xem dòng hàng và xử lý.</p>';
+            : `<p class="warehouse-empty">${session.loading ? "Đang tải chi tiết phiếu…" : "Chọn một phiếu để xem dòng hàng và xử lý."}</p>`;
         const supplierTerm = $("supplierSearch").value.trim().toLocaleLowerCase("vi"), active = $("supplierStatus").value;
         const suppliers = session.suppliers.filter((s) => `${s.name} ${s.phone} ${s.email}`.toLocaleLowerCase("vi").includes(supplierTerm) && (!active || s.isActive === (active === "active")));
         $("supplierList").innerHTML = suppliers.length ? suppliers.map((s) => `<article class="warehouse-card">
@@ -88,13 +95,41 @@
         confirmation = { kind, id, expected, data }; $("warehouseConfirmTitle").textContent = title; $("warehouseConfirmText").textContent = text; $("warehouseConfirm").showModal();
     }
     $("addPurchaseButton").addEventListener("click", openPurchase);
+    for (const [id, view] of [["purchasesTab", "purchases"], ["suppliersTab", "suppliers"]]) {
+        $(id).addEventListener("click", () => setWorkspace(view));
+        $(id).addEventListener("keydown", (event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === "Home" ? "purchases" : event.key === "End" ? "suppliers" : view === "purchases" ? "suppliers" : "purchases";
+            setWorkspace(next); $(next === "purchases" ? "purchasesTab" : "suppliersTab").focus();
+        });
+    }
+    $("closePurchaseDetail").addEventListener("click", () => {
+        $("purchaseDetailPanel").classList.remove("is-open");
+        $("purchaseList").querySelector(`[data-purchase="${session.purchase?.id}"]`)?.focus();
+    });
+    $("purchaseDetailPanel").addEventListener("keydown", (event) => { if (event.key === "Escape") $("closePurchaseDetail").click(); });
     for (const id of ["manageSupplierAdd", "addSupplierButton"]) $(id).addEventListener("click", () => openSupplier());
     $("addPurchaseItemButton").addEventListener("click", () => { if (!locked()) addItemRow(); });
     $("purchaseSupplier").addEventListener("change", render);
     for (const id of ["purchaseSearch", "purchaseStatus", "purchaseMonth", "supplierSearch", "supplierStatus"]) $(id).addEventListener("input", render);
     document.addEventListener("click", (event) => {
         const b = event.target.closest("button"); if (!b || locked()) return;
-        if (b.dataset.purchase) ui.run(() => session.selectPurchase(Number(b.dataset.purchase)));
+        if (b.dataset.purchase) {
+            $("purchaseDetailPanel").classList.add("is-open");
+            let failed = false;
+            ui.run(async () => {
+                try { return await session.selectPurchase(Number(b.dataset.purchase)); }
+                catch (error) { failed = true; throw error; }
+            }).then(() => {
+                if (!failed) return;
+                $("purchaseDetailPanel").classList.remove("is-open");
+                $("uiMessage").setAttribute("tabindex", "-1");
+                $("uiMessage").scrollIntoView({ block: "nearest" });
+                $("uiMessage").focus({ preventScroll: true });
+            });
+            if (window.matchMedia?.("(max-width: 1000px)").matches) $("closePurchaseDetail").focus();
+        }
         if (b.dataset.receive || b.dataset.cancelPurchase) {
             const p = session.purchase, receive = Boolean(b.dataset.receive);
             openConfirm(receive ? "receive" : "cancelPurchase", p.id, purchaseSnapshot(p), receive ? `Nhận hàng phiếu #${p.id}` : `Hủy phiếu #${p.id}`,
@@ -110,7 +145,7 @@
     $("purchaseForm").addEventListener("submit", (event) => {
         event.preventDefault(); if (locked() || !optionsReady) return;
         const data = { supplierId: $("purchaseSupplier").value, items: Array.from($("purchaseItemRows").children).map((row) => ({ ingredientId: row.querySelector("[data-ingredient]").value, quantity: row.querySelector("[data-quantity]").value, unitPrice: row.querySelector("[data-price]").value })) };
-        ui.run(async () => { const created = await session.command("createPurchase", null, data); $("purchaseDialog").close(); ui.message(`Đã tạo phiếu nháp #${created.id}. Kiểm tra chi tiết trước khi xác nhận nhận hàng.`); }, "", "purchaseFormMessage");
+        ui.run(async () => { const created = await session.command("createPurchase", null, data); $("purchaseDialog").close(); setWorkspace("purchases"); $("purchaseDetailPanel").classList.add("is-open"); ui.message(`Đã tạo phiếu nháp #${created.id}. Kiểm tra chi tiết trước khi xác nhận nhận hàng.`); }, "", "purchaseFormMessage");
     });
     $("supplierForm").addEventListener("submit", (event) => {
         event.preventDefault(); if (locked()) return;
@@ -137,5 +172,7 @@
         await session.refresh();
         const id = session.selectedPurchaseId || Number(new URLSearchParams(window.location.search).get("purchaseId")) || session.purchases[0]?.id;
         if (id) await session.selectPurchase(id);
+        if (new URLSearchParams(window.location.search).get("tab") === "suppliers") setWorkspace("suppliers");
+        else if (new URLSearchParams(window.location.search).get("purchaseId")) $("purchaseDetailPanel").classList.add("is-open");
     }));
 })();

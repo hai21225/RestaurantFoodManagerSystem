@@ -45,7 +45,6 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     // ==========================================================
 
     [Theory]
-    [InlineData(Foods)]                    // Authenticated
     [InlineData(RestaurantTables)]         // PosOrCashier
     [InlineData(TableAreas)]               // PosOrCashier
     [InlineData(OrderById)]                // PosOrCashier
@@ -72,7 +71,7 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
         client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "not-a-valid-jwt");
 
-        var response = await client.GetAsync(Foods);
+        var response = await client.GetAsync(MyProfile);
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -279,14 +278,32 @@ public sealed class AuthHttpTests : IClassFixture<EnforcedRestaurantApiFactory>
     private string CreateToken(string role)
     {
         using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
+
+        var suffix = Guid.NewGuid().ToString("N");
+        var user = new Users
+        {
+            UserName = $"http-test-{role.ToLowerInvariant()}-{suffix}",
+            UserPassword = "not-used",
+            UserFullName = "HTTP Auth Test",
+            UserEmail = $"http-test-{role.ToLowerInvariant()}-{suffix}@test.local",
+            UserPhone = "0000000000",
+            IsActive = true,
+            TokenVersion = 1,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        db.Users.Add(user);
+        db.SaveChanges();
 
         var token = tokenService.CreateToken(
             new UserDto
             {
-                UserId = 4242,
-                UserName = $"http-test-{role.ToLowerInvariant()}",
-                FullName = "HTTP Auth Test",
+                UserId = user.Id,
+                UserName = user.UserName,
+                FullName = user.UserFullName,
+                TokenVersion = user.TokenVersion
             },
             [role]);
 

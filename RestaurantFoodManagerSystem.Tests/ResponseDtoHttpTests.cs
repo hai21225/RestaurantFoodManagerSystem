@@ -143,7 +143,7 @@ public sealed class ResponseDtoHttpTests : IClassFixture<RestaurantApiFactory>
         {
             TableId = table.TableId,
             CreatedBy = user.Id,
-            Status = OrderStatuses.Pending,
+            Status = OrderStatuses.Ready,
             Subtotal = total,
             TotalAmount = total,
             CreatedAt = DateTime.UtcNow,

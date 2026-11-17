@@ -34,6 +34,7 @@
             this.api = api; this.auth = auth; this.storage = storage; this.makeKey = makeKey;
             this.orders = []; this.tables = []; this.order = null; this.payments = [];
             this.ledger = { items: [], total: 0, page: 1, pageSize: 20 };
+            this.currentShift = null; this.shiftLoaded = false; this.shifts = [];
             this.loaded = false; this.busy = false; this.loading = false; this.pending = null; this.momo = null;
             for (const [key, field] of [[pendingKey, "pending"], [momoKey, "momo"]]) {
                 try {
@@ -93,12 +94,47 @@
             if (!Array.isArray(data.items)) throw fail("Không đọc được danh sách phiếu thu.", 502);
             this.ledger = data;
         }
+        async loadShift() {
+            this.assertAccess();
+            try {
+                this.currentShift = await this.api.get("/cashier-shifts/current");
+            } catch (error) {
+                if (error.status === 404) this.currentShift = null;
+                else throw error;
+            }
+            this.shiftLoaded = true;
+            return this.currentShift;
+        }
+        async openShift({ openingCash, note } = {}) {
+            this.assertAccess();
+            const amount = Number(openingCash);
+            if (!Number.isFinite(amount) || amount < 0) throw fail("Tiền đầu ca phải lớn hơn hoặc bằng 0.", 400);
+            const cashierUserId = this.auth.getUser()?.userId;
+            const shift = await this.api.post("/cashier-shifts/open", { openingCash: amount, cashierUserId, note: String(note || "").trim() || null });
+            this.currentShift = shift; this.shiftLoaded = true;
+            return shift;
+        }
+        async closeShift(shiftId, { actualCash, note } = {}) {
+            this.assertAccess();
+            const amount = Number(actualCash);
+            if (!Number.isFinite(amount) || amount < 0) throw fail("Tiền thực tế phải lớn hơn hoặc bằng 0.", 400);
+            const shift = await this.api.post(`/cashier-shifts/${Number(shiftId)}/close`, { actualCash: amount, note: String(note || "").trim() || null });
+            this.currentShift = null; this.shiftLoaded = true;
+            return shift;
+        }
+        async loadShiftHistory() {
+            this.assertAccess();
+            const list = await this.api.get("/cashier-shifts");
+            if (!Array.isArray(list)) throw fail("Không đọc được lịch sử ca thu ngân.", 502);
+            this.shifts = list;
+            return list;
+        }
         async refresh(filters = {}, page = this.ledger.page) {
             this.assertAccess();
             if (this.busy || this.loading) return;
             this.loading = true;
             try {
-                await Promise.all([this.loadQueue(), this.loadLedger(filters, page),
+                await Promise.all([this.loadQueue(), this.loadLedger(filters, page), this.loadShift(),
                     this.order ? this.loadOrder(this.order.orderId) : Promise.resolve()]);
             } catch (error) { this.loaded = false; throw error; }
             finally { this.loading = false; }

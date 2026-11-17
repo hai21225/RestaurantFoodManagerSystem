@@ -19,12 +19,30 @@ public sealed class ReportsController : ControllerBase
         Ok(await s.GetRevenueAsync(query, ct));
 
     [HttpGet("revenue/export.csv")]
-    public async Task<IActionResult> ExportRevenueCsv([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct)
+    public async Task<IActionResult> ExportRevenueCsv([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        CsvFileResult(await s.ExportRevenueCsvAsync(query, ct), "revenue", query.Period);
+
+    [HttpGet("top-dishes")]
+    public async Task<IActionResult> TopDishes([FromQuery] TopDishesQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        Ok(await s.GetTopDishesAsync(query, ct));
+
+    [HttpGet("top-dishes/export.csv")]
+    public async Task<IActionResult> ExportTopDishesCsv([FromQuery] TopDishesQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        CsvFileResult(await s.ExportTopDishesCsvAsync(query, ct), "top-dishes", query.Period);
+
+    [HttpGet("profitability")]
+    public async Task<IActionResult> Profitability([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        Ok(await s.GetProfitabilityAsync(query, ct));
+
+    [HttpGet("profitability/export.csv")]
+    public async Task<IActionResult> ExportProfitabilityCsv([FromQuery] RevenueReportQuery query, [FromServices] ReportService s, CancellationToken ct) =>
+        CsvFileResult(await s.ExportProfitabilityCsvAsync(query, ct), "profitability", query.Period);
+
+    private FileContentResult CsvFileResult(byte[] bytes, string prefix, string? period)
     {
-        var bytes = await s.ExportRevenueCsvAsync(query, ct);
         // Tên file dùng giờ VN cho khớp với nội dung CSV (giờ VN).
         var stamp = (DateTime.UtcNow + VietnamTime.Offset).ToString("yyyyMMddHHmm", CultureInfo.InvariantCulture);
-        var fileName = $"revenue-{VietnamTime.NormalizePeriod(query.Period)}-{stamp}.csv";
+        var fileName = $"{prefix}-{VietnamTime.NormalizePeriod(period)}-{stamp}.csv";
         return File(bytes, "text/csv; charset=utf-8", fileName);
     }
 }

@@ -1,13 +1,16 @@
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class ToppingService
 {
     private readonly AppDbContext _db;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
-    public ToppingService(AppDbContext db)
+    public ToppingService(AppDbContext db, IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
+        _hub = hub;
     }
 
 
@@ -65,12 +68,15 @@ public class ToppingService
             throw new InvalidOperationException("Topping already exists");
         }
 
+        ValidateStockQuantity(request.StockQuantity);
+
         var topping = new Topping
         {
             ToppingName = name,
             ToppingPrice = request.ToppingPrice,
             IsAvailable = request.IsAvailable,
-            IsActive = true
+            IsActive = true,
+            StockQuantity = request.StockQuantity
         };
 
         await _db.Toppings.AddAsync(topping, ct);
@@ -82,6 +88,7 @@ public class ToppingService
             throw new InvalidOperationException("Failed to create topping");
         }
 
+        await BroadcastToppingUpdatedAsync(topping, ct);
         return MapToDto(topping);
     }
 
@@ -110,11 +117,15 @@ public class ToppingService
             throw new InvalidOperationException("Topping name already exists");
         }
 
+        ValidateStockQuantity(request.StockQuantity);
+
         topping.ToppingName = name;
         topping.ToppingPrice = request.ToppingPrice;
         topping.IsAvailable = request.IsAvailable;
+        topping.StockQuantity = request.StockQuantity;
 
         await _db.SaveChangesAsync(ct);
+        await BroadcastToppingUpdatedAsync(topping, ct);
 
         return MapToDto(topping);
     }
@@ -139,7 +150,13 @@ public class ToppingService
 
         topping.IsAvailable = isAvailable;
 
-        return await _db.SaveChangesAsync(ct) > 0;
+        var saved = await _db.SaveChangesAsync(ct) > 0;
+        if (saved)
+        {
+            await BroadcastToppingUpdatedAsync(topping, ct);
+        }
+
+        return saved;
     }
 
 
@@ -179,9 +196,32 @@ public class ToppingService
         }
 
         await _db.SaveChangesAsync(ct);
+        await BroadcastToppingUpdatedAsync(topping, ct);
         return true;
     }
 
+
+    private static void ValidateStockQuantity(int? stockQuantity)
+    {
+        if (stockQuantity < 0)
+        {
+            throw new ArgumentException("StockQuantity must be greater than or equal to 0");
+        }
+    }
+
+    private async Task BroadcastToppingUpdatedAsync(Topping topping, CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            await _hub.Clients.All.SendAsync("ToppingUpdated", MapToDto(topping), ct);
+        }
+        catch
+        {
+            // SignalR broadcast failure should not fail topping mutations.
+        }
+    }
 
     private static ToppingResponseDto MapToDto(Topping topping)
     {
@@ -191,7 +231,8 @@ public class ToppingService
             ToppingName = topping.ToppingName,
             ToppingPrice = topping.ToppingPrice,
             IsActive = topping.IsActive,
-            IsAvailable = topping.IsAvailable
+            IsAvailable = topping.IsAvailable,
+            StockQuantity = topping.StockQuantity
         };
     }
 }

@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 public sealed class OrdersController : ControllerBase
 {
     // Bếp cũng cần đọc chi tiết đơn để hiển thị phiếu bếp; không được sửa (các action ghi vẫn dùng policy hẹp hơn).
-    [Authorize(Policy = AuthPolicies.PosKitchenRead)]
+    [Authorize(Policy = AuthPolicies.PosKitchenOrCustomer)]
     [HttpGet("{id:int}")] public async Task<IActionResult> Get(int id, [FromServices] OrderService service, CancellationToken ct) => (await service.GetAsync(id, ct)) is { } x ? Ok(x) : NotFound();
+    [Authorize(Policy = AuthPolicies.CustomerOnly)]
+    [HttpGet("my")] public async Task<IActionResult> My([FromQuery] OrderListQuery query, [FromServices] OrderService service, CancellationToken ct) => Ok(await service.GetMyOrdersAsync(query, ct));
     [Authorize(Policy = AuthPolicies.PosOrCashier)]
     [HttpGet] public async Task<IActionResult> List([FromQuery] OrderListQuery query, [FromServices] OrderService service, CancellationToken ct) => Ok(await service.GetListAsync(query, ct));
-    [Authorize(Policy = AuthPolicies.PosOperator)]
+    [Authorize(Policy = AuthPolicies.CustomerOrPos)]
     [HttpPost] public async Task<IActionResult> Create(CreateOrderRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct) => Ok(await service.CreateIdempotentAsync(request, idempotencyKey, ct));
     // C-09: route "thay toàn bộ dòng món" (replace-all) đã bị chặn.
     //
@@ -36,7 +38,7 @@ public sealed class OrdersController : ControllerBase
         {
             message = "PUT /api/orders/{id}/items is retired (C-09). Use POST /api/orders/{id}/items to add items, PATCH /api/orders/{id}/items/{itemId}/quantity to change quantity, or POST /api/orders/{id}/items/{itemId}/cancel to cancel a dish."
         });
-    [Authorize(Policy = AuthPolicies.PosOperator)]
+    [Authorize(Policy = AuthPolicies.CustomerOrPos)]
     [HttpPost("{id:int}/items")]
     public async Task<IActionResult> AddItems(int id, AddOrderItemsRequest request, [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey, [FromServices] OrderService service, CancellationToken ct) =>
         await service.AddItemsIdempotentAsync(id, request, idempotencyKey, ct) is { } detail ? Ok(detail) : NotFound();

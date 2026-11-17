@@ -102,4 +102,30 @@ public class AuthController : ControllerBase
             message = "Register successful"
         });
     }
+
+    // POST: /api/auth/customer/register  (public)
+    [AllowAnonymous]
+    [HttpPost("customer/register")]
+    public async Task<IActionResult> CustomerRegister(
+        [FromBody] CustomerRegisterRequest request,
+        CancellationToken ct = default)
+    {
+        var user = await _authService.RegisterCustomerAsync(request, ct);
+        var roles = new List<string> { AuthPolicies.Roles.Customer };
+        var response = new LoginResponse
+        {
+            UserId = user.UserId,
+            UserName = user.UserName,
+            Email = user.Email,
+            FullName = user.FullName,
+            Roles = roles,
+            Token = _tokenService.CreateToken(user, roles)
+        };
+
+        return Ok(new
+        {
+            message = "Register successful",
+            data = response
+        });
+    }
 }

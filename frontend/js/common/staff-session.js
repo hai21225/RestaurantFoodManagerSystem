@@ -1,7 +1,7 @@
 (function () {
     const pendingKey = "restaurant.staffPending";
     const fail = (message, status = 409) => Object.assign(new Error(message), { status });
-    const roleLabels = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho" };
+    const roleLabels = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho", Customer: "Khách hàng" };
     const kinds = ["create", "update", "active", "assignRole", "removeRole", "resetPassword"];
     const validId = (id) => ["number", "string"].includes(typeof id) && Number.isInteger(Number(id)) && Number(id) > 0 && Number(id) <= 2147483647;
     const snapshot = (user) => JSON.stringify([user.userId, user.userName, user.fullName, user.email, user.phone, user.isActive, [...user.roles].sort(), user.updatedAt || null]);
@@ -23,7 +23,7 @@
     class StaffSession {
         constructor({ api, auth, storage }) {
             this.api = api; this.auth = auth; this.storage = storage;
-            this.users = []; this.roles = []; this.detail = null; this.detailVersion = 0;
+            this.users = []; this.roles = []; this.detail = null; this.customerSummary = null; this.detailVersion = 0; this.userType = "all";
             this.loading = false; this.detailLoading = false; this.loaded = false; this.busy = false;
             this.pending = null; this.needsLogin = false;
             try {
@@ -40,16 +40,18 @@
             if (!Array.isArray(roles) || roles.some((r) => !validId(r.roleId) || typeof r.roleName !== "string" || !r.roleName.trim()) || new Set(roles.map((r) => r.roleName)).size !== roles.length) throw fail("Không đọc được đầy đủ danh sách vai trò.", 502);
             return roles;
         }
-        async load() {
+        async load(userType = this.userType) {
             this.assertAccess(); this.loaded = false;
-            const [users, roles] = await Promise.all([this.api.get("/users"), this.loadRoles()]);
+            this.userType = ["all", "staff", "customer"].includes(userType) ? userType : "all";
+            const usersPath = this.userType === "all" ? "/users" : `/users?userType=${encodeURIComponent(this.userType)}`;
+            const [users, roles] = await Promise.all([this.api.get(usersPath), this.loadRoles()]);
             if (!checkUsers(users)) throw fail("Không đọc được đầy đủ danh sách nhân viên.", 502);
             this.users = users; this.roles = roles; this.loaded = true;
         }
         async refresh() {
             this.assertAccess(); if (this.busy || this.loading) return;
             this.loading = true;
-            try { await this.load(); this.detail = null; ++this.detailVersion; }
+            try { await this.load(); this.detail = null; this.customerSummary = null; ++this.detailVersion; }
             finally { this.loading = false; }
         }
         async userDetails(id) {
@@ -60,11 +62,14 @@
         }
         async selectUser(id) {
             if (this.busy || this.loading) return null;
-            const version = ++this.detailVersion; this.detailLoading = true; this.detail = null;
+            const version = ++this.detailVersion; this.detailLoading = true; this.detail = null; this.customerSummary = null;
             try {
                 const user = await this.userDetails(id);
+                const summary = user.roles.includes("Customer")
+                    ? await this.api.get(`/users/${Number(id)}/customer-summary`).catch(() => null)
+                    : null;
                 if (version !== this.detailVersion) return null;
-                this.detail = user; return user;
+                this.detail = user; this.customerSummary = summary; return user;
             } catch (error) { if (version === this.detailVersion) throw error; return null; }
             finally { if (version === this.detailVersion) this.detailLoading = false; }
         }

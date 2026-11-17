@@ -122,7 +122,8 @@ public sealed class ApiHostSmokeTests : IClassFixture<RestaurantApiFactory>
 
         var payload = await response.Content.ReadFromJsonAsync<SetupStatusResponse>();
         Assert.NotNull(payload);
-        Assert.True(payload!.RequiresSetup);
+        // SeedOnStartup = true runs BasicDataSeeder which seeds default users.
+        Assert.False(payload!.RequiresSetup);
     }
 
     [Fact]

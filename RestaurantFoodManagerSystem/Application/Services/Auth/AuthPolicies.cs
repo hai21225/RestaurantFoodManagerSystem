@@ -15,6 +15,7 @@ public static class AuthPolicies
         public const string Chef = "Chef";
         public const string Cashier = "Cashier";
         public const string Waiter = "Waiter";
+        public const string Customer = "Customer";
     }
 
     /// <summary>Mọi role hợp lệ (đã đăng nhập).</summary>
@@ -50,4 +51,13 @@ public static class AuthPolicies
     /// (món đã Ready chỉ Admin) do <c>OrderCancellationPolicy</c> áp ở tầng service.
     /// </summary>
     public const string OrderCancellation = "OrderCancellation";
+
+    /// <summary>Chỉ Customer.</summary>
+    public const string CustomerOnly = "CustomerOnly";
+
+    /// <summary>Admin + Waiter + Customer — đặt bàn và gọi món tại bàn (qua POS hoặc QR).</summary>
+    public const string CustomerOrPos = "CustomerOrPos";
+
+    /// <summary>Admin + Waiter + Cashier + Chef + Customer — đọc chi tiết đơn (Customer chỉ đọc được đơn của mình).</summary>
+    public const string PosKitchenOrCustomer = "PosKitchenOrCustomer";
 }

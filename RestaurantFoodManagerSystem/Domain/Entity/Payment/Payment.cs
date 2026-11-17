@@ -47,4 +47,7 @@ public class Payment
 
     /// <summary>Thời điểm hoàn tiền (null nếu chưa hoàn).</summary>
     public DateTime? RefundedAt { get; set; }
+
+    /// <summary>Ca làm việc của thu ngân ghi nhận giao dịch (V2).</summary>
+    public int? ShiftId { get; set; }
 }

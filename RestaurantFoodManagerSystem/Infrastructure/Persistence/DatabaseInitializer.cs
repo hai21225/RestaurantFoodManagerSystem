@@ -30,6 +30,7 @@ public static class DatabaseInitializer
         ("Chef", "Nhân viên bếp"),
         ("Cashier", "Nhân viên thu ngân"),
         ("Waiter", "Nhân viên phục vụ"),
+        ("Customer", "Khách hàng"),
     ];
 
     /// <summary>
@@ -73,16 +74,25 @@ public static class DatabaseInitializer
     {
         ArgumentNullException.ThrowIfNull(db);
 
-        if (await db.Roles.AnyAsync(cancellationToken))
+        var existingNames = await db.Roles
+            .Select(r => r.RoleName)
+            .ToHashSetAsync(StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var missingRoles = DefaultRoles
+            .Where(role => !existingNames.Contains(role.Name))
+            .Select(role => new Roles
+            {
+                RoleName = role.Name,
+                RoleDescription = role.Description,
+            })
+            .ToList();
+
+        if (missingRoles.Count == 0)
         {
             return false;
         }
 
-        db.Roles.AddRange(DefaultRoles.Select(role => new Roles
-        {
-            RoleName = role.Name,
-            RoleDescription = role.Description,
-        }));
+        db.Roles.AddRange(missingRoles);
 
         await db.SaveChangesAsync(cancellationToken);
         return true;

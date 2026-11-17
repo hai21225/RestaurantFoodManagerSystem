@@ -7,6 +7,7 @@
     public string? Email { get; set; }
     public string? Phone { get; set; }
     public bool? IsActive { get; set; }
+    public int TokenVersion { get; set; } = 1;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 

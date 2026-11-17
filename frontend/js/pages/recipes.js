@@ -40,9 +40,8 @@
         $("recipeCount").textContent = `${sizes.length} kích cỡ`;
         $("recipeRows").innerHTML = sizes.length ? sizes.map((s) => {
             const r = session.activeRecipe(s.sizeId);
-            return `<article class="catalog-recipe-row${selectedSizeId === s.sizeId ? " is-selected" : ""}"><strong>${esc(s.foodName)} · ${esc(s.sizeName)}</strong>
-                <p>${r ? `${esc(r.name)} · Phiên bản ${esc(r.version)} · ${r.ingredientCount} nguyên liệu` : "Chưa có công thức đang hoạt động"}</p>
-                <div>${badge(r ? "Đã thiết lập" : "Chưa thiết lập", r ? "" : "is-warning")}${!s.isActive ? badge("Kích cỡ ngừng dùng", "is-inactive") : ""}${!s.foodIsActive ? badge("Món ngừng dùng", "is-inactive") : ""}</div>
+            return `<article class="catalog-recipe-row${selectedSizeId === s.sizeId ? " is-selected" : ""}"><div class="recipe-row-identity"><strong>${esc(s.foodName)}</strong><span>${esc(s.sizeName)}</span>${!s.isActive ? badge("Kích cỡ ngừng dùng", "is-inactive") : ""}${!s.foodIsActive ? badge("Món ngừng dùng", "is-inactive") : ""}</div>
+                <div class="recipe-row-version">${badge(r ? "Đã thiết lập" : "Chưa thiết lập", r ? "" : "is-warning")}<p>${r ? `${esc(r.name)}<br>Phiên bản ${esc(r.version)} · ${r.ingredientCount} nguyên liệu` : "Chưa có công thức đang hoạt động"}</p></div>
                 <div class="catalog-row-actions"><button class="secondary-action" data-view-size="${s.sizeId}" ${session.busy || session.loading ? "disabled" : ""}>Xem / Phiên bản</button>
                 <button class="${r ? "secondary-action" : "primary-action"}" data-edit-size="${s.sizeId}" ${locked() || !s.isActive ? "disabled" : ""}>${r ? "Sửa công thức" : "Thiết lập"}</button></div></article>`;
         }).join("") : '<p class="catalog-empty">Chưa có kích cỡ phù hợp. Kiểm tra bộ lọc hoặc tạo kích cỡ tại <a href="foods.html">Món ăn</a>.</p>';
@@ -89,7 +88,7 @@
             $("recipeDetail").innerHTML = '<p class="catalog-empty">Tải lại danh mục trước khi xem phiên bản.</p>'; return;
         }
         $("catalogSummary").innerHTML = [["Nguyên liệu đang dùng", session.ingredients.filter((i) => i.isActive).length], ["Nguyên liệu ngừng dùng", session.ingredients.filter((i) => !i.isActive).length], ["Công thức đang dùng", session.recipes.filter((r) => r.isActive).length]]
-            .map(([label, value]) => `<article><span>${label}</span><strong>${value}</strong></article>`).join("");
+            .map(([label, value]) => `<span><strong>${value}</strong> ${label.toLocaleLowerCase("vi")}</span>`).join("");
         renderIngredients(); renderRecipes();
     }
     async function run(action, success = "", target = "catalogNotice") {
@@ -163,8 +162,18 @@
     }
     async function selectSize(id, recipeId = null) {
         selectedSizeId = id; session.detail = null;
+        $("recipeDetailPanel").classList.add("is-open");
+        if (window.matchMedia?.("(max-width: 1000px)").matches) $("closeRecipeDetail").focus();
         const target = recipeId || session.activeRecipe(id)?.recipeId;
-        if (target) await run(() => session.selectRecipe(target)); else render();
+        if (target) {
+            const out = await run(() => session.selectRecipe(target));
+            if (!out.ok) {
+                $("recipeDetailPanel").classList.remove("is-open");
+                $("catalogNotice").setAttribute("tabindex", "-1");
+                $("catalogNotice").scrollIntoView({ block: "nearest" });
+                $("catalogNotice").focus({ preventScroll: true });
+            }
+        } else render();
     }
     function confirm(title, text, action) {
         $("confirmTitle").textContent = title; $("confirmText").textContent = text; message("", false, "confirmMessage"); confirmAction = action; $("catalogConfirm").showModal();
@@ -208,6 +217,11 @@
         const id = Number(button.dataset.viewSize || button.dataset.editSize);
         if (button.dataset.viewSize) selectSize(id); else if (button.dataset.editSize) openRecipe(id, session.activeRecipe(id)?.recipeId || null);
     });
+    $("closeRecipeDetail").addEventListener("click", () => {
+        $("recipeDetailPanel").classList.remove("is-open");
+        $("recipeRows").querySelector(`[data-view-size="${selectedSizeId}"]`)?.focus();
+    });
+    $("recipeDetailPanel").addEventListener("keydown", (event) => { if (event.key === "Escape") $("closeRecipeDetail").click(); });
     $("recipeDetail").addEventListener("click", (event) => {
         const button = event.target.closest("button"); if (!button) return;
         if (button.dataset.viewRecipe) { const id = Number(button.dataset.viewRecipe), r = session.recipes.find((r) => r.recipeId === id); if (r) selectSize(r.sizeId, id); return; }

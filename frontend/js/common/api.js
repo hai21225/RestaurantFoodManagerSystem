@@ -13,9 +13,23 @@
     }
 
     function anonymous(path, method) {
-        const route = path.split("?")[0].replace(/\/$/, "");
-        return (method === "POST" && ["/auth/login", "/setup/first-admin"].includes(route))
-            || (method === "GET" && route === "/setup/status");
+        const [rawRoute, query = ""] = path.split("?");
+        const route = rawRoute.replace(/\/$/, "");
+        if (method === "POST" && ["/auth/login", "/auth/customer/register", "/setup/first-admin", "/reservations/deposit/momo/notify"].includes(route)) {
+            return true;
+        }
+        if (method === "GET") {
+            const params = new URLSearchParams(query);
+            if (params.get("includeInactive") === "true") return false;
+            return route === "/setup/status"
+                || route === "/menu"
+                || route === "/foods"
+                || /^\/foods\/\d+$/.test(route)
+                || route === "/categories"
+                || /^\/categories\/\d+$/.test(route)
+                || route.startsWith("/public/");
+        }
+        return false;
     }
 
     function errorMessage(status, payload) {
@@ -41,6 +55,14 @@
         }
         const method = (options.method || "GET").toUpperCase();
         const isAnonymous = anonymous(path, method);
+        // Các trang cũ có thể tải dữ liệu ngay khi script chạy: đợi hồ sơ thật trước.
+        // /users/me là chính bước bootstrap, không được đợi promise của nó.
+        if (!isAnonymous && path.split("?")[0] !== "/users/me" && !auth.isPublicPage()) {
+            if (auth.isCheckingPageAccess()) await auth.ready;
+            if (auth.getToken() && !auth.isPageAllowed()) {
+                throw new ApiError("Bạn không có quyền truy cập màn hình này.", 403, null);
+            }
+        }
         const requestToken = auth.getToken();
         const headers = new Headers(options.headers || {});
         if (options.body !== undefined && !headers.has("Content-Type")) headers.set("Content-Type", "application/json");
@@ -106,12 +128,21 @@
 
     // Lấy hồ sơ thật khi mở trang; backend vẫn quyết định mọi quyền truy cập.
     const bootstrapToken = auth.getToken();
-    auth.ready = auth.isPublicPage() || !bootstrapToken ? Promise.resolve(null)
-        : window.restaurantApi.get("/users/me").then((user) => {
-            if (auth.getToken() === bootstrapToken) auth.updateUser(user);
-            return user;
-        }).catch((error) => {
-            if (error.status !== 401) window.dispatchEvent(new CustomEvent("restaurant:auth-error", { detail: error.message }));
-            return null;
-        });
+    if (!auth.isPublicPage() && !bootstrapToken) {
+        auth.redirectToLogin();
+        auth.ready = Promise.resolve(null);
+    } else {
+        auth.ready = auth.isPublicPage() || !bootstrapToken ? Promise.resolve(null)
+            : window.restaurantApi.get("/users/me").then((user) => {
+                if (auth.getToken() === bootstrapToken) {
+                    auth.updateUser(user);
+                    auth.enforcePageAccess();
+                }
+                return user;
+            }).catch((error) => {
+                if (error.status !== 401) window.dispatchEvent(new CustomEvent("restaurant:auth-error", { detail: error.message }));
+                if (auth.getToken() === bootstrapToken) auth.blockPageAccess(error.message);
+                return null;
+            });
+    }
 })();

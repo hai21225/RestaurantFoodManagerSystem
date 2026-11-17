@@ -1,0 +1,69 @@
+/* Xem trước trên màn hình; nguồn giấy được tách khỏi bảng bếp và hộp thoại. */
+#kitchenPrintPaper { display: none; }
+.service-workspace--kitchen .kitchen-print-dialog { width: min(660px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 0; overflow: hidden; }
+.kitchen-print-shell { display: flex; flex-direction: column; max-height: calc(100dvh - 32px); }
+.kitchen-print-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 20px; border-bottom: 1px solid #e5d9ca; flex-shrink: 0; }
+.kitchen-print-header h2 { margin: 4px 0 0; }
+.kitchen-print-scroll { overflow: auto; min-height: 0; padding: 16px 20px; }
+.kitchen-print-options { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 12px; }
+.kitchen-print-options select { width: 100%; min-height: 44px; border: 1px solid #ded3c4; border-radius: 8px; padding: 8px; background: #fffdf9; color: #3a3028; }
+.kitchen-print-reprint { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-top: 8px; font-size: 14px; }
+.kitchen-print-reprint input { width: 20px; height: 20px; min-height: 20px; }
+.kitchen-print-actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding: 12px 20px; border-top: 1px solid #e5d9ca; background: #fffdf9; flex-shrink: 0; }
+.kitchen-print-actions button { min-height: 44px; }
+.service-workspace--kitchen .kitchen-ticket-print { margin-top: 12px; width: 100%; min-height: 44px; font-size: 12px; }
+.kitchen-print-preview { background: #ece7df; padding: 16px; border-radius: 8px; margin-top: 12px; overflow: auto; }
+.kitchen-slip-batch { min-width: 0; }
+.kitchen-slip-batch > .kitchen-slip-summary { margin: 0 0 12px; color: #3a3028; font-size: 13px; text-align: center; }
+.kitchen-slip { box-sizing: border-box; width: 80mm; max-width: 100%; padding: 4mm; margin: 0 auto; border: 1px solid #ccc; background: #fff; color: #000; font: 10pt/1.4 Arial, sans-serif; overflow-wrap: anywhere; }
+.kitchen-slip + .kitchen-slip { margin-top: 20px; }
+.kitchen-print-preview[data-paper-size="58"] .kitchen-slip { width: 58mm; }
+.kitchen-slip :is(h1, h2, h3, p, ul, ol, dl) { margin: 0; color: #000; font-family: Arial, sans-serif; }
+.kitchen-slip .kitchen-slip-header { text-align: center; padding-bottom: 3mm; border-bottom: 2px solid #000; }
+.kitchen-slip .kitchen-slip-title { font-size: 14pt; font-weight: 700; }
+.kitchen-slip .kitchen-slip-table { display: block; font-size: 22pt; font-weight: 700; margin: 2mm 0; line-height: 1.15; }
+.kitchen-slip .kitchen-slip-position { font-size: 8pt; }
+.kitchen-slip .kitchen-slip-meta { font-size: 9pt; margin-top: 2mm; }
+.kitchen-slip .kitchen-slip-meta > div { margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-meta dt, .kitchen-slip .kitchen-slip-meta dd { display: inline; margin: 0; }
+.kitchen-slip .kitchen-slip-meta dt { font-weight: 700; }
+.kitchen-slip .kitchen-slip-meta dt::after { content: ": "; }
+.kitchen-slip .kitchen-slip-closed { font-weight: 700; border: 2px solid #000; padding: 2mm; margin: 2mm 0; }
+.kitchen-slip .kitchen-slip-scope { border: 1px solid #000; padding: 2mm; margin: 3mm 0; font-weight: 700; text-align: center; }
+.kitchen-slip .kitchen-slip-reprint { border: 2px solid #000; padding: 2mm; margin-bottom: 3mm; font-size: 15pt; font-weight: 700; text-align: center; }
+.kitchen-slip .kitchen-slip-order-note { padding: 2mm 0; white-space: pre-wrap; font-weight: 700; }
+.kitchen-slip .kitchen-slip-items { padding: 0; list-style: none; }
+.kitchen-slip .kitchen-slip-item { padding: 3mm 0; border-bottom: 1px dashed #000; break-inside: avoid; }
+.kitchen-slip .kitchen-slip-item-heading { font-size: 16pt; line-height: 1.3; }
+.kitchen-slip .kitchen-slip-quantity { display: inline; font-size: inherit; font-weight: 700; }
+.kitchen-slip .kitchen-slip-quantity small { font-size: 11pt; }
+.kitchen-slip .kitchen-slip-item-name { display: inline; font-size: inherit; font-weight: 700; margin-left: 1.5mm; }
+.kitchen-slip .kitchen-slip-item-size { margin-top: 2mm; font-size: 12pt; font-weight: 700; }
+.kitchen-slip .kitchen-slip-sent-at { margin-top: 2mm; }
+.kitchen-slip .kitchen-slip-item-flag { display: block; font-weight: 700; margin-top: 1mm; }
+.kitchen-slip .kitchen-slip-item:is(.is-done, .is-cancelled) .kitchen-slip-item-flag { border: 2px solid #000; padding: 1mm; }
+.kitchen-slip .kitchen-slip-item.is-cancelled .kitchen-slip-item-name { text-decoration: line-through; }
+.kitchen-slip .kitchen-slip-toppings { padding-left: 4mm; margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-toppings ul { padding-left: 4mm; }
+.kitchen-slip .kitchen-slip-item-note, .kitchen-slip-cancel-reason { white-space: pre-wrap; margin: 2mm 0; font-weight: 700; }
+.kitchen-slip .kitchen-slip-footer { font-size: 8pt; border-top: 1px dashed #000; padding-top: 2mm; margin-top: 3mm; }
+.kitchen-slip .kitchen-slip-footer p { margin: 1mm 0; }
+.kitchen-slip .kitchen-slip-empty { padding: 4mm 0; }
+@media (max-width: 480px) {
+    .kitchen-print-header, .kitchen-print-scroll, .kitchen-print-actions { padding: 12px; }
+    .kitchen-print-options { grid-template-columns: minmax(0, 1fr); }
+    .kitchen-print-actions .primary-action { width: 100%; }
+    .kitchen-print-preview { padding: 8px; }
+}
+@media print {
+    @page { size: auto; margin: 4mm; }
+    body.printing-kitchen { background: #fff !important; color: #000 !important; min-height: 0 !important; height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+    body.printing-kitchen > * { display: none !important; }
+    body.printing-kitchen > #kitchenPrintPaper { display: block !important; margin: 0 !important; padding: 0 !important; }
+    body.printing-kitchen dialog::backdrop { display: none !important; }
+    #kitchenPrintPaper .kitchen-slip { width: 72mm; max-width: 100%; margin: 0; padding: 0; border: 0; box-shadow: none; }
+    #kitchenPrintPaper[data-paper-size="58"] .kitchen-slip { width: 50mm; }
+    #kitchenPrintPaper .kitchen-slip-summary { display: none !important; }
+    #kitchenPrintPaper .kitchen-slip { break-inside: avoid; page-break-inside: avoid; }
+    #kitchenPrintPaper .kitchen-slip:not(:last-child) { break-after: page; page-break-after: always; }
+}

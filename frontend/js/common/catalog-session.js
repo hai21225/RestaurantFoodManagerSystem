@@ -42,8 +42,17 @@
                 this.api.get("/foods?includeInactive=true"), this.api.get("/management/inventory")
             ]);
             if (![ingredients, recipes, foods, inventory].every(Array.isArray)) throw fail("Không đọc được đầy đủ danh mục nguyên liệu/công thức.", 502);
-            const byFood = await Promise.all(foods.map((food) => this.api.get(`/foods/${food.foodId}/sizes?includeInactive=true`)));
-            if (!byFood.every(Array.isArray)) throw fail("Không đọc được danh sách kích cỡ món.", 502);
+            const byFood = await Promise.all(foods.map(async (food) => {
+                try {
+                    const list = await this.api.get(`/foods/${food.foodId}/sizes?includeInactive=true`);
+                    return Array.isArray(list) ? list : [];
+                } catch (error) {
+                    if (error?.status === 401 || error?.status === 403 || error?.status === 0 || error?.status >= 500) {
+                        throw error;
+                    }
+                    return [];
+                }
+            }));
             this.ingredients = ingredients; this.recipes = recipes; this.foods = foods; this.inventory = inventory;
             // Giữ mọi tên kích cỡ từ API, không giới hạn vào S/M/L và không bỏ lịch sử món đã ngừng.
             this.sizes = foods.flatMap((food, index) => byFood[index].map((size) => ({ ...size, foodId: food.foodId, foodName: food.foodName, foodIsActive: food.isActive })));

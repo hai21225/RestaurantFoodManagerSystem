@@ -26,7 +26,7 @@
             input = `<select name="${f.name}"${f.required ? " required" : ""}>${opts}</select>`;
         } else {
             if (f.type === "datetime-local") value = String(value).replace(/[zZ]$/, "").slice(0, 19);
-            input = `<input name="${f.name}" type="${f.type === "integer" ? "number" : f.type}" value="${esc(value)}"${f.required ? " required" : ""}${f.type === "datetime-local" ? ' step="1"' : ""}${f.max && f.type === "text" ? ` maxlength="${f.max}"` : ""}${["number", "integer"].includes(f.type) ? ` min="${f.min ?? 0}" max="${f.max ?? 9007199254740991}" step="${f.type === "integer" ? "1" : "0.01"}" required` : ""}>`;
+            input = `<input name="${f.name}" type="${f.type === "integer" ? "number" : f.type}" value="${esc(value)}"${f.required ? " required" : ""}${f.type === "datetime-local" ? ' step="1"' : ""}${f.max && f.type === "text" ? ` maxlength="${f.max}"` : ""}${f.placeholder ? ` placeholder="${esc(f.placeholder)}"` : ""}${["number", "integer"].includes(f.type) ? ` min="${f.min ?? 0}" max="${f.max ?? 9007199254740991}" step="${f.type === "integer" ? "1" : "0.01"}"${f.nullable ? "" : " required"}` : ""}>`;
         }
         return `<label class="admin-field">${title}${input}</label>`;
     }
@@ -35,7 +35,8 @@
         if (module === "links") return `${money(item.toppingPrice)} · ${item.isAvailable ? "Đang bán" : "Tạm hết"}`;
         const lines = session.definition.fields.filter((f) => f.name !== session.definition.name).map((f) => {
             let value = item[f.name];
-            if (value == null || value === "") value = "—";
+            if (f.name === "stockQuantity") value = value == null ? "Không giới hạn" : value === 0 ? "Hết hàng (0)" : `Còn ${value}`;
+            else if (value == null || value === "") value = "—";
             else if (f.type === "checkbox") value = value ? "Có" : "Không";
             else if (["sizePrice", "toppingPrice", "minimumOrderAmount", "maxDiscountAmount"].includes(f.name)) value = money(value);
             else if (f.type === "area") value = item.areaName || "Chưa phân khu";
@@ -44,7 +45,14 @@
             return `<div><dt>${esc(f.label)}</dt><dd>${esc(value)}</dd></div>`;
         });
         if (module === "promotions") lines.push(`<div><dt>Phạm vi</dt><dd>${item.sizeIds?.length || item.categoryIds?.length ? `${item.sizeIds?.length || 0} kích cỡ · ${item.categoryIds?.length || 0} danh mục` : "Toàn hóa đơn"}</dd></div>`);
-        if (module === "tables") lines.push(`<div><dt>Trạng thái phục vụ</dt><dd>${esc(({ Available: "Trống", Occupied: "Có khách", Reserved: "Đã đặt", Maintenance: "Bảo trì" })[item.status] || item.status)}</dd></div>`);
+        if (module === "tables") {
+            lines.push(`<div><dt>Trạng thái phục vụ</dt><dd>${esc(({ Available: "Trống", Occupied: "Có khách", Reserved: "Đã đặt", Maintenance: "Bảo trì" })[item.status] || item.status)}</dd></div>`);
+            lines.push(`<div><dt>Mã QR</dt><dd>${esc(item.qrToken || "Chưa có")}</dd></div>`);
+            if (item.qrToken) {
+                const qrPath = `qr-order.html?qrToken=${encodeURIComponent(item.qrToken)}`;
+                lines.push(`<div><dt>Link đặt món QR</dt><dd><code>${esc(qrPath)}</code> <button class="secondary-action" type="button" data-copy-qr="${item.tableId}">Sao chép link</button></dd></div>`);
+            }
+        }
         return `<dl class="admin-details">${lines.join("")}</dl>`;
     }
     function render() {
@@ -56,6 +64,7 @@
         $("managedFood").disabled = locked();
         $("adminAdd").hidden = !!d.editOnly; $("adminAdd").disabled = locked() || (d.food && !session.foodId);
         $("adminAdd").textContent = d.singleton ? "Sửa thiết lập" : module === "links" ? "Gán topping" : "Thêm mới";
+        $("adminBulkTables").hidden = module !== "tables"; $("adminBulkTables").disabled = locked();
         $("adminRefresh").disabled = session.busy || session.loading;
         $("adminStatus").disabled = !!d.singleton || module === "links";
         const term = $("adminSearch").value.trim().toLocaleLowerCase("vi"), status = $("adminStatus").value;
@@ -69,14 +78,15 @@
             if (module === "toppings" && !inactive) actions += `<button class="secondary-action" type="button" data-action="availability" data-id="${n}">${x.isAvailable ? "Báo tạm hết" : "Bật bán"}</button>`;
             if (module === "sizes" && !inactive && !x.isDefault) actions += `<button class="secondary-action" type="button" data-action="default" data-id="${n}">Đặt mặc định</button>`;
             if (module === "promotions") actions += `<button class="secondary-action" type="button" data-targets="${n}">Chọn phạm vi</button>`;
-            return `<article class="panel admin-record"><div class="panel-header"><h3>${esc(x[d.name] || d.title)}</h3>${d.singleton ? "" : `<span>#${n} · ${inactive ? "Ngừng dùng" : "Đang dùng"}</span>`}</div>${details(x)}<div class="admin-actions">${actions}</div></article>`;
+            if (module === "tables") actions += `<button class="secondary-action" type="button" data-regen-qr="${n}">Tạo lại QR</button>`;
+            return `<article class="admin-record admin-data-row" data-admin-module="${module}"><div class="admin-record-heading"><span class="admin-row-mark" aria-hidden="true">${esc(String(x[d.name] || d.title).trim().slice(0, 1).toLocaleUpperCase("vi"))}</span><div><h3>${esc(x[d.name] || d.title)}</h3>${d.singleton ? "" : `<span class="admin-row-status${inactive ? " is-inactive" : ""}">#${n} · ${inactive ? "Ngừng dùng" : "Đang dùng"}</span>`}</div></div><div class="admin-record-detail">${details(x)}</div><div class="admin-actions">${actions}</div></article>`;
         }).join("") : '<p class="empty-state">Không có mục phù hợp. Thử đổi bộ lọc hoặc thêm mới.</p>';
         $("adminRows").querySelectorAll("button").forEach((b) => { b.disabled = locked(); });
         $("adminPending").hidden = !session.pending;
         $("adminPendingText").textContent = session.pending ? `${session.pending.description}. ${session.pending.accepted ? "Máy chủ đã nhận lệnh; cần tải lại dữ liệu." : "Chưa xác định được kết quả. Không gửi lại thao tác."}` : "";
         $("adminReview").disabled = session.busy || session.loading;
         $("adminAck").hidden = !session.pending?.reviewed; $("adminAck").disabled = session.busy;
-        for (const form of [$("adminForm"), $("targetForm"), $("adminConfirmForm")]) form.querySelectorAll("input,textarea,select,button[type=submit]").forEach((el) => { el.disabled = locked() || el.dataset.unavailable === "true"; });
+        for (const form of [$("adminForm"), $("targetForm"), $("adminConfirmForm"), $("bulkTablesForm")]) form.querySelectorAll("input,textarea,select,button[type=submit]").forEach((el) => { el.disabled = locked() || el.dataset.unavailable === "true"; });
         $("adminContext").textContent = module === "settings" ? "Hệ thống tính VAT/phí dịch vụ. Lưu cấu hình không tự tính lại tiền các đơn đã mở. Các khoản tiền hiển thị theo VND."
             : module === "promotions" ? "Thời gian theo Việt Nam (UTC+7). Tạo khuyến mãi và chọn phạm vi là hai bước riêng. Sửa phạm vi không tự tính lại các đơn đã áp dụng."
             : module === "tables" ? "Sửa tên, số chỗ và khu vực. Thay đổi trạng thái/xóa/khôi phục bàn tại màn Bàn ăn."
@@ -111,7 +121,17 @@
     $("adminAdd").addEventListener("click", () => openEditor(session.definition.singleton ? session.items[0] : null));
     $("adminRows").addEventListener("click", (e) => {
         const b = e.target.closest("button"); if (!b || locked()) return;
-        const n = Number(b.dataset.edit ?? b.dataset.id ?? b.dataset.targets), item = session.items.find((x) => x[session.definition.id] === n); if (!item) return;
+        const n = Number(b.dataset.edit ?? b.dataset.id ?? b.dataset.targets ?? b.dataset.copyQr ?? b.dataset.regenQr), item = session.items.find((x) => x[session.definition.id] === n); if (!item) return;
+        if (b.dataset.copyQr != null) {
+            const link = new URL(`qr-order.html?qrToken=${encodeURIComponent(item.qrToken)}`, location.href).href;
+            if (navigator.clipboard?.writeText) navigator.clipboard.writeText(link).then(() => message(`Đã sao chép link QR bàn ${item.tableNumber}.`), () => message(`Link QR: ${link}`));
+            else message(`Link QR: ${link}`);
+            return;
+        }
+        if (b.dataset.regenQr != null) {
+            run(async () => { await api.post(`/restaurant-tables/${n}/qr-token`, {}); await session.refresh(); }, `Đã tạo lại mã QR cho bàn ${item.tableNumber}.`);
+            return;
+        }
         if (b.dataset.edit != null) return openEditor(item);
         if (b.dataset.targets) {
             targetItem = item; expected = snapshot(item);
@@ -151,6 +171,31 @@
     });
     $("adminReview").addEventListener("click", () => run(() => session.review(() => session.load()), "Đã tải dữ liệu. Kiểm tra thao tác trước rồi xác nhận đã đối chiếu."));
     $("adminAck").addEventListener("click", () => { try { session.acknowledge(); render(); message("Đã xác nhận đối chiếu. Kiểm tra trước khi thực hiện lệnh mới."); } catch (e) { message(e.message, true); } });
+    $("adminBulkTables").addEventListener("click", () => {
+        if (locked() || session.module !== "tables") return;
+        $("bulkTablesForm").reset();
+        $("bulkStartNumber").value = "1"; $("bulkEndNumber").value = "10"; $("bulkCapacity").value = "4";
+        $("bulkAreaId").innerHTML = option("", "Chưa phân khu", true) + (session.lookups.areas || []).filter((x) => x.isActive).map((x) => option(x.areaId, x.areaName)).join("");
+        $("bulkTablesMessage").textContent = "";
+        $("bulkTablesDialog").showModal();
+    });
+    $("bulkTablesForm").addEventListener("submit", async (e) => {
+        e.preventDefault(); if (locked()) return;
+        const prefix = $("bulkPrefix").value.trim(), startNumber = Number($("bulkStartNumber").value), endNumber = Number($("bulkEndNumber").value);
+        const areaId = $("bulkAreaId").value ? Number($("bulkAreaId").value) : null, capacity = Number($("bulkCapacity").value);
+        if (!Number.isInteger(startNumber) || startNumber < 1 || !Number.isInteger(endNumber) || endNumber < startNumber) { $("bulkTablesMessage").textContent = "Dải số bàn không hợp lệ."; return; }
+        if (endNumber - startNumber + 1 > 100) { $("bulkTablesMessage").textContent = "Chỉ tạo tối đa 100 bàn mỗi lần."; return; }
+        if (!Number.isInteger(capacity) || capacity < 1) { $("bulkTablesMessage").textContent = "Sức chứa phải lớn hơn 0."; return; }
+        try {
+            session.busy = true; render();
+            const res = await api.post("/restaurant-tables/bulk", { prefix, startNumber, endNumber, areaId, capacity });
+            session.busy = false;
+            $("bulkTablesDialog").close();
+            await session.refresh();
+            message(res?.message || `Đã tạo ${Array.isArray(res?.data) ? res.data.length : endNumber - startNumber + 1} bàn mới.`);
+        } catch (error) { $("bulkTablesMessage").textContent = error.message; message(error.message, true); }
+        finally { session.busy = false; render(); }
+    });
     document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => $(b.dataset.close).close()));
     auth.ready.then(() => {
         const requested = new URL(location.href).searchParams.get("tab");

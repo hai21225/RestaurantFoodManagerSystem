@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký khách hàng - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/login.css">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/auth-sahara.css?v=20261112-stitch-layout3">
+    <script src="../js/common/auth.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/dialogs.js" defer></script>
+    <script src="../js/pages/register.js?v=20261117-v2fix1" defer></script>
+</head>
+<body class="login-page service-workspace service-workspace--auth">
+    <header class="login-topbar">
+        <div class="login-brand" aria-label="Restaurant - Hệ thống quản lý nhà hàng">
+            <span class="login-brand-mark" aria-hidden="true">RF</span>
+            <div class="login-brand-name">
+                <strong>Restaurant</strong>
+                <span>Đặt bàn &amp; Gọi món</span>
+            </div>
+        </div>
+        <span class="login-staff-label">Tài khoản khách hàng</span>
+    </header>
+
+    <main class="login-main">
+        <section class="panel login-card" aria-label="Đăng ký tài khoản khách hàng">
+            <div id="registerFormView">
+                <div class="login-heading">
+                    <p class="eyebrow">Khách hàng mới</p>
+                    <h1>Đăng ký tài khoản</h1>
+                    <p>Tạo tài khoản để đặt bàn trực tuyến và theo dõi đơn gọi món.</p>
+                </div>
+
+                <form id="registerForm" class="login-form" data-state="default" novalidate>
+                    <fieldset id="registerFields" class="login-fields">
+                        <legend class="login-visually-hidden">Thông tin đăng ký</legend>
+
+                        <div class="login-field">
+                            <label for="regFullName">Họ và tên</label>
+                            <input id="regFullName" name="fullName" type="text" autocomplete="name"
+                                maxlength="150" placeholder="Ví dụ: Nguyễn Văn A" required
+                                aria-describedby="fullNameError" aria-invalid="false">
+                            <p id="fullNameError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="regUserName">Tên đăng nhập</label>
+                            <input id="regUserName" name="userName" type="text" autocomplete="username"
+                                autocapitalize="none" spellcheck="false" maxlength="64"
+                                placeholder="Không chứa khoảng trắng" required
+                                aria-describedby="userNameError" aria-invalid="false">
+                            <p id="userNameError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="regEmail">Email</label>
+                            <input id="regEmail" name="email" type="email" autocomplete="email"
+                                autocapitalize="none" spellcheck="false" maxlength="128"
+                                placeholder="email@example.com" required
+                                aria-describedby="emailError" aria-invalid="false">
+                            <p id="emailError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="regPhone">Số điện thoại</label>
+                            <input id="regPhone" name="phone" type="tel" autocomplete="tel"
+                                maxlength="20" placeholder="Ví dụ: 0901234567" required
+                                aria-describedby="phoneError" aria-invalid="false">
+                            <p id="phoneError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="regPassword">Mật khẩu</label>
+                            <div class="login-password-field">
+                                <input id="regPassword" name="password" type="password" autocomplete="new-password"
+                                    maxlength="128" placeholder="Tối thiểu 6 ký tự" required
+                                    aria-describedby="passwordError" aria-invalid="false">
+                                <button id="toggleRegPassword" class="login-password-toggle" type="button"
+                                    aria-label="Hiện mật khẩu" aria-controls="regPassword"
+                                    aria-pressed="false" title="Hiện mật khẩu">
+                                    <svg class="login-eye" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                        <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    <svg class="login-eye-off" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false" hidden>
+                                        <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+                                        <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+                                        <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+                                        <path d="m2 2 20 20" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <p id="passwordError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-field">
+                            <label for="regConfirmPassword">Xác nhận mật khẩu</label>
+                            <input id="regConfirmPassword" name="confirmPassword" type="password" autocomplete="new-password"
+                                maxlength="128" placeholder="Nhập lại mật khẩu" required
+                                aria-describedby="confirmPasswordError" aria-invalid="false">
+                            <p id="confirmPasswordError" class="login-field-error"></p>
+                        </div>
+
+                        <div class="login-notice-slot">
+                            <p id="registerError" class="login-error" role="alert" hidden></p>
+                            <p id="registerStatus" class="login-status" role="status" aria-live="polite" aria-atomic="true"></p>
+                        </div>
+
+                        <button id="registerSubmit" class="primary-action login-submit" type="submit">
+                            <span class="login-spinner" aria-hidden="true" hidden></span>
+                            <span id="registerSubmitLabel">Đăng ký</span>
+                        </button>
+                    </fieldset>
+                </form>
+
+                <div class="auth-links" aria-label="Điều hướng tài khoản">
+                    <a class="auth-link-item" href="login.html">Đã có tài khoản? Đăng nhập</a>
+                    <a class="auth-link-item" href="public-menu.html">Xem thực đơn &amp; bàn trống</a>
+                </div>
+                <noscript><p class="login-noscript">Cần bật JavaScript để mở biểu mẫu.</p></noscript>
+            </div>
+        </section>
+    </main>
+
+    <footer class="login-footer">
+        <span>Restaurant Food Manager</span>
+        <span>Cổng khách hàng</span>
+    </footer>
+</body>
+</html>

@@ -4,7 +4,7 @@ require('node:vm').runInContext(require('node:fs').readFileSync(require('node:pa
 const {OrderExtrasSession}=context.window.restaurantOrderExtras;
 function setup(role='Waiter'){
  const calls=[],store=storage(),a=auth(role),order={orderId:1,tableId:1,status:'Ready',items:[],totalAmount:100,promotionId:null,note:'',updatedAt:'1'},tables=[{tableId:1,isActive:true,status:'Occupied'},{tableId:2,isActive:true,status:'Available'}];
- const api={baseUrl:'/api',get:async p=>{calls.push(['get',p]);if(p==='/orders/1')return copy(order);if(p==='/restaurant-tables')return copy(tables);if(p.startsWith('/orders?'))return {total:0,items:[]};if(p==='/management/promotions')return [];throw Error(p);},patch:async(p,b)=>{calls.push(['patch',p,b]);if(p.endsWith('/table'))order.tableId=b.tableId;if(p.endsWith('/note'))order.note=b.note;},delete:async p=>calls.push(['delete',p])};
+ const api={baseUrl:'/api',get:async p=>{calls.push(['get',p]);if(p==='/orders/1')return copy(order);if(p==='/restaurant-tables')return copy(tables);if(p.startsWith('/orders?'))return {total:0,items:[]};if(p==='/management/promotions'||p==='/management/promotions/active')return [];throw Error(p);},patch:async(p,b)=>{calls.push(['patch',p,b]);if(p.endsWith('/table'))order.tableId=b.tableId;if(p.endsWith('/note'))order.note=b.note;},delete:async p=>calls.push(['delete',p])};
  return {s:new OrderExtrasSession({api,auth:a,storage:store,orderId:1}),api,a,store,calls,order,tables};
 }
 test('Phục vụ đọc đơn/bàn nhưng không gọi danh sách khuyến mãi AdminOnly',async()=>{const x=setup();await x.s.refresh();assert.ok(!x.calls.some(c=>c[1]==='/management/promotions'));assert.ok(!x.calls.some(c=>/^\/restaurant-tables\/\d/.test(c[1])));});

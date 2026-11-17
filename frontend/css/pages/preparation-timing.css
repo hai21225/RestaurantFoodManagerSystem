@@ -1,0 +1,43 @@
+/* Thời gian đã làm do mốc server; không dùng màu để suy đoán món bị trễ. */
+.service-workspace .preparation-clock {
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    max-width: 100%;
+    padding: 4px 8px;
+    margin: 5px 0;
+    border: 1px solid #dbc5a6;
+    border-radius: 6px;
+    background: #fff0d9;
+    color: #71401c;
+    font: 600 12px/1.5 Manrope, "Segoe UI", sans-serif;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.service-workspace .preparation-clock.is-unavailable {
+    background: #f3eee7;
+    border-color: #e0d8cc;
+    color: #74685c;
+    font-weight: 400;
+}
+.service-workspace .ticket-item-content > .preparation-clock { font-size: 12px; }
+.service-workspace .ticket-timing { margin-bottom: 6px; }
+.service-workspace .ordered-time {
+    display: block;
+    margin: 4px 0;
+    color: #766653;
+    font-size: 12px;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.service-workspace .preparation-clock--waiting { background: #fff2cc; border-color: #d6b86e; color: #704a15; }
+.service-workspace .preparation-time-notice {
+    padding: 8px 10px;
+    border-left: 3px solid #a94f1c;
+    background: #fff0d9;
+    color: #71401c;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
