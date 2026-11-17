@@ -97,7 +97,7 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
             phone = "0000000000"
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Email already exists", json.GetProperty("message").GetString());
     }
@@ -177,7 +177,7 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
 
         var response = await admin.PatchAsync($"/api/users/{adminId}/active?active=false", null);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("You cannot lock your own account", json.GetProperty("message").GetString());
     }
@@ -220,7 +220,7 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
             confirmNewPassword = "new-pass-1"
         });
 
-        Assert.Equal(HttpStatusCode.BadRequest, wrong.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, wrong.StatusCode);
         var wrongJson = await wrong.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Current password is incorrect", wrongJson.GetProperty("message").GetString());
 
@@ -271,7 +271,8 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
     [Fact]
     public async Task GetRoles_ForAdmin_ReturnsTheFiveSeededRoles()
     {
-        using var client = CreateClient(1, "p4-role-admin", AuthPolicies.Roles.Admin);
+        var (adminId, adminName, _) = SeedUser(AuthPolicies.Roles.Admin);
+        using var client = CreateClient(adminId, adminName, AuthPolicies.Roles.Admin);
 
         var response = await client.GetAsync("/api/roles");
 
@@ -279,12 +280,13 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         var names = json.EnumerateArray().Select(x => x.GetProperty("roleName").GetString()).ToList();
 
-        Assert.Equal(5, names.Count);
+        Assert.Equal(6, names.Count);
         Assert.Contains(AuthPolicies.Roles.Admin, names);
         Assert.Contains(AuthPolicies.Roles.WarehouseManager, names);
         Assert.Contains(AuthPolicies.Roles.Chef, names);
         Assert.Contains(AuthPolicies.Roles.Cashier, names);
         Assert.Contains(AuthPolicies.Roles.Waiter, names);
+        Assert.Contains(AuthPolicies.Roles.Customer, names);
         // Không trả ma trận quyền — quyết định P4: ma trận là policy trong code.
         Assert.DoesNotContain(json.EnumerateArray(), row => row.TryGetProperty("permissions", out _));
     }
@@ -339,11 +341,21 @@ public sealed class UserAccountHttpTests : IClassFixture<EnforcedRestaurantApiFa
         // Dùng factory riêng để DB chỉ có đúng một Admin, không phụ thuộc thứ tự test khác.
         using var factory = new EnforcedRestaurantApiFactory();
         var (adminId, adminName, _) = SeedUser(factory, AuthPolicies.Roles.Admin);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var adminRole = db.Roles.Single(r => r.RoleName == AuthPolicies.Roles.Admin);
+            var otherAdmins = db.UserRoles
+                .Where(ur => ur.RoleId == adminRole.RoleId && ur.UserId != adminId)
+                .ToList();
+            db.UserRoles.RemoveRange(otherAdmins);
+            db.SaveChanges();
+        }
         using var client = CreateClient(factory, adminId, adminName, AuthPolicies.Roles.Admin);
 
         var response = await client.DeleteAsync($"/api/users/{adminId}/roles/Admin");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("Cannot remove the last Admin role", json.GetProperty("message").GetString());
     }

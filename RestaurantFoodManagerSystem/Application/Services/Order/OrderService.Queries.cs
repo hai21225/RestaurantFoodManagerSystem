@@ -11,6 +11,9 @@ public sealed partial class OrderService
         var order = await _db.Orders.AsNoTracking().FirstOrDefaultAsync(x => x.OrderId == id, ct);
         if (order is null) return null;
 
+        if (IsCustomerOnlyCaller() && order.CustomerUserId != _currentUser.UserId)
+            throw new UnauthorizedAccessException("You do not have access to this order");
+
         // LEFT JOIN: nếu món/size bị xoá cứng thì dòng món vẫn phải hiện trong chi tiết đơn
         // (thiếu món ⇒ POS hiển thị sai, tổng tiền lệch). (P0: GetAsync dùng INNER JOIN)
         var items = await (from oi in _db.OrderItems.AsNoTracking()
@@ -188,7 +191,21 @@ public sealed partial class OrderService
     /// Danh sách đơn có lọc + phân trang cho <c>GET /api/orders</c> (P1).
     /// Lấy kèm <c>tableNumber</c> (join bàn) và <c>itemCount</c> (đếm dòng món) trong cùng truy vấn.
     /// </summary>
-    public async Task<PagedResponse<OrderListItemResponse>> GetListAsync(OrderListQuery query, CancellationToken ct = default)
+    public Task<PagedResponse<OrderListItemResponse>> GetMyOrdersAsync(OrderListQuery query, CancellationToken ct = default)
+    {
+        if (_currentUser.UserId is not int customerUserId)
+            throw new UnauthorizedAccessException("Authenticated customer is required");
+
+        return GetListAsync(query, ct, customerUserId);
+    }
+
+    public Task<PagedResponse<OrderListItemResponse>> GetListAsync(OrderListQuery query, CancellationToken ct = default) =>
+        GetListAsync(query, ct, null);
+
+    private async Task<PagedResponse<OrderListItemResponse>> GetListAsync(
+        OrderListQuery query,
+        CancellationToken ct,
+        int? customerUserId)
     {
         var skip = Paging.ResolveSkip(query.Page, query.PageSize);
         var status = string.IsNullOrWhiteSpace(query.Status) ? null : query.Status.Trim().ToLowerInvariant();
@@ -204,6 +221,7 @@ public sealed partial class OrderService
                && (tableId == null || o.TableId == tableId)
                && (fromDate == null || o.CreatedAt >= fromDate)
                && (toDate == null || o.CreatedAt <= toDate)
+               && (customerUserId == null || o.CustomerUserId == customerUserId)
             select new OrderListItemResponse
             {
                 OrderId = o.OrderId,
@@ -299,6 +317,21 @@ public sealed partial class OrderService
                 ReasonCode = h.ReasonCode,
                 CreatedAt = h.CreatedAt
             }).ToListAsync(ct);
+    }
+
+    private bool IsCustomerOnlyCaller() =>
+        _currentUser.Roles.Contains(AuthPolicies.Roles.Customer, StringComparer.OrdinalIgnoreCase)
+        && !_currentUser.Roles.Contains(AuthPolicies.Roles.Admin, StringComparer.OrdinalIgnoreCase)
+        && !_currentUser.Roles.Contains(AuthPolicies.Roles.Waiter, StringComparer.OrdinalIgnoreCase);
+
+    private static void EnsureCustomerQrToken(RestaurantTable table, string? providedToken)
+    {
+        if (string.IsNullOrWhiteSpace(table.QrToken)
+            || string.IsNullOrWhiteSpace(providedToken)
+            || !string.Equals(table.QrToken, providedToken.Trim(), StringComparison.Ordinal))
+        {
+            throw new UnauthorizedAccessException("Valid table QR token is required for customer orders");
+        }
     }
 
     private Task<bool> OrderExistsAsync(int orderId, CancellationToken ct) =>

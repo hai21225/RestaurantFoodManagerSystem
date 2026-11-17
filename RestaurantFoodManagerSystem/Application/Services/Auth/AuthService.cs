@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
 public class AuthService
@@ -8,12 +9,20 @@ public class AuthService
     private readonly UserService _userService;
     private readonly UserRoleService _userRoleService;
     private readonly RoleService _roleService;
-    public AuthService(AppDbContext db, UserService userService, UserRoleService userRoleService,RoleService roleService)
+    private readonly IMemoryCache? _cache;
+
+    public AuthService(
+        AppDbContext db,
+        UserService userService,
+        UserRoleService userRoleService,
+        RoleService roleService,
+        IMemoryCache? cache = null)
     {
         _db = db;
         _userService = userService;
         _userRoleService = userRoleService;
         _roleService = roleService;
+        _cache = cache;
     }
 
     public async Task<UserDto?> Login(string identifier, string password, CancellationToken ct = default)
@@ -97,10 +106,8 @@ public class AuthService
             throw new ArgumentException("Role name is required");
         }
 
-        if (!await _db.Users.AnyAsync(u => u.Id == userid, ct))
-        {
-            throw new KeyNotFoundException("User not found");
-        }
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userid, ct)
+            ?? throw new KeyNotFoundException("User not found");
 
         var role = await _roleService.GetRoleByRoleNameAsync(name, ct);
         if (role is null)
@@ -113,11 +120,17 @@ public class AuthService
             throw new InvalidOperationException("Role is already assigned to this user");
         }
 
-        return await _userRoleService.AddUserRoleAsync(new UserRoleDto
+        user.TokenVersion++;
+        user.UpdatedAt = DateTime.UtcNow;
+
+        var added = await _userRoleService.AddUserRoleAsync(new UserRoleDto
         {
             UserId = userid,
             RoleId = role.RoleId,
         }, ct);
+
+        _cache?.Remove($"auth:user:{user.Id}");
+        return added;
     }
 
     /// <summary>
@@ -155,9 +168,11 @@ public class AuthService
         }
 
         user.UserPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.TokenVersion++;
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+        _cache?.Remove($"auth:user:{user.Id}");
     }
 
     /// <summary>
@@ -178,9 +193,11 @@ public class AuthService
             ?? throw new KeyNotFoundException("User not found");
 
         user.UserPassword = BCrypt.Net.BCrypt.HashPassword(newPassword);
+        user.TokenVersion++;
         user.UpdatedAt = DateTime.UtcNow;
 
         await _db.SaveChangesAsync(ct);
+        _cache?.Remove($"auth:user:{user.Id}");
     }
 
     private static string ValidateConfirmedNewPassword(string? rawNewPassword, string? rawConfirmPassword)
@@ -258,10 +275,8 @@ public class AuthService
             throw new ArgumentException("Role name is required");
         }
 
-        if (!await _db.Users.AnyAsync(u => u.Id == userId, ct))
-        {
-            throw new KeyNotFoundException("User not found");
-        }
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == userId, ct)
+            ?? throw new KeyNotFoundException("User not found");
 
         var role = await _db.Roles
             .AsNoTracking()
@@ -279,7 +294,10 @@ public class AuthService
         }
 
         _db.UserRoles.Remove(link);
+        user.TokenVersion++;
+        user.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
+        _cache?.Remove($"auth:user:{user.Id}");
     }
 
     /// <summary>
@@ -311,6 +329,40 @@ public class AuthService
 
         await tx.CommitAsync(ct);
         return true;
+    }
+
+    /// <summary>
+    /// Đăng ký tài khoản khách hàng công khai (V2) — tạo user + gán role Customer trong 1 transaction.
+    /// </summary>
+    public async Task<UserDto> RegisterCustomerAsync(
+        CustomerRegisterRequest request,
+        CancellationToken ct = default)
+    {
+        await using var tx = await _db.Database.BeginTransactionAsync(ct);
+
+        var created = await Register(new UserDto
+        {
+            UserName = request.UserName,
+            Email = request.Email,
+            Password = request.Password,
+            ConfirmPassword = request.ConfirmPassword,
+            FullName = request.FullName,
+            Phone = request.Phone
+        }, ct);
+
+        if (!created)
+        {
+            throw new InvalidOperationException("Register failed");
+        }
+
+        var user = await _userService.FindUserByUsernameAsync(request.UserName ?? string.Empty, ct)
+            ?? throw new InvalidOperationException("User not found after register");
+
+        await AssignRoleToUser(user.UserId, AuthPolicies.Roles.Customer, ct);
+        await tx.CommitAsync(ct);
+
+        return await _userService.FindUserByUsernameAsync(request.UserName ?? string.Empty, ct)
+            ?? user;
     }
 
 }

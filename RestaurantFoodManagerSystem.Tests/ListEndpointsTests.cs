@@ -91,8 +91,8 @@ public sealed class ListEndpointsServiceTests : TestBase
     public async Task Payments_List_FiltersByMethodAndStatus()
     {
         var s = SeedOrderScenario();
-        var order1 = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 100m);
-        var order2 = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 200m);
+        var order1 = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 100m, status: OrderStatuses.Ready);
+        var order2 = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 200m, status: OrderStatuses.Ready);
 
         await Payments.CreateAsync(new CreatePaymentRequest { OrderId = order1.OrderId, PaymentMethod = "Cash", CreatedBy = s.Staff.Id }, CancellationToken.None);
         await Payments.CreateAsync(new CreatePaymentRequest { OrderId = order2.OrderId, PaymentMethod = "Card", CreatedBy = s.Staff.Id }, CancellationToken.None);

@@ -12,6 +12,12 @@ public sealed class CreateOrderRequest
     /// Sửa sau bằng <c>PATCH /api/orders/{id}/note</c>.
     /// </summary>
     [MaxLength(500)] public string? Note { get; set; }
+
+    /// <summary>Mã QR bàn bắt buộc khi khách tự gọi món (V2).</summary>
+    [MaxLength(100)] public string? TableQrToken { get; set; }
+
+    /// <summary>Lịch đặt bàn liên kết với đơn (V2).</summary>
+    public int? ReservationId { get; set; }
 }
 
 /// <summary>
@@ -50,6 +56,7 @@ public sealed class AddOrderItemsRequest
 {
     public int ChangedBy { get; set; }
     [MinLength(1)] public List<CreateOrderItemRequest> Items { get; set; } = [];
+    [MaxLength(100)] public string? TableQrToken { get; set; }
 }
 
 /// <summary>

@@ -19,7 +19,11 @@ public class CategoriesController : ControllerBase
     // GET /api/categories?name=drink
     // ===================================================
 
-    [Authorize(Policy = AuthPolicies.Authenticated)]
+    private bool CanViewInactive =>
+        (User.Identity?.IsAuthenticated ?? false) &&
+        (User.IsInRole(AuthPolicies.Roles.Admin) || User.IsInRole(AuthPolicies.Roles.WarehouseManager));
+
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? name,
@@ -29,14 +33,14 @@ public class CategoriesController : ControllerBase
         {
             var categories =
                 await _categoryService
-                    .GetCategoriesByNameAsync(name, ct);
+                    .GetCategoriesByNameAsync(name, CanViewInactive, ct);
 
             return Ok(categories);
         }
 
         var result =
             await _categoryService
-                .GetAllCategoriesAsync(ct);
+                .GetAllCategoriesAsync(CanViewInactive, ct);
 
         return Ok(result);
     }
@@ -46,7 +50,7 @@ public class CategoriesController : ControllerBase
     // GET /api/categories/5
     // ===================================================
 
-    [Authorize(Policy = AuthPolicies.Authenticated)]
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
@@ -54,6 +58,11 @@ public class CategoriesController : ControllerBase
         var category =
             await _categoryService
                 .GetCategoryByIdAsync(id, ct);
+
+        if (!category.IsActive && !CanViewInactive)
+        {
+            return NotFound(new { message = "Category not found" });
+        }
 
         return Ok(category);
     }

@@ -30,6 +30,12 @@
     /// </summary>
     public int? PromotionId { get; set; }
 
+    /// <summary>Khách hàng sở hữu đơn (nếu đặt qua tài khoản khách hoặc quét QR đăng nhập, V2).</summary>
+    public int? CustomerUserId { get; set; }
+
+    /// <summary>Lịch đặt bàn liên kết với đơn này (V2).</summary>
+    public int? ReservationId { get; set; }
+
     /// <summary>
     /// Snapshot loại giảm giá của khuyến mãi tại lúc áp dụng (Đợt 2 / A3).
     /// Giữ lại để sửa/xoá khuyến mãi sau này không làm đổi nghĩa của đơn cũ.

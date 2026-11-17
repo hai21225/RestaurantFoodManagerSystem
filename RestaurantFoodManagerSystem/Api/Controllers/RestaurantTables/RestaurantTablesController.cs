@@ -110,4 +110,30 @@ public class RestaurantTablesController : ControllerBase
     [HttpPatch("{id:int}/maintenance")]
     public async Task<IActionResult> Maintenance(int id, [FromQuery] bool enabled, CancellationToken ct = default) =>
         await _restaurantTableService.SetMaintenanceAsync(id, enabled, ct) ? NoContent() : NotFound();
+
+    // POST: /api/restaurant-tables/{id}/qr-token
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
+    [HttpPost("{id:int}/qr-token")]
+    public async Task<IActionResult> RegenerateQrToken(int id, CancellationToken ct = default)
+    {
+        var token = await _restaurantTableService.RegenerateQrTokenAsync(id, ct);
+        return token is null
+            ? NotFound(new { message = "Restaurant table not found" })
+            : Ok(new { tableId = id, qrToken = token });
+    }
+
+    // POST: /api/restaurant-tables/bulk
+    [Authorize(Policy = AuthPolicies.AdminOnly)]
+    [HttpPost("bulk")]
+    public async Task<IActionResult> BulkCreate(
+        [FromBody] BulkCreateTablesRequest request,
+        CancellationToken ct = default)
+    {
+        var created = await _restaurantTableService.BulkCreateTablesAsync(request, ct);
+        return Ok(new
+        {
+            message = $"Created {created.Count} restaurant tables successfully",
+            data = created
+        });
+    }
 }

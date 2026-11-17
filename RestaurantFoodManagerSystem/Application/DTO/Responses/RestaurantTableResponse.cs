@@ -14,4 +14,5 @@
     /// hiển thị trạng thái "Bảo trì" thay vì ẩn mất.
     /// </summary>
     public bool IsActive { get; set; }
+    public string? QrToken { get; set; }
 }

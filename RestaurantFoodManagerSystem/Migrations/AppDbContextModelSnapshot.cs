@@ -22,6 +22,85 @@ namespace RestaurantFoodManagerSystem.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("CashierShift", b =>
+                {
+                    b.Property<int>("ShiftId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ShiftId"));
+
+                    b.Property<decimal?>("ActualCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CardTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CashTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<int>("CashierUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("ExpectedCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("MomoTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime>("OpenedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<decimal>("OpeningCash")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("OtherTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("RefundTotal")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<decimal?>("Variance")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.HasKey("ShiftId");
+
+                    b.HasIndex("CashierUserId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Open'");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("cashier_shifts", (string)null);
+                });
+
             modelBuilder.Entity("Category", b =>
                 {
                     b.Property<int>("CategoryId")
@@ -171,6 +250,59 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasIndex("ToppingId");
 
                     b.ToTable("food_toppings", (string)null);
+                });
+
+            modelBuilder.Entity("IdempotencyKey", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int?>("ActorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RequestFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<string>("ResponseJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Scope")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("Scope", "Key")
+                        .IsUnique();
+
+                    b.ToTable("idempotency_keys", (string)null);
                 });
 
             modelBuilder.Entity("Ingredient", b =>
@@ -403,6 +535,9 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("int");
 
+                    b.Property<int?>("CustomerUserId")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("DiscountAmount")
                         .HasPrecision(18, 2)
                         .HasColumnType("decimal(18,2)");
@@ -420,6 +555,9 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("PromotionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ReservationId")
                         .HasColumnType("int");
 
                     b.Property<byte[]>("RowVersion")
@@ -459,7 +597,11 @@ namespace RestaurantFoodManagerSystem.Migrations
 
                     b.HasIndex("CreatedBy");
 
+                    b.HasIndex("CustomerUserId");
+
                     b.HasIndex("PromotionId");
+
+                    b.HasIndex("ReservationId");
 
                     b.HasIndex("Status");
 
@@ -715,6 +857,9 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("ShiftId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -734,6 +879,8 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasFilter("[Status] = 'Paid'");
 
                     b.HasIndex("RequestId");
+
+                    b.HasIndex("ShiftId");
 
                     b.HasIndex("TransactionCode")
                         .IsUnique()
@@ -1035,6 +1182,10 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<string>("QrToken")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -1054,6 +1205,10 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.HasKey("TableId");
 
                     b.HasIndex("AreaId");
+
+                    b.HasIndex("QrToken")
+                        .IsUnique()
+                        .HasFilter("[QrToken] IS NOT NULL");
 
                     b.HasIndex("TableNumber")
                         .IsUnique()
@@ -1159,6 +1314,111 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.ToTable("table_areas", (string)null);
                 });
 
+            modelBuilder.Entity("TableReservation", b =>
+                {
+                    b.Property<int>("ReservationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReservationId"));
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CancelledBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ConfirmedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ConfirmedBy")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("CustomerName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("CustomerPhone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("CustomerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("DepositAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("DepositStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("DepositTransactionCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("OrderId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PartySize")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("ReservedFrom")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("ReservedTo")
+                        .HasColumnType("datetime2");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime?>("SeatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("TableId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("ReservationId");
+
+                    b.HasIndex("CustomerUserId");
+
+                    b.HasIndex("OrderId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TableId", "ReservedFrom", "ReservedTo");
+
+                    b.ToTable("table_reservations", (string)null);
+                });
+
             modelBuilder.Entity("Topping", b =>
                 {
                     b.Property<int>("ToppingId")
@@ -1220,6 +1480,11 @@ namespace RestaurantFoodManagerSystem.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
 
+                    b.Property<int>("TokenVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
 
@@ -1257,6 +1522,15 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .IsUnique();
 
                     b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("CashierShift", b =>
+                {
+                    b.HasOne("Users", null)
+                        .WithMany()
+                        .HasForeignKey("CashierUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Food", b =>
@@ -1353,10 +1627,20 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Users", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Promotion", null)
                         .WithMany()
                         .HasForeignKey("PromotionId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("TableReservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("RestaurantTable", null)
                         .WithMany()
@@ -1443,6 +1727,11 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("CashierShift", null)
+                        .WithMany()
+                        .HasForeignKey("ShiftId")
+                        .OnDelete(DeleteBehavior.NoAction);
                 });
 
             modelBuilder.Entity("PromotionCategory", b =>
@@ -1537,6 +1826,20 @@ namespace RestaurantFoodManagerSystem.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("Area");
+                });
+
+            modelBuilder.Entity("TableReservation", b =>
+                {
+                    b.HasOne("Users", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("RestaurantTable", null)
+                        .WithMany()
+                        .HasForeignKey("TableId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("UserRoles", b =>

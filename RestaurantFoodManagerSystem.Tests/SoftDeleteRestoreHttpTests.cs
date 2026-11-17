@@ -1,8 +1,10 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using RestaurantFoodManagerSystem.Infrastructure.Auth;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 using Xunit;
 
@@ -244,8 +246,37 @@ public sealed class SoftDeleteRestoreHttpTests : IClassFixture<RestaurantApiFact
         var categoryId = 0;
         var activeId = 0;
         var inactiveId = 0;
+        var adminToken = string.Empty;
         Seed(db =>
         {
+            var suffix = Guid.NewGuid().ToString("N");
+            var admin = new Users
+            {
+                UserName = $"softdel-admin-{suffix}",
+                UserPassword = "not-used",
+                UserFullName = "SoftDelete Admin",
+                UserEmail = $"softdel-admin-{suffix}@test.local",
+                UserPhone = "0000000000",
+                IsActive = true,
+                TokenVersion = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(admin);
+            db.SaveChanges();
+
+            using var scope = _factory.Services.CreateScope();
+            var tokenService = scope.ServiceProvider.GetRequiredService<TokenService>();
+            adminToken = tokenService.CreateToken(
+                new UserDto
+                {
+                    UserId = admin.Id,
+                    UserName = admin.UserName,
+                    FullName = admin.UserFullName,
+                    TokenVersion = admin.TokenVersion
+                },
+                [AuthPolicies.Roles.Admin])!;
+
             var category = new Category
             {
                 CategoryName = $"http-food-cat-{Guid.NewGuid():N}",
@@ -283,6 +314,8 @@ public sealed class SoftDeleteRestoreHttpTests : IClassFixture<RestaurantApiFact
         });
 
         using var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", adminToken);
         var visible = await client.GetFromJsonAsync<JsonElement>(
             $"/api/foods?categoryId={categoryId}");
         var all = await client.GetFromJsonAsync<JsonElement>(

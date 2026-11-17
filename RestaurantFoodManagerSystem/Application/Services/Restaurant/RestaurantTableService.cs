@@ -59,7 +59,8 @@ public class RestaurantTableService
             Capacity = r.Capacity,
             AreaId = r.AreaId,
             IsActive = true,
-            Status = RestaurantTableStatuses.Available
+            Status = RestaurantTableStatuses.Available,
+            QrToken = GenerateQrToken()
         };
         await _db.RestaurantTables.AddAsync(x, ct);
         await _db.SaveChangesAsync(ct);
@@ -287,6 +288,77 @@ public class RestaurantTableService
     private static bool IsMaintenance(string? status) =>
         string.Equals(status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase);
 
+    public async Task<string?> RegenerateQrTokenAsync(int id, CancellationToken ct = default)
+    {
+        var x = await _db.RestaurantTables.FirstOrDefaultAsync(t => t.TableId == id, ct);
+        if (x is null) return null;
+
+        x.QrToken = GenerateQrToken();
+        await _db.SaveChangesAsync(ct);
+        return x.QrToken;
+    }
+
+    public async Task<List<RestaurantTableDto>> BulkCreateTablesAsync(
+        BulkCreateTablesRequest request,
+        CancellationToken ct = default)
+    {
+        if (request.Capacity <= 0)
+            throw new ArgumentException("Capacity must be positive");
+
+        if (request.StartNumber <= 0 || request.EndNumber < request.StartNumber)
+            throw new ArgumentException("Invalid table number range");
+
+        if (request.EndNumber - request.StartNumber + 1 > 100)
+            throw new ArgumentException("Cannot create more than 100 tables at once");
+
+        if (request.AreaId.HasValue)
+        {
+            await EnsureAreaExistsAsync(request.AreaId.Value, requireActive: true, ct);
+        }
+
+        var prefix = request.Prefix?.Trim() ?? string.Empty;
+        var numbers = Enumerable.Range(request.StartNumber, request.EndNumber - request.StartNumber + 1)
+            .Select(n => $"{prefix}{n}")
+            .ToList();
+
+        var existing = await _db.RestaurantTables.AsNoTracking()
+            .Where(t => t.IsActive && numbers.Contains(t.TableNumber))
+            .Select(t => t.TableNumber)
+            .ToListAsync(ct);
+
+        if (existing.Count > 0)
+            throw new InvalidOperationException($"Table number already exists: {string.Join(", ", existing)}");
+
+        var areaName = request.AreaId.HasValue
+            ? await _db.TableAreas.AsNoTracking()
+                .Where(a => a.AreaId == request.AreaId.Value)
+                .Select(a => a.AreaName)
+                .FirstOrDefaultAsync(ct) ?? string.Empty
+            : string.Empty;
+
+        var tables = numbers.Select(num => new RestaurantTable
+        {
+            TableNumber = num,
+            Capacity = request.Capacity,
+            AreaId = request.AreaId,
+            IsActive = true,
+            Status = RestaurantTableStatuses.Available,
+            QrToken = GenerateQrToken()
+        }).ToList();
+
+        await _db.RestaurantTables.AddRangeAsync(tables, ct);
+        await _db.SaveChangesAsync(ct);
+
+        return tables.Select(t =>
+        {
+            var dto = Map(t);
+            dto.AreaName = areaName;
+            return dto;
+        }).ToList();
+    }
+
+    private static string GenerateQrToken() => Guid.NewGuid().ToString("N");
+
     private static RestaurantTableDto Map(RestaurantTable x) => new()
     {
         TableId = x.TableId,
@@ -295,6 +367,7 @@ public class RestaurantTableService
         Status = x.Status,
         AreaId = x.AreaId,
         AreaName = x.Area?.AreaName ?? string.Empty,
-        IsActive = x.IsActive
+        IsActive = x.IsActive,
+        QrToken = x.QrToken
     };
 }

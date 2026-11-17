@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -11,6 +12,7 @@ public sealed partial class OrderService
     private readonly IOrderIdempotencyStore _idempotency;
     private readonly OrderLifecycleCoordinator _lifecycle;
     private readonly RestaurantSettingsService _settings;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
     public OrderService(
         AppDbContext db,
@@ -19,7 +21,8 @@ public sealed partial class OrderService
         ILogger<OrderService> logger,
         IOrderIdempotencyStore idempotency,
         OrderLifecycleCoordinator lifecycle,
-        RestaurantSettingsService settings)
+        RestaurantSettingsService settings,
+        IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
         _tables = tables;
@@ -28,6 +31,7 @@ public sealed partial class OrderService
         _idempotency = idempotency;
         _lifecycle = lifecycle;
         _settings = settings;
+        _hub = hub;
     }
 
     /// <summary>
@@ -73,6 +77,11 @@ public sealed partial class OrderService
             newNote is null ? "Cleared bill note" : $"Updated bill note: {newNote}");
 
         await _db.SaveChangesAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status, note = order.Note },
+            ct);
         return true;
     }
 
@@ -120,6 +129,12 @@ public sealed partial class OrderService
         if (string.Equals(table.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
             throw new InvalidOperationException("Table is under maintenance");
 
+        var isCustomerCaller = IsCustomerOnlyCaller();
+        if (isCustomerCaller)
+        {
+            EnsureCustomerQrToken(table, request.TableQrToken);
+        }
+
         // Completed chỉ là bếp/khách đã xong món; bàn chỉ được trả về trống sau khi Paid
         // (hoặc Cancelled). Vì vậy Completed vẫn phải chặn tạo đơn mới trên cùng bàn.
         var tableHasOpenOrder = await _db.Orders.AnyAsync(
@@ -129,6 +144,34 @@ public sealed partial class OrderService
             ct);
         if (tableHasOpenOrder)
             throw new InvalidOperationException("Table already has an open order");
+
+        var now = DateTime.UtcNow;
+        TableReservation? reservation = null;
+        if (request.ReservationId is int reservationId)
+        {
+            reservation = await _db.TableReservations
+                .FirstOrDefaultAsync(r => r.ReservationId == reservationId, ct);
+            if (reservation is null)
+                throw new KeyNotFoundException("Reservation not found");
+            if (reservation.TableId != request.TableId)
+                throw new InvalidOperationException("Reservation does not belong to this table");
+            if (reservation.Status is not (TableReservationStatuses.Confirmed or TableReservationStatuses.Seated))
+                throw new InvalidOperationException($"Reservation is {reservation.Status} and cannot be used for ordering");
+            if (isCustomerCaller && reservation.CustomerUserId != _currentUser.UserId)
+                throw new UnauthorizedAccessException("You do not have access to this reservation");
+        }
+        else
+        {
+            var windowEnd = now.AddHours(2);
+            var hasUpcomingReservation = await _db.TableReservations.AnyAsync(
+                r => r.TableId == request.TableId
+                  && (r.Status == TableReservationStatuses.Confirmed || r.Status == TableReservationStatuses.Seated)
+                  && r.ReservedFrom < windowEnd
+                  && r.ReservedTo > now,
+                ct);
+            if (hasUpcomingReservation)
+                throw new InvalidOperationException("Table is reserved for an upcoming booking");
+        }
 
         var preparedItems = await PrepareItemsAsync(request.Items, ct);
         var itemRequirements = await CalculateItemRequirementsAsync(preparedItems, ct);
@@ -141,14 +184,27 @@ public sealed partial class OrderService
         {
             TableId = request.TableId,
             CreatedBy = createdBy,
+            CustomerUserId = isCustomerCaller ? _currentUser.UserId : reservation?.CustomerUserId,
+            ReservationId = reservation?.ReservationId,
             Status = OrderStatuses.Pending,
             // Đợt 3 / B3: ghi chú cho cả hoá đơn (tuỳ chọn khi tạo đơn).
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = now,
+            UpdatedAt = now
         };
         _db.Orders.Add(order);
         await _db.SaveChangesAsync(ct);
+
+        if (reservation is not null)
+        {
+            reservation.OrderId = order.OrderId;
+            if (reservation.Status == TableReservationStatuses.Confirmed)
+            {
+                reservation.Status = TableReservationStatuses.Seated;
+                reservation.SeatedAt ??= now;
+            }
+            reservation.UpdatedAt = now;
+        }
 
         var orderItems = await AddOrderItemsAsync(order.OrderId, preparedItems, createdBy, ct);
         order.Subtotal = orderItems.Sum(x => x.UnitPrice * x.Quanlity);
@@ -182,6 +238,19 @@ public sealed partial class OrderService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderCreated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                customerUserId = order.CustomerUserId
+            },
+            ct);
+        await BroadcastTableStatusChangedAsync(order.TableId, ct);
         return order;
     }
 
@@ -213,6 +282,18 @@ public sealed partial class OrderService
         var table = await _db.RestaurantTables
             .AsNoTracking()
             .FirstOrDefaultAsync(x => x.TableId == order.TableId, ct);
+
+        if (IsCustomerOnlyCaller())
+        {
+            if (table is null || !table.IsActive ||
+                string.Equals(table.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase))
+                throw new UnauthorizedAccessException("Valid active table QR token is required");
+
+            EnsureCustomerQrToken(table, request.TableQrToken);
+
+            if (order.CustomerUserId.HasValue && order.CustomerUserId != _currentUser.UserId)
+                throw new UnauthorizedAccessException("You do not have access to this order");
+        }
 
         if (table is null || !table.IsActive ||
             !string.Equals(table.Status, RestaurantTableStatuses.Occupied, StringComparison.OrdinalIgnoreCase))
@@ -265,6 +346,18 @@ public sealed partial class OrderService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderItemsAdded",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                addedCount = orderItems.Count
+            },
+            ct);
         return true;
     }
 
@@ -762,7 +855,24 @@ public sealed partial class OrderService
         await tx.CommitAsync(ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderItemQuantityAdjusted",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                orderItemId = itemId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                quantity = targetQuantity
+            },
+            ct);
 
         return true;
     }
@@ -1231,7 +1341,23 @@ public sealed partial class OrderService
         await tx.CommitAsync(ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderItemCancelled",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                orderItemId = itemId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount
+            },
+            ct);
 
         return true;
     }
@@ -1311,7 +1437,16 @@ public sealed partial class OrderService
         await tx.CommitAsync(ct);
 
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
+        {
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
+            await BroadcastTableStatusChangedAsync(order.TableId, ct);
+        }
+
+        await BroadcastOrderEventAsync(
+            "OrderStatusChanged",
+            order,
+            new { orderId = order.OrderId, tableId = order.TableId, status = order.Status },
+            ct);
 
         return true;
     }
@@ -1386,6 +1521,19 @@ public sealed partial class OrderService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                discountAmount = order.DiscountAmount,
+                promotionId = order.PromotionId
+            },
+            ct);
         return true;
     }
 
@@ -1461,6 +1609,13 @@ public sealed partial class OrderService
 
         await _tables.RefreshStatusForTableAsync(previousTableId, ct);
         await _tables.RefreshStatusForTableAsync(request.TableId, ct);
+        await BroadcastOrderEventAsync(
+            "OrderTableChanged",
+            order,
+            new { orderId = order.OrderId, previousTableId, tableId = order.TableId },
+            ct);
+        await BroadcastTableStatusChangedAsync(previousTableId, ct);
+        await BroadcastTableStatusChangedAsync(request.TableId, ct);
         return true;
     }
 
@@ -1507,6 +1662,65 @@ public sealed partial class OrderService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastOrderEventAsync(
+            "OrderUpdated",
+            order,
+            new
+            {
+                orderId = order.OrderId,
+                tableId = order.TableId,
+                status = order.Status,
+                totalAmount = order.TotalAmount,
+                discountAmount = order.DiscountAmount,
+                promotionId = order.PromotionId
+            },
+            ct);
         return true;
+    }
+
+    private async Task BroadcastOrderEventAsync(
+        string eventName,
+        Order order,
+        object payload,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        var groups = new List<string>(5)
+        {
+            "role:Kitchen",
+            "role:Waiter",
+            "role:Cashier",
+            $"order:{order.OrderId}"
+        };
+        if (order.CustomerUserId.HasValue)
+        {
+            groups.Add($"customer:{order.CustomerUserId.Value}");
+        }
+
+        try
+        {
+            await _hub.Clients.Groups(groups).SendAsync(eventName, payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for order {OrderId}", eventName, order.OrderId);
+        }
+    }
+
+    private async Task BroadcastTableStatusChangedAsync(int tableId, CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            await _hub.Clients
+                .Groups("role:Waiter", "role:Cashier")
+                .SendAsync("TableStatusChanged", new { tableId }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast TableStatusChanged for table {TableId}", tableId);
+        }
     }
 }

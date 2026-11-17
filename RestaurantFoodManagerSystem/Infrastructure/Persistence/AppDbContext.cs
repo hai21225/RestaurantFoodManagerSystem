@@ -49,6 +49,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
         // =========================================================
 
         public DbSet<Payment> Payments { get; set; }
+        public DbSet<CashierShift> CashierShifts { get; set; }
 
         // =========================================================
         // PROMOTION
@@ -87,6 +88,7 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
         public DbSet<TableArea> TableAreas { get; set; }
         public DbSet<RestaurantTable> RestaurantTables { get; set; }
+        public DbSet<TableReservation> TableReservations { get; set; }
 
         // =========================================================
         // SETTINGS (Đợt 2 / A1)
@@ -94,6 +96,12 @@ namespace RestaurantFoodManagerSystem.Infrastructure.Persistence
 
         /// <summary>Cấu hình quán — bảng chỉ có một bản ghi duy nhất (Id = 1).</summary>
         public DbSet<RestaurantSettings> RestaurantSettings { get; set; }
+
+        // =========================================================
+        // INFRASTRUCTURE / V2
+        // =========================================================
+
+        public DbSet<IdempotencyKey> IdempotencyKeys { get; set; }
 
         /// <summary>
         /// Sinh giá trị mới cho concurrency token ở provider không có rowversion (SQLite trong test).

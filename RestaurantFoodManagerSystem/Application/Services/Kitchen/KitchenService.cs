@@ -1,4 +1,5 @@
 using System.Data;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
@@ -11,6 +12,7 @@ public sealed partial class KitchenService
     private readonly OrderLifecycleCoordinator _lifecycle;
     private readonly ILogger<KitchenService> _logger;
     private readonly RestaurantSettingsService _settings;
+    private readonly IHubContext<RestaurantHub>? _hub;
 
     public KitchenService(
         AppDbContext db,
@@ -18,7 +20,8 @@ public sealed partial class KitchenService
         ICurrentUser currentUser,
         OrderLifecycleCoordinator lifecycle,
         ILogger<KitchenService> logger,
-        RestaurantSettingsService settings)
+        RestaurantSettingsService settings,
+        IHubContext<RestaurantHub>? hub = null)
     {
         _db = db;
         _tables = tables;
@@ -26,6 +29,7 @@ public sealed partial class KitchenService
         _lifecycle = lifecycle;
         _logger = logger;
         _settings = settings;
+        _hub = hub;
     }
 
     public async Task<bool> UpdateOrderStatusAsync(int id, KitchenStatusRequest request, CancellationToken ct)
@@ -233,6 +237,12 @@ public sealed partial class KitchenService
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         }
 
+        await BroadcastKitchenEventAsync(
+            "KitchenTicketStatusChanged",
+            kitchenOrder.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = kitchenOrder.OrderId, status = kitchenOrder.Status },
+            ct);
+
         return true;
     }
 
@@ -370,6 +380,12 @@ public sealed partial class KitchenService
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
         }
 
+        await BroadcastKitchenEventAsync(
+            "KitchenItemStatusChanged",
+            kitchenOrder.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = kitchenOrder.OrderId, kitchenItemId = item.Id, orderItemId = item.OrderItemId, status = item.Status },
+            ct);
+
         return true;
     }
 
@@ -443,6 +459,11 @@ public sealed partial class KitchenService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastKitchenEventAsync(
+            "KitchenItemReopened",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, status = kitchenItem.Status },
+            ct);
         return true;
     }
 
@@ -509,6 +530,11 @@ public sealed partial class KitchenService
 
             await _db.SaveChangesAsync(ct);
             await tx.CommitAsync(ct);
+            await BroadcastKitchenEventAsync(
+                "KitchenItemPreparedUpdated",
+                order.OrderId,
+                new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity },
+                ct);
             return true;
         }
 
@@ -570,6 +596,11 @@ public sealed partial class KitchenService
 
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await BroadcastKitchenEventAsync(
+            "KitchenItemPreparedUpdated",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity },
+            ct);
         return true;
     }
 
@@ -768,7 +799,33 @@ public sealed partial class KitchenService
         if (string.Equals(order.Status, OrderStatuses.Cancelled, StringComparison.OrdinalIgnoreCase))
             await _tables.RefreshStatusForTableAsync(order.TableId, ct);
 
+        await BroadcastKitchenEventAsync(
+            "KitchenShortageReported",
+            order.OrderId,
+            new { kitchenOrderId = kitchenOrder.KitchenOrderId, orderId = order.OrderId, kitchenItemId = kitchenItem.Id, orderItemId = orderItem.Id, preparedQuantity = request.PreparedQuantity, reasonCode },
+            ct);
+
         return true;
+    }
+
+    private async Task BroadcastKitchenEventAsync(
+        string eventName,
+        int orderId,
+        object payload,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        try
+        {
+            await _hub.Clients
+                .Groups("role:Kitchen", "role:Waiter", $"order:{orderId}")
+                .SendAsync(eventName, payload, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for order {OrderId}", eventName, orderId);
+        }
     }
 
     private sealed record MutableKitchenItemContext(

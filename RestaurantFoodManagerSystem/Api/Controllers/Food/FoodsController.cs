@@ -21,13 +21,22 @@ public class FoodsController : ControllerBase
     // GET /api/foods?includeInactive=true
     // ========================================
 
-    [Authorize(Policy = AuthPolicies.Authenticated)]
+    private bool CanViewInactive =>
+        (User.Identity?.IsAuthenticated ?? false) &&
+        (User.IsInRole(AuthPolicies.Roles.Admin) || User.IsInRole(AuthPolicies.Roles.WarehouseManager));
+
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAll(
         [FromQuery] int? categoryId,
         [FromQuery] bool includeInactive = false,
         CancellationToken ct = default)
     {
+        if (!CanViewInactive)
+        {
+            includeInactive = false;
+        }
+
         if (categoryId.HasValue)
         {
             var foods = await _foodService
@@ -47,14 +56,14 @@ public class FoodsController : ControllerBase
     // GET /api/foods/5
     // ========================================
 
-    [Authorize(Policy = AuthPolicies.Authenticated)]
+    [AllowAnonymous]
     [HttpGet("{id:int}")]
     public async Task<IActionResult> GetById(int id, CancellationToken ct = default)
     {
         var food = await _foodService
             .GetFoodByIdAsync(id, ct);
 
-        if (food == null)
+        if (food == null || (!food.IsActive && !CanViewInactive))
         {
             return NotFound(new
             {

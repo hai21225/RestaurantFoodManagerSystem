@@ -37,6 +37,8 @@ public sealed class MenuTests : TestBase
         var visibleSize = SeedSize(visibleFood.FoodId, 20m, name: "M");
         var hiddenSize = SeedSize(visibleFood.FoodId, 25m, name: "L");
         hiddenSize.IsActive = false;
+        var ingredient = SeedIngredient(10m);
+        SeedRecipe(visibleSize.SizeId, (ingredient.IngredientId, 1m));
 
         var visibleTopping = SeedTopping(price: 3m);
         var unassignedTopping = SeedTopping(price: 4m);
@@ -69,6 +71,9 @@ public sealed class MenuTests : TestBase
     {
         var category = SeedCategory();
         var food = SeedFood(category.CategoryId);
+        var size = SeedSize(food.FoodId, 20m, name: "M");
+        var ingredient = SeedIngredient(10m);
+        SeedRecipe(size.SizeId, (ingredient.IngredientId, 1m));
         var inactive = SeedTopping(isActive: false);
         var unavailable = SeedTopping(isAvailable: false);
         Db.FoodToppings.Add(new FoodTopping { FoodId = food.FoodId, ToppingId = inactive.ToppingId });

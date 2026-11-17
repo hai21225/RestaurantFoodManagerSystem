@@ -9,7 +9,7 @@ public sealed class PaymentsFlowTests : TestBase
     public async Task Create_UsesServerSideOrderTotal_AndMarksOrderPaid()
     {
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 250m);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, subtotal: 250m, status: OrderStatuses.Ready);
 
         var payment = await Payments.CreateAsync(new CreatePaymentRequest
         {
@@ -37,7 +37,7 @@ public sealed class PaymentsFlowTests : TestBase
         // C-19: mã giao dịch phải luôn có và luôn duy nhất — client không gửi thì
         // server sinh mã nội bộ (trước đây để chuỗi rỗng ⇒ nhiều dòng trùng nhau).
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
 
         var payment = await Payments.CreateAsync(new CreatePaymentRequest
         {
@@ -67,7 +67,7 @@ public sealed class PaymentsFlowTests : TestBase
     public async Task Create_Throws_WhenOrderAlreadyPaid()
     {
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
         var request = new CreatePaymentRequest { OrderId = order.OrderId, PaymentMethod = "Cash", CreatedBy = s.Staff.Id };
 
         await Payments.CreateAsync(request, CancellationToken.None);
@@ -82,7 +82,7 @@ public sealed class PaymentsFlowTests : TestBase
     public async Task Create_KeepsClientTransactionCode()
     {
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
 
         var payment = await Payments.CreateAsync(new CreatePaymentRequest
         {
@@ -100,7 +100,7 @@ public sealed class PaymentsFlowTests : TestBase
     {
         // C-19: trùng mã giao dịch = thu 2 lần cùng một mã ngân hàng ⇒ phải báo lỗi.
         var s = SeedOrderScenario();
-        var first = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var first = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
 
         await Payments.CreateAsync(new CreatePaymentRequest
         {
@@ -110,7 +110,7 @@ public sealed class PaymentsFlowTests : TestBase
             CreatedBy = s.Staff.Id
         }, CancellationToken.None);
 
-        var second = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var second = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
         var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => Payments.CreateAsync(
             new CreatePaymentRequest
             {
@@ -129,8 +129,8 @@ public sealed class PaymentsFlowTests : TestBase
     public async Task Create_GeneratedTransactionCodes_AreDifferentPerPayment()
     {
         var s = SeedOrderScenario();
-        var first = SeedOrder(s.Table.TableId, s.Staff.Id);
-        var second = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var first = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
+        var second = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
 
         var a = await Payments.CreateAsync(new CreatePaymentRequest
         {
@@ -223,7 +223,7 @@ public sealed class PaymentsFlowTests : TestBase
     {
         // Defect #26: frontend gửi chữ thường, API cũ dùng chữ hoa; lưu tên chuẩn để lọc nhất quán.
         var s = SeedOrderScenario();
-        var order = SeedOrder(s.Table.TableId, s.Staff.Id);
+        var order = SeedOrder(s.Table.TableId, s.Staff.Id, status: OrderStatuses.Ready);
 
         var payment = await Payments.CreateAsync(new CreatePaymentRequest
         {

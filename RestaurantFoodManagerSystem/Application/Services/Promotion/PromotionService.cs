@@ -16,6 +16,24 @@ public sealed class PromotionService
             .OrderByDescending(x => x.StartAt)
             .ToListAsync(ct);
 
+    public Task<List<Promotion>> GetActivePublicAsync(CancellationToken ct = default)
+    {
+        var now = DateTime.UtcNow;
+        return _db.Promotions.AsNoTracking()
+            .Where(x => x.IsActive && x.StartAt <= now && x.EndAt >= now)
+            .OrderByDescending(x => x.StartAt)
+            .ToListAsync(ct);
+    }
+
+    public Task<List<Promotion>> GetActiveValidAsync(CancellationToken ct = default)
+    {
+        var nowUtc = DateTime.UtcNow;
+        return _db.Promotions.AsNoTracking()
+            .Where(x => x.IsActive && x.StartAt <= nowUtc && x.EndAt >= nowUtc)
+            .OrderByDescending(x => x.StartAt)
+            .ToListAsync(ct);
+    }
+
     public Task<Promotion?> GetByIdAsync(int id, CancellationToken ct = default) =>
         _db.Promotions.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
 

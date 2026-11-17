@@ -87,8 +87,11 @@ public sealed class ConcurrencyAndQueryGuardTests : TestBase
         var category = SeedCategory();
         var food1 = SeedFood(category.CategoryId);
         var food2 = SeedFood(category.CategoryId);
-        SeedSize(food1.FoodId, 50m, name: "M");
-        SeedSize(food2.FoodId, 60m, name: "L");
+        var size1 = SeedSize(food1.FoodId, 50m, name: "M");
+        var size2 = SeedSize(food2.FoodId, 60m, name: "L");
+        var ingredient = SeedIngredient(10m);
+        SeedRecipe(size1.SizeId, (ingredient.IngredientId, 1m));
+        SeedRecipe(size2.SizeId, (ingredient.IngredientId, 1m));
         var topping1 = SeedTopping();
         var topping2 = SeedTopping();
         Db.FoodToppings.Add(new FoodTopping { FoodId = food1.FoodId, ToppingId = topping1.ToppingId });

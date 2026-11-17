@@ -13,6 +13,9 @@
 
     public bool IsActive { get; set; }
 
+    /// <summary>Mã QR duy nhất gắn trên bàn để khách tự quét gọi món tại bàn (V2).</summary>
+    public string? QrToken { get; set; }
+
     /// <summary>
     /// Concurrency token (Nhóm B7). Trên SQL Server là cột <c>rowversion</c> do DB tự sinh;
     /// trên provider khác (SQLite dùng cho test) giá trị được <c>AppDbContext</c> tự cập nhật.
