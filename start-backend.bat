@@ -16,13 +16,16 @@ if /I "%~1"=="--check" (
     echo OK: da tim thay backend, frontend, dotnet va Python 3.
     echo Backend: http://localhost:5225 - Development
     echo Frontend: http://localhost:5500/pages/login.html
-    echo MigrateOnStartup=false, SeedOnStartup=false
+    echo MigrateOnStartup=true, SeedOnStartup=true - BasicDataSeeder
+    echo JWT: dung bien moi truong hoac khoa rieng duoc luu tren may.
+    echo Check khong chay backend, migration hoac seed.
     exit /b 0
 )
 
 call :portInUse 5225
 if errorlevel 10 (
     echo Cong 5225 dang duoc su dung, bo qua khoi dong backend.
+    echo Muon chay lai seed: dung backend cu roi mo lai file BAT.
 ) else (
     start "Restaurant Food Manager - Backend" "%ComSpec%" /d /c call "%~f0" --backend
 )
@@ -45,6 +48,8 @@ exit /b 0
 
 :backend
 title Restaurant Food Manager - Backend
+call :backendPrerequisites
+if errorlevel 1 goto failed
 call :portInUse 5225
 if errorlevel 10 (
     echo Cong 5225 dang duoc su dung. Khong khoi dong them backend.
@@ -52,11 +57,32 @@ if errorlevel 10 (
     exit /b 0
 )
 echo Dang khoi dong backend tai http://localhost:5225
-echo Dung database dang cau hinh; khong tu migrate hoac nap du lieu mau.
+echo Dung database dang cau hinh; ap dung migration va BasicDataSeeder.
+echo Seed bo sung du lieu con thieu; khong dat lai mat khau tai khoan da co.
 echo Nhan Ctrl+C de dung backend.
 echo.
-dotnet run --project "RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj" --launch-profile http -- --Database:MigrateOnStartup=false --Database:SeedOnStartup=false
+set "ASPNETCORE_ENVIRONMENT=Development"
+set "DOTNET_ENVIRONMENT=Development"
+set "taskProject=%~dp0RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj"
+pushd "%~dp0RestaurantFoodManagerSystem"
+powershell.exe -NoProfile -Command ^
+    "$ErrorActionPreference = 'Stop'; try {" ^
+    "if ([string]::IsNullOrWhiteSpace($env:Authentication__Jwt__Key)) {" ^
+    "$taskKeyDirectory = Join-Path $env:LOCALAPPDATA 'RestaurantFoodManagerSystem';" ^
+    "$taskKeyPath = Join-Path $taskKeyDirectory 'jwt-signing-key.txt';" ^
+    "[void][IO.Directory]::CreateDirectory($taskKeyDirectory);" ^
+    "if (-not [IO.File]::Exists($taskKeyPath)) {" ^
+    "$taskKeyBytes = New-Object byte[] 48; $taskRandom = [Security.Cryptography.RandomNumberGenerator]::Create();" ^
+    "try { $taskRandom.GetBytes($taskKeyBytes) } finally { $taskRandom.Dispose() };" ^
+    "[IO.File]::WriteAllText($taskKeyPath, [Convert]::ToBase64String($taskKeyBytes));" ^
+    "Write-Host 'Da tao khoa JWT rieng tren may.';" ^
+    "}; $env:Authentication__Jwt__Key = [IO.File]::ReadAllText($taskKeyPath).Trim();" ^
+    "}; if ([Text.Encoding]::UTF8.GetByteCount($env:Authentication__Jwt__Key) -lt 32) { throw 'Khoa JWT phai dai it nhat 32 byte. Kiem tra bien moi truong hoac file khoa rieng.' };" ^
+    "& dotnet run --project $env:taskProject --no-launch-profile --urls 'http://localhost:5225' -- '--Database:MigrateOnStartup=true' '--Database:SeedOnStartup=true';" ^
+    "exit $LASTEXITCODE;" ^
+    "} catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }"
 set "taskServerExit=%ERRORLEVEL%"
+popd
 goto stopped
 
 :frontend
@@ -85,13 +111,20 @@ pause
 exit /b %taskServerExit%
 
 :prerequisites
-if not exist "RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj" (
-    echo Khong tim thay project backend. Hay giu file BAT trong thu muc goc repository.
-    exit /b 1
-)
+call :backendPrerequisites
+if errorlevel 1 exit /b 1
 
 if not exist "frontend\pages\login.html" (
     echo Khong tim thay frontend. Hay giu file BAT trong thu muc goc repository.
+    exit /b 1
+)
+
+call :findPython
+exit /b %ERRORLEVEL%
+
+:backendPrerequisites
+if not exist "RestaurantFoodManagerSystem\RestaurantFoodManagerSystem.csproj" (
+    echo Khong tim thay project backend. Hay giu file BAT trong thu muc goc repository.
     exit /b 1
 )
 
@@ -101,8 +134,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-call :findPython
-exit /b %ERRORLEVEL%
+exit /b 0
+
+:failed
+pause
+exit /b 1
 
 :findPython
 set "taskPythonCommand="
