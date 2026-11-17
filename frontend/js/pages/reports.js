@@ -9,6 +9,7 @@
     const date = (value) => utc(value).toLocaleDateString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" });
     const input = () => ({ period: $("reportPeriod").value, date: $("reportDate").value });
     let selectedBucket = null;
+    let activeTab = "revenue";
     function message(text = "", error = false) { $("reportNotice").textContent = text; $("reportNotice").classList.toggle("is-error", error); }
     function selectBucket(index) {
         const group = session.report?.groups[index];
@@ -44,17 +45,75 @@
             : '<tr><td colspan="3" class="table-empty">Không có giao dịch đã thu trong kỳ này.</td></tr>';
         $("revenueFoot").innerHTML = `<tr><th scope="row">Tổng kỳ</th><td>${money(report.totalRevenue)}</td><td>${report.orderCount}</td></tr>`;
     }
+    function renderDishRows(items) {
+        if (!items.length) return '<tr><td colspan="7" class="table-empty">Không có món bán ra trong kỳ này.</td></tr>';
+        return items.map((item) => {
+            const missing = item.hasMissingRecipe || item.hasMissingCost;
+            const badge = missing ? ' <small style="color:#9a3412;font-weight:600;">(Thiếu công thức/giá vốn)</small>' : "";
+            return `<tr><th scope="row">${esc(item.foodName)}${badge}</th><td>${esc(item.sizeName)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${item.quantitySold}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${money(item.revenue)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${money(item.cogs)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${money(item.grossProfit)}</td><td style="text-align:right;font-variant-numeric:tabular-nums;">${Number(item.grossMarginPct ?? 0).toFixed(1)}%</td></tr>`;
+        }).join("");
+    }
+    function renderTabs() {
+        document.querySelectorAll("[data-report-tab]").forEach((btn) => {
+            const active = btn.dataset.reportTab === activeTab;
+            btn.classList.toggle("is-active", active);
+            btn.setAttribute("aria-selected", String(active));
+        });
+        $("tabRevenuePanel").hidden = activeTab !== "revenue";
+        $("tabTopDishesPanel").hidden = activeTab !== "top-dishes";
+        $("tabProfitabilityPanel").hidden = activeTab !== "profitability";
+    }
+    function renderTopDishes() {
+        const items = session.topDishes;
+        $("exportTopDishes").disabled = !items || session.topDishesLoading || session.exporting;
+        if (!items) {
+            $("topDishesHint").textContent = session.topDishesLoading ? "Đang tải top món bán chạy…" : "Chọn kỳ/ngày rồi bấm Xem báo cáo.";
+            $("topDishesRows").innerHTML = "";
+            return;
+        }
+        $("topDishesHint").textContent = `Hiển thị tối đa ${items.length} món bán chạy nhất trong kỳ.`;
+        $("topDishesRows").innerHTML = renderDishRows(items);
+    }
+    function renderProfitability() {
+        const prof = session.profitability;
+        $("exportProfitability").disabled = !prof || session.profitabilityLoading || session.exporting;
+        if (!prof) {
+            $("profitabilityWarning").hidden = true;
+            $("profitabilitySummary").innerHTML = "";
+            $("profitabilityHint").textContent = session.profitabilityLoading ? "Đang tải dữ liệu giá vốn & lợi nhuận…" : "Chọn kỳ/ngày rồi bấm Xem báo cáo.";
+            $("profitabilityRows").innerHTML = "";
+            return;
+        }
+        if (prof.missingRecipeOrCostCount > 0) {
+            $("profitabilityWarning").hidden = false;
+            $("profitabilityWarning").textContent = `Cảnh báo: có ${prof.missingRecipeOrCostCount} món/kích cỡ chưa có công thức hoặc giá vốn nguyên liệu. Số liệu COGS có thể chưa đầy đủ.`;
+        } else {
+            $("profitabilityWarning").hidden = true;
+        }
+        $("profitabilitySummary").innerHTML = [
+            ["Tổng doanh thu", money(prof.totalRevenue), "Doanh thu món trong kỳ"],
+            ["Tổng giá vốn (COGS)", money(prof.totalCogs), "Theo định lượng & giá vốn"],
+            ["Lợi nhuận gộp", money(prof.totalGrossProfit), "Doanh thu trừ giá vốn"],
+            ["Biên lợi nhuận gộp", `${Number(prof.grossMarginPct ?? 0).toFixed(1)}%`, "Tỷ suất lợi nhuận gộp"]
+        ].map(([label, value, note]) => `<article class="summary-tile"><span>${label}</span><strong>${esc(value)}</strong><small>${note}</small></article>`).join("");
+        $("profitabilityHint").textContent = `${prof.items.length} dòng món/kích cỡ · ${periods[prof.period] || prof.period}`;
+        $("profitabilityRows").innerHTML = renderDishRows(prof.items);
+    }
     function render() {
         const allowed = session.hasAccess(), report = session.report;
         $("reportsContent").hidden = !allowed; $("reportsAccess").hidden = allowed;
         if (!allowed) return;
-        $("loadRevenue").disabled = session.revenueLoading || session.exporting;
-        for (const id of ["reportPeriod", "reportDate"]) $(id).disabled = session.revenueLoading || session.exporting;
+        renderTabs();
+        renderTopDishes();
+        renderProfitability();
+        const busy = session.revenueLoading || session.topDishesLoading || session.profitabilityLoading || session.exporting;
+        $("loadRevenue").disabled = busy;
+        for (const id of ["reportPeriod", "reportDate"]) $(id).disabled = busy;
         document.querySelectorAll("[data-report-period]").forEach((button) => {
-            button.disabled = session.revenueLoading || session.exporting;
+            button.disabled = busy;
             button.setAttribute("aria-pressed", String(button.dataset.reportPeriod === $("reportPeriod").value));
         });
-        $("loadRevenue").textContent = session.revenueLoading ? "Đang tải…" : "Xem báo cáo";
+        $("loadRevenue").textContent = busy && !session.exporting ? "Đang tải…" : "Xem báo cáo";
         $("exportRevenue").disabled = !session.matches(input()) || session.exporting;
         $("exportRevenue").textContent = session.exporting ? "Đang xuất…" : "Tải báo cáo CSV ↓";
         $("reportFilterHint").textContent = report && !session.matches(input()) ? "Bộ lọc chưa áp dụng. Nhấn Xem báo cáo trước khi tải CSV." : "";
@@ -73,20 +132,34 @@
         renderChart(report); renderTable();
         $("reportUpdated").textContent = `Cập nhật ${utc(session.loadedAt).toLocaleString("vi-VN", { timeZone: "Asia/Ho_Chi_Minh" })} · Giờ Việt Nam`;
     }
-    async function load() {
-        message(); selectedBucket = null;
+    async function loadActiveTab() {
+        message();
         try {
-            const promise = session.loadRevenue(input()); render(); const report = await promise;
-            if (report) {
-                $("reportDate").value = session.applied.date;
-                const url = new URL(window.location.href); url.searchParams.set("period", session.applied.period); url.searchParams.set("date", session.applied.date); window.history.replaceState(null, "", url);
+            const q = input();
+            if (activeTab === "revenue") {
+                selectedBucket = null;
+                const promise = session.loadRevenue(q); render(); const report = await promise;
+                if (report) {
+                    $("reportDate").value = session.applied.date;
+                    const url = new URL(window.location.href); url.searchParams.set("period", session.applied.period); url.searchParams.set("date", session.applied.date); window.history.replaceState(null, "", url);
+                }
+            } else if (activeTab === "top-dishes") {
+                const promise = session.loadTopDishes(q, 10); render(); await promise;
+            } else if (activeTab === "profitability") {
+                const promise = session.loadProfitability(q); render(); await promise;
             }
         } catch (error) { message(error.message, true); }
         finally { render(); }
     }
-    $("reportFilters").addEventListener("submit", (event) => { event.preventDefault(); if (!session.revenueLoading && !session.exporting) load(); });
+    async function load() { return loadActiveTab(); }
+    $("reportFilters").addEventListener("submit", (event) => { event.preventDefault(); if (!session.revenueLoading && !session.topDishesLoading && !session.profitabilityLoading && !session.exporting) load(); });
+    document.querySelectorAll("[data-report-tab]").forEach((button) => button.addEventListener("click", () => {
+        if (!session.hasAccess() || activeTab === button.dataset.reportTab) return;
+        activeTab = button.dataset.reportTab;
+        loadActiveTab();
+    }));
     document.querySelectorAll("[data-report-period]").forEach((button) => button.addEventListener("click", () => {
-        if (session.revenueLoading || session.exporting || !session.hasAccess()) return;
+        if (session.revenueLoading || session.topDishesLoading || session.profitabilityLoading || session.exporting || !session.hasAccess()) return;
         $("reportPeriod").value = button.dataset.reportPeriod;
         load();
     }));
@@ -99,6 +172,20 @@
         if (!session.matches(input()) || session.exporting) return;
         message();
         try { const promise = session.exportCsv(); render(); const name = await promise; message(`Đã gửi file ${name} cho trình duyệt tải xuống. Bạn mở file trong mục Tải xuống / Downloads.`); }
+        catch (error) { message(error.message, true); }
+        finally { render(); }
+    });
+    $("exportTopDishes").addEventListener("click", async () => {
+        if (!session.topDishes || session.exporting) return;
+        message();
+        try { const promise = session.exportTopDishesCsv(); render(); const name = await promise; message(`Đã gửi file ${name} cho trình duyệt tải xuống.`); }
+        catch (error) { message(error.message, true); }
+        finally { render(); }
+    });
+    $("exportProfitability").addEventListener("click", async () => {
+        if (!session.profitability || session.exporting) return;
+        message();
+        try { const promise = session.exportProfitabilityCsv(); render(); const name = await promise; message(`Đã gửi file ${name} cho trình duyệt tải xuống.`); }
         catch (error) { message(error.message, true); }
         finally { render(); }
     });

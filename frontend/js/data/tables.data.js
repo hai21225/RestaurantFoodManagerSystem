@@ -10,6 +10,7 @@ window.tablesData = {
         { value: "all", label: "Tất cả (cả đã xóa)" },
         { value: "empty", label: "Trống" },
         { value: "serving", label: "Có khách" },
+        { value: "reserved", label: "Đang có khách giữ" },
         { value: "inactive", label: "Bảo trì" },
         { value: "deleted", label: "Đã xóa" }
     ],

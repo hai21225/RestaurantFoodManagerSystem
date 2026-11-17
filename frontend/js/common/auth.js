@@ -3,12 +3,20 @@
     const userKey = "restaurant.currentUser";
     const appUrl = new URL("../../", document.currentScript.src);
     const loginUrl = new URL("pages/login.html", appUrl);
-    const publicPages = [loginUrl.pathname, new URL("pages/setup.html", appUrl).pathname];
+    const publicMenuUrl = new URL("pages/public-menu.html", appUrl);
+    const publicPages = [
+        loginUrl.pathname,
+        new URL("pages/setup.html", appUrl).pathname,
+        new URL("pages/register.html", appUrl).pathname,
+        publicMenuUrl.pathname
+    ];
     let redirecting = false;
     let pageAccess = "checking";
     const pageRoles = {
         "index.html": ["Admin"],
         "pages/tables.html": ["Admin", "Waiter"],
+        "pages/reservations.html": ["Admin", "Waiter", "Cashier", "Customer"],
+        "pages/qr-order.html": ["Admin", "Waiter", "Customer"],
         "pages/order.html": ["Admin", "Waiter"],
         "pages/order-tools.html": ["Admin", "Waiter", "Cashier"],
         "pages/kitchen.html": ["Admin", "Chef"],
@@ -18,6 +26,7 @@
         "pages/purchases.html": ["Admin", "WarehouseManager"],
         "pages/recipes.html": ["Admin", "WarehouseManager"],
         "pages/employees.html": ["Admin"],
+        "pages/customers.html": ["Admin"],
         "pages/roles.html": ["Admin"],
         "pages/reports.html": ["Admin"]
     };
@@ -59,7 +68,7 @@
     function getHomeUrl() {
         const roles = Array.isArray(getUser()?.roles) ? getUser().roles : [];
         const homes = [["Admin", "index.html"], ["Waiter", "pages/tables.html"], ["Chef", "pages/kitchen.html"],
-            ["Cashier", "pages/payment.html"], ["WarehouseManager", "pages/inventory.html"]];
+            ["Cashier", "pages/payment.html"], ["WarehouseManager", "pages/inventory.html"], ["Customer", "pages/reservations.html"]];
         return new URL(homes.find(([role]) => roles.includes(role))?.[1] || "pages/account.html", appUrl).href;
     }
 
@@ -144,6 +153,11 @@
     function redirectToLogin() {
         if (isPublicPage() || redirecting) return;
         redirecting = true;
+        const resolved = resolvePage(window.location.href);
+        if (resolved?.page === "index.html") {
+            window.location.replace(publicMenuUrl.href);
+            return;
+        }
         const target = new URL(loginUrl);
         target.searchParams.set("returnUrl", window.location.href);
         window.location.replace(target.href);

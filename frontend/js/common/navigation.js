@@ -14,7 +14,7 @@
         operator.appendChild(sessionMessage);
         function renderOperator() {
             const user = auth.getUser();
-            const roleNames = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho" };
+            const roleNames = { Admin: "Quản trị", Waiter: "Phục vụ", Chef: "Bếp", Cashier: "Thu ngân", WarehouseManager: "Quản lý kho", Customer: "Khách hàng" };
             operator.querySelector(".operator-role").textContent = (user?.roles || []).map((role) => roleNames[role] || role).join(", ") || "Chưa có vai trò";
             operator.querySelector("strong").textContent = user?.fullName || user?.userName || "Chưa đăng nhập";
             logout.hidden = !user;
@@ -33,13 +33,45 @@
         return;
     }
 
-    const catalogUrl = new URL("../../pages/recipes.html", document.currentScript.src);
-    const catalogItem = document.createElement("button");
-    catalogItem.type = "button"; catalogItem.className = "nav-item nav-catalog";
-    catalogItem.dataset.page = catalogUrl.href; catalogItem.textContent = "Nguyên liệu / Công thức";
-    if (window.location.pathname === catalogUrl.pathname) catalogItem.classList.add("is-active");
+    const orderNavItem = navigation.querySelector('[data-page="order.html"]') || navigation.querySelector('[data-page$="/order.html"]');
+    if (orderNavItem) {
+        orderNavItem.hidden = true;
+        orderNavItem.remove?.();
+    }
+
+    function createNavButton(relativePath, label, extraClass, customerOnly = false) {
+        const targetUrl = new URL(relativePath, document.currentScript.src);
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = extraClass ? `nav-item ${extraClass}` : "nav-item";
+        button.dataset.page = targetUrl.href;
+        if (customerOnly) button.dataset.customerOnly = "true";
+        button.textContent = label;
+        if (window.location.pathname === targetUrl.pathname) button.classList.add("is-active");
+        return button;
+    }
+
+    const tablesItem = navigation.querySelector('[data-page$="tables.html"]');
+    const reservationsItem = createNavButton("../../pages/reservations.html", "Đặt bàn", "nav-reservations");
+    const qrOrderItem = createNavButton("../../pages/qr-order.html", "Gọi món QR", "nav-qr-order", true);
+    const publicMenuItem = createNavButton("../../pages/public-menu.html", "Thực đơn", "nav-public-menu", true);
+    if (tablesItem) {
+        tablesItem.after(reservationsItem);
+        reservationsItem.after(qrOrderItem);
+        qrOrderItem.after(publicMenuItem);
+    } else {
+        navigation.append(reservationsItem, qrOrderItem, publicMenuItem);
+    }
+
+    const catalogItem = createNavButton("../../pages/recipes.html", "Nguyên liệu / Công thức", "nav-catalog");
     const inventoryItem = navigation.querySelector('[data-page$="inventory.html"]');
     if (inventoryItem) inventoryItem.after(catalogItem); else navigation.appendChild(catalogItem);
+
+    const employeesItem = navigation.querySelector('[data-page$="employees.html"]');
+    if (!navigation.querySelector('[data-page$="customers.html"]')) {
+        const customersItem = createNavButton("../../pages/customers.html", "Khách hàng");
+        if (employeesItem) employeesItem.after(customersItem); else navigation.appendChild(customersItem);
+    }
 
     const adminModules = [
         { tab: "categories", label: "Danh mục / Topping", modules: ["categories", "toppings", "sizes", "links"], roles: ["Admin", "WarehouseManager"] },
@@ -61,9 +93,12 @@
         });
         navigation.appendChild(item);
     });
-    if (/\/order-tools\.html$/.test(location.pathname)) navigation.querySelector('[data-page="order.html"]')?.classList.add("is-active");
-    const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"));
-    const managementItems = items.slice(6);
+    if (/\/(order|order-tools)\.html$/.test(location.pathname)) navigation.querySelector('[data-page$="tables.html"]')?.classList.add("is-active");
+    const items = Array.from(navigation.querySelectorAll(":scope > .nav-item"))
+        .filter((item) => !/(?:^|\/)order\.html(?:$|\?)/.test(item.dataset.page || ""));
+    const splitIndex = items.findIndex((item) => /\/employees\.html(?:$|\?)/.test(item.dataset.page || ""));
+    const overviewEnd = splitIndex > 0 ? splitIndex : 6;
+    const managementItems = items.slice(overviewEnd);
     items.forEach((item) => { if (item.classList.contains("is-active")) item.setAttribute("aria-current", "page"); });
     // Nút Tổng quan đang chọn trong HTML cũ chưa có URL.
     if (items[0] && !items[0].dataset.page) items[0].dataset.page = new URL("../../index.html", document.currentScript.src).href;
@@ -71,7 +106,7 @@
     items.forEach((item) => {
         if (!item.dataset.page) return;
         const target = new URL(item.dataset.page, location.href);
-        if (/\/(index|pages\/(tables|order|order-tools|kitchen|payment|foods|inventory|purchases|recipes|administration|employees|roles|account|reports))\.html$/.test(target.pathname)) {
+        if (/\/(index|pages\/(tables|reservations|qr-order|public-menu|order|order-tools|kitchen|payment|foods|inventory|purchases|recipes|administration|employees|customers|roles|account|reports))\.html$/.test(target.pathname)) {
             target.searchParams.set("ui", "20261112-print1");
             item.dataset.page = target.href;
         }
@@ -117,7 +152,7 @@
         });
     }
 
-    createGroup("Tổng quan", "nav-overview", items.slice(0, 6), true);
+    createGroup("Tổng quan", "nav-overview", items.slice(0, overviewEnd), true);
     if (managementItems.length) createGroup("Quản trị", "nav-management", managementItems);
 
     function applyLayout() {
@@ -126,7 +161,14 @@
             const visible = group.entries.filter((item) => !item.hidden);
             const active = visible.find((item) => item.classList.contains("is-active"));
             const personalOnly = visible.length === 1 && new URL(visible[0].dataset.page, location.href).pathname.endsWith("/account.html");
-            const title = personalOnly ? "Tài khoản" : auth?.hasRole("Admin") ? group.title : group.alwaysDesktop ? "Công việc" : "Quản lý kho";
+            const isCustomerOnly = auth?.hasRole("Customer") && !auth?.hasRole("Admin") && !auth?.hasRole("Waiter") && !auth?.hasRole("Cashier");
+            const title = personalOnly
+                ? "Tài khoản"
+                : auth?.hasRole("Admin")
+                    ? group.title
+                    : group.alwaysDesktop
+                        ? (isCustomerOnly ? "Khách hàng" : "Công việc")
+                        : "Quản lý kho";
             // Thanh dưới trên điện thoại cho biết màn đang mở; popup vẫn chứa cả nhóm.
             group.name.textContent = mobile.matches && active ? active.textContent.trim() : title;
             group.submenu.setAttribute("aria-label", `Các mục ${title}`);
@@ -136,7 +178,10 @@
     }
     function renderNavigation() {
         items.forEach((item) => {
-            item.hidden = !auth?.isPageAllowed() || !auth.canAccessPage(new URL(item.dataset.page, location.href).href);
+            const customerOnly = item.dataset.customerOnly === "true";
+            item.hidden = !auth?.isPageAllowed()
+                || (customerOnly && !auth.hasRole("Customer"))
+                || !auth.canAccessPage(new URL(item.dataset.page, location.href).href);
         });
         groups.forEach((group) => {
             const visible = group.entries.filter((item) => !item.hidden);

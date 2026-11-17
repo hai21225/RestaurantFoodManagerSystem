@@ -15,4 +15,19 @@
     /// </summary>
     public bool IsActive { get; set; }
     public string? QrToken { get; set; }
+    public ActiveReservationDto? ActiveReservation { get; set; }
+}
+
+public sealed class ActiveReservationDto
+{
+    public int ReservationId { get; set; }
+    public string CustomerName { get; set; } = string.Empty;
+    public string CustomerPhone { get; set; } = string.Empty;
+    public int PartySize { get; set; }
+    public DateTime ReservedFrom { get; set; }
+    public DateTime ReservedTo { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string DepositStatus { get; set; } = string.Empty;
+    public decimal DepositAmount { get; set; }
+    public bool IsOverdue { get; set; }
 }

@@ -74,7 +74,7 @@ test('401 xoá phiên, dữ liệu đơn cũ và quay về login kèm trang cầ
     b.sessionStorage.setItem('restaurant.catalogPending', 'previous-catalog-request');
     b.sessionStorage.setItem('restaurant.staffPending', 'previous-staff-request');
     b.respond(async () => new Response('invalid-json', { status: 401, headers: { 'content-type': 'application/json' } }));
-    await assert.rejects(b.api.get('/menu'), (e) => e.status === 401);
+    await assert.rejects(b.api.get('/restaurant-tables'), (e) => e.status === 401);
     assert.equal(b.auth.getToken(), null);
     assert.equal(b.sessionStorage.getItem('restaurant.currentUser'), null);
     assert.equal(b.localStorage.getItem('restaurant.selectedTable'), null);
@@ -179,7 +179,7 @@ test('401 của request cũ không xoá phiên mới vừa đăng nhập', async
     const b = await browser();
     let finish;
     b.respond(() => new Promise((resolve) => { finish = resolve; }));
-    const pending = b.api.get('/menu');
+    const pending = b.api.get('/restaurant-tables');
     b.auth.setSession({ ...profile, token: 'new-session' });
     finish(new Response(null, { status: 401 }));
     await assert.rejects(pending, (e) => e.status === 401);
@@ -304,4 +304,40 @@ test('Back/Forward không giữ màn cũ sau khi chuyển sang tài khoản khá
     b.window.dispatchEvent(new Event('pageshow'));
     assert.deepEqual(b.redirects, ['http://localhost:5500/pages/kitchen.html']);
     assert.equal(b.auth.isPageAllowed(), false);
+});
+
+test('V2: public pages (register, public-menu) và anonymous endpoints không cần token', async () => {
+    for (const page of ['register.html', 'public-menu.html']) {
+        const b = await browser({ url: `http://localhost:5500/pages/${page}`, token: null });
+        assert.equal(b.auth.isPublicPage(), true);
+        assert.equal(b.redirects.length, 0);
+        b.respond(async () => json([]));
+        await b.api.get('/menu');
+        await b.api.get('/foods/1');
+        await b.api.get('/categories/2');
+        await b.api.get('/public/tables');
+        await b.api.post('/auth/customer/register', { userName: 'c1' });
+        await b.api.post('/reservations/deposit/momo/notify', { orderId: 'M1' });
+        assert.equal(b.requests.length, 6);
+        assert.ok(b.requests.every((r) => !r.headers.has('Authorization')));
+    }
+});
+
+test('V2: role Customer truy cập đúng trang và về reservations.html làm trang chủ', async () => {
+    const b = await browser({ url: 'http://localhost:5500/pages/reservations.html', user: { ...profile, roles: ['Customer'] } });
+    assert.equal(b.auth.getHomeUrl(), 'http://localhost:5500/pages/reservations.html');
+    assert.equal(b.auth.canAccessPage('/pages/reservations.html'), true);
+    assert.equal(b.auth.canAccessPage('/pages/qr-order.html'), true);
+    assert.equal(b.auth.canAccessPage('/pages/public-menu.html'), true);
+    assert.equal(b.auth.canAccessPage('/pages/account.html'), true);
+    assert.equal(b.auth.canAccessPage('/pages/tables.html'), false);
+    assert.equal(b.auth.canAccessPage('/pages/order.html'), false);
+    assert.equal(b.auth.canAccessPage('/index.html'), false);
+});
+
+test('V2: index.html chưa đăng nhập gọi redirectToLogin ngay trong bootstrap', async () => {
+    const b = await browser({ url: 'http://localhost:5500/index.html', token: null, waitForBootstrap: false });
+    await b.auth.ready;
+    assert.equal(b.redirects.length, 1);
+    assert.ok(b.redirects[0].includes('/pages/public-menu.html'));
 });

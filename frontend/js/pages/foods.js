@@ -46,7 +46,7 @@
     const foodLifecycleNotice = document.querySelector("#foodLifecycleNotice");
     const foodLifecycleMessage = document.querySelector("#foodLifecycleMessage");
     const foodLifecycleConfirm = document.querySelector("#foodLifecycleConfirm");
-    const navButtons = document.querySelectorAll("[data-page]");
+    const navButtons = document.querySelectorAll("[data-page]:not(.nav-item)");
 
     function escapeHtml(value) {
         return String(value ?? "")
@@ -491,8 +491,7 @@
             await window.restaurantApi.post("/categories", {
                 name: data.get("name").trim(),
                 description: data.get("description").trim(),
-                // API hiện tại dùng kiểu boolean cho displayOrder.
-                displayOrder: false,
+                displayOrder: 0,
                 isActive: true
             });
             categoryDialog.close();

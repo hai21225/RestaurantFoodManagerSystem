@@ -20,7 +20,7 @@
             $("backToOrder").href = `order.html?tableId=${o.tableId}&ui=20261112-print1`;
             $("goToPayment").href = `payment.html?orderId=${o.orderId}`;
         }
-        $("promotionHint").textContent = auth.hasRole("Admin") ? "Chọn mã từ danh sách. Hệ thống kiểm tra thời hạn, phạm vi và điều kiện đơn rồi cập nhật số tiền." : "Hiện chưa có danh sách chọn khuyến mãi cho vai trò Phục vụ. Bạn có thể dùng mã do Quản trị cung cấp.";
+        $("promotionHint").textContent = "Chọn mã từ danh sách khuyến mãi đang hiệu lực. Hệ thống kiểm tra thời hạn, phạm vi và điều kiện đơn rồi cập nhật số tiền.";
         for (const form of [$("noteForm"), $("moveForm"), $("promotionForm")]) form.querySelectorAll("input,textarea,select,button").forEach((e) => { e.disabled = !!locked(); });
         $("removePromotion").disabled = !!locked() || !o?.promotionId;
         $("toolsRefresh").disabled = session.busy || session.loading;

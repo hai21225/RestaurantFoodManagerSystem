@@ -46,10 +46,47 @@ public sealed class PublicController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("tables/resolve-qr")]
+    public async Task<IActionResult> ResolveQr([FromQuery] string? qrToken, CancellationToken ct = default)
+    {
+        var token = qrToken?.Trim();
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return BadRequest(new { message = "Vui lòng nhập mã QR bàn." });
+        }
+
+        var tables = await _tableService.GetAllRestaurantTablesAsync(ct);
+        var match = tables.FirstOrDefault(t =>
+            t.IsActive
+            && !string.Equals(t.Status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(t.QrToken, token, StringComparison.Ordinal));
+
+        if (match is null)
+        {
+            return NotFound(new { message = "Mã QR bàn không hợp lệ hoặc bàn đang tạm ngừng phục vụ." });
+        }
+
+        return Ok(new PublicTableDto
+        {
+            TableId = match.TableId,
+            TableNumber = match.TableNumber,
+            Capacity = match.Capacity,
+            AreaId = match.AreaId,
+            AreaName = match.AreaName,
+            Status = match.Status
+        });
+    }
+
     [HttpGet("promotions")]
     public async Task<IActionResult> GetPromotions(CancellationToken ct = default)
     {
-        return Ok(await _promotionService.GetActivePublicAsync(ct));
+        var promotions = await _promotionService.GetActivePublicAsync(ct);
+        var targets = await _promotionService.GetTargetsAsync(
+            promotions.Select(x => x.Id).ToList(), ct);
+        var result = promotions
+            .Select(x => PromotionResponse.From(x, targets.GetValueOrDefault(x.Id)))
+            .ToList();
+        return Ok(result);
     }
 }
 

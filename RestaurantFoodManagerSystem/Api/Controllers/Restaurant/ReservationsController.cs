@@ -85,6 +85,28 @@ public sealed class ReservationsController : ControllerBase
         CancellationToken ct) =>
         await service.CreateMomoDepositAsync(id, ct) is { } x ? Ok(x) : NotFound();
 
+    [Authorize(Policy = AuthPolicies.CustomerOrPos)]
+    [HttpPost("{id:int}/deposit/momo/mock")]
+    public async Task<IActionResult> MomoDepositMock(
+        int id,
+        [FromQuery] string? requestId,
+        [FromQuery] bool success,
+        [FromServices] ReservationService service,
+        CancellationToken ct)
+    {
+        var outcome = await service.SimulateMomoDepositAsync(id, requestId, success, ct);
+        if (!outcome.Accepted)
+            return BadRequest(new { message = outcome.Message });
+
+        return Ok(new
+        {
+            accepted = true,
+            applied = outcome.WasApplied,
+            reservationId = outcome.PaymentId,
+            message = outcome.Message
+        });
+    }
+
     [AllowAnonymous]
     [HttpPost("deposit/momo/notify")]
     public async Task<IActionResult> MomoDepositNotify(

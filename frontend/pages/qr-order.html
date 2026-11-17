@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gọi món QR - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/v2-customer.css?v=20261117-v2fix1">
+    <script src="../js/common/auth.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10" defer></script>
+    <script src="../js/common/realtime.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/pages/qr-order.js?v=20261117-v2fix1" defer></script>
+</head>
+<body class="service-workspace service-workspace--qr-order">
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>Gọi món tại bàn</span>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Khách hàng tự gọi món</p>
+                    <h1>Gọi món QR</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Khách hàng</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <p id="qrNotice" class="v2-notice" role="status" hidden></p>
+
+                <!-- Gate when qrToken is missing -->
+                <section id="qrGatePanel" class="panel v2-qr-gate" aria-labelledby="qrGateTitle">
+                    <p class="eyebrow">Chưa có mã QR bàn</p>
+                    <h2 id="qrGateTitle">Vui lòng quét mã QR đặt tại bàn để gọi món</h2>
+                    <p>Hoặc nhập mã bàn và mã QR được in trên bàn để bắt đầu gọi món.</p>
+                    <form id="qrManualForm" class="v2-card-list" novalidate>
+                        <div class="v2-field">
+                            <label for="manualTableSelect">Chọn bàn</label>
+                            <select id="manualTableSelect" required></select>
+                        </div>
+                        <div class="v2-field">
+                            <label for="manualQrInput">Mã QR bàn</label>
+                            <input id="manualQrInput" type="text" maxlength="100" placeholder="Nhập mã QR tại bàn" required>
+                        </div>
+                        <button class="primary-action" type="submit">Xác nhận mã QR</button>
+                    </form>
+                </section>
+
+                <!-- Ordering workspace when qrToken is present -->
+                <section id="qrWorkspace" hidden>
+                    <div class="panel" style="margin-bottom: 16px;">
+                        <div class="v2-res-head">
+                            <div>
+                                <p class="eyebrow">Phiên gọi món tại bàn</p>
+                                <h2 id="qrTableTitle">Bàn đang chọn</h2>
+                                <span class="v2-promo-meta" id="qrTokenDisplay"></span>
+                            </div>
+                            <div class="v2-actions-row">
+                                <select id="qrTableSelect" class="v2-search-input" style="min-width:180px;" aria-label="Chọn bàn" hidden></select>
+                                <button id="changeQrBtn" class="secondary-action" type="button">Đổi mã QR</button>
+                                <button id="refreshMyOrdersBtn" class="secondary-action" type="button">Làm mới đơn</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="v2-section-grid">
+                        <section class="panel" aria-labelledby="qrMenuHeading">
+                            <div class="panel-header">
+                                <div>
+                                    <h2 id="qrMenuHeading">Thực đơn</h2>
+                                    <span id="qrFoodCount">0 món</span>
+                                </div>
+                                <input id="qrSearchInput" class="v2-search-input" type="search"
+                                    placeholder="Tìm món (VD: bo, bll)" autocomplete="off" aria-label="Tìm món">
+                            </div>
+                            <div id="qrCategoryTabs" class="v2-pill-list" role="tablist"></div>
+                            <div id="qrFoodGrid" class="v2-menu-grid"></div>
+                        </section>
+
+                        <aside class="v2-card-list">
+                            <section class="panel v2-cart-box" aria-labelledby="qrCartHeading">
+                                <div class="panel-header">
+                                    <h2 id="qrCartHeading">Giỏ món mới</h2>
+                                    <span id="qrCartCount">0 món</span>
+                                </div>
+                                <div id="qrCartList"></div>
+                                <div class="v2-field">
+                                    <label for="qrOrderNote">Ghi chú đơn</label>
+                                    <input id="qrOrderNote" type="text" maxlength="500" placeholder="Ghi chú cho bếp (tùy chọn)">
+                                </div>
+                                <div class="v2-res-head">
+                                    <strong>Tạm tính:</strong>
+                                    <strong id="qrCartTotal">0đ</strong>
+                                </div>
+                                <div class="v2-actions-row">
+                                    <button id="qrSendOrderBtn" class="primary-action" type="button" disabled>Gửi gọi món</button>
+                                    <button id="qrClearCartBtn" class="secondary-action" type="button" disabled>Xóa giỏ</button>
+                                </div>
+                            </section>
+
+                            <section class="panel" aria-labelledby="myOrdersHeading">
+                                <div class="panel-header">
+                                    <h2 id="myOrdersHeading">Đơn hàng của tôi</h2>
+                                    <span id="myOrdersCount">0 đơn</span>
+                                </div>
+                                <div id="myOrdersList" class="v2-card-list"></div>
+                            </section>
+                        </aside>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <dialog id="qrDishDialog" class="form-dialog" aria-labelledby="qrDishTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="qrDishTitle">Chọn kích cỡ &amp; topping</h2>
+                <p id="qrDishDesc">Tùy chọn món trước khi thêm vào giỏ.</p>
+            </div>
+            <button id="closeQrDishBtn" class="dialog-close-button" type="button" aria-label="Đóng">×</button>
+        </div>
+        <form id="qrDishForm" class="v2-card-list">
+            <div class="v2-field">
+                <label>Kích cỡ</label>
+                <div id="qrSizeOptions" class="v2-card-list"></div>
+            </div>
+            <div id="qrToppingWrap" class="v2-field" hidden>
+                <label>Topping thêm</label>
+                <div id="qrToppingOptions" class="v2-card-list"></div>
+            </div>
+            <div class="v2-form-grid">
+                <div class="v2-field">
+                    <label for="qrDishQty">Số lượng</label>
+                    <input id="qrDishQty" type="number" min="1" max="50" value="1" required>
+                </div>
+                <div class="v2-field">
+                    <label for="qrDishNote">Ghi chú món</label>
+                    <input id="qrDishNote" type="text" maxlength="500" placeholder="Ít cay, không hành...">
+                </div>
+            </div>
+            <button class="primary-action" type="submit">Thêm vào giỏ</button>
+        </form>
+    </dialog>
+</body>
+</html>

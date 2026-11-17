@@ -2,7 +2,13 @@ using System.Data;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
-public static class RestaurantTableStatuses { public const string Available="Available"; public const string Occupied="Occupied"; public const string Maintenance="Maintenance"; }
+public static class RestaurantTableStatuses
+{
+    public const string Available = "Available";
+    public const string Occupied = "Occupied";
+    public const string Reserved = "Reserved";
+    public const string Maintenance = "Maintenance";
+}
 
 public class RestaurantTableService
 {
@@ -16,26 +22,43 @@ public class RestaurantTableService
             .FirstOrDefaultAsync(t => t.TableId == id, ct);
         if (x is null) return null;
         await SaveRefreshedStatusAsync(x, ct);
-        return Map(x);
+        var dto = Map(x);
+        if (string.Equals(dto.Status, RestaurantTableStatuses.Reserved, StringComparison.OrdinalIgnoreCase))
+        {
+            var active = await LoadActiveReservationsByTableAsync([x.TableId], ct);
+            if (active.TryGetValue(x.TableId, out var reservation))
+            {
+                dto.ActiveReservation = MapActiveReservation(reservation, DateTime.UtcNow);
+            }
+        }
+        return dto;
     }
 
     public async Task<List<RestaurantTableDto>> GetAllRestaurantTablesAsync(CancellationToken ct = default)
     {
-        // Include khu vực trong cùng truy vấn bàn; vẫn chỉ thêm MỘT truy vấn cho occupied.
+        // Include khu vực trong cùng truy vấn bàn; vẫn chỉ thêm MỘT truy vấn cho occupied và MỘT cho reservation.
         var xs = await _db.RestaurantTables
             .AsNoTracking()
             .Include(x => x.Area)
             .ToListAsync(ct);
 
-        // Defect #11: một truy vấn nhóm duy nhất thay vì `Orders.AnyAsync` cho từng bàn (N+1).
-        // Vẫn giữ nguyên hành vi cũ: danh sách chỉ TÍNH trạng thái để trả về, không ghi DB.
-        var occupied = await LoadOccupiedTableIdsAsync(xs.Select(x => x.TableId).ToList(), ct);
-        foreach (var x in xs)
-        {
-            x.Status = ResolveStatus(x, occupied.Contains(x.TableId));
-        }
+        var tableIds = xs.Select(x => x.TableId).ToList();
+        var occupied = await LoadOccupiedTableIdsAsync(tableIds, ct);
+        var activeReservations = await LoadActiveReservationsByTableAsync(tableIds, ct);
+        var now = DateTime.UtcNow;
 
-        return xs.Select(Map).ToList();
+        return xs.Select(x =>
+        {
+            activeReservations.TryGetValue(x.TableId, out var activeReservation);
+            var status = ResolveStatus(x, occupied.Contains(x.TableId), activeReservation is not null);
+            var dto = Map(x);
+            dto.Status = status;
+            if (status == RestaurantTableStatuses.Reserved && activeReservation is not null)
+            {
+                dto.ActiveReservation = MapActiveReservation(activeReservation, now);
+            }
+            return dto;
+        }).ToList();
     }
 
     // Nhóm B6: bàn đã soft-delete không còn chiếm số bàn (unique index có HasFilter IsActive).
@@ -213,7 +236,14 @@ public class RestaurantTableService
         }
 
         var occupied = (await LoadOccupiedTableIdsAsync([x.TableId], ct)).Contains(x.TableId);
-        x.Status = occupied ? RestaurantTableStatuses.Occupied : RestaurantTableStatuses.Available;
+        if (occupied)
+        {
+            x.Status = RestaurantTableStatuses.Occupied;
+            return;
+        }
+
+        var hasReservation = (await LoadActiveReservationsByTableAsync([x.TableId], ct)).ContainsKey(x.TableId);
+        x.Status = hasReservation ? RestaurantTableStatuses.Reserved : RestaurantTableStatuses.Available;
     }
 
     private Task<bool> HasActiveTableNumberAsync(
@@ -280,10 +310,58 @@ public class RestaurantTableService
         }
     }
 
-    private static string ResolveStatus(RestaurantTable x, bool occupied) =>
+    private async Task<Dictionary<int, TableReservation>> LoadActiveReservationsByTableAsync(
+        IReadOnlyCollection<int> tableIds,
+        CancellationToken ct)
+    {
+        if (tableIds.Count == 0)
+        {
+            return [];
+        }
+
+        var windowEnd = DateTime.UtcNow.AddHours(2);
+        var reservations = await _db.TableReservations.AsNoTracking()
+            .Where(r => tableIds.Contains(r.TableId)
+                        && (r.Status == TableReservationStatuses.Pending
+                            || r.Status == TableReservationStatuses.Confirmed)
+                        && r.ReservedFrom <= windowEnd)
+            .OrderBy(r => r.ReservedFrom)
+            .ToListAsync(ct);
+
+        var result = new Dictionary<int, TableReservation>();
+        foreach (var r in reservations)
+        {
+            result.TryAdd(r.TableId, r);
+        }
+        return result;
+    }
+
+    private static ActiveReservationDto MapActiveReservation(TableReservation r, DateTime nowUtc)
+    {
+        var deadline = r.ReservedTo == default ? r.ReservedFrom : r.ReservedTo;
+        return new ActiveReservationDto
+        {
+            ReservationId = r.ReservationId,
+            CustomerName = r.CustomerName,
+            CustomerPhone = r.CustomerPhone,
+            PartySize = r.PartySize,
+            ReservedFrom = r.ReservedFrom,
+            ReservedTo = r.ReservedTo,
+            Status = r.Status,
+            DepositStatus = r.DepositStatus,
+            DepositAmount = r.DepositAmount,
+            IsOverdue = nowUtc > deadline
+        };
+    }
+
+    private static string ResolveStatus(RestaurantTable x, bool occupied, bool reserved) =>
         !x.IsActive || IsMaintenance(x.Status)
             ? RestaurantTableStatuses.Maintenance
-            : occupied ? RestaurantTableStatuses.Occupied : RestaurantTableStatuses.Available;
+            : occupied
+                ? RestaurantTableStatuses.Occupied
+                : reserved
+                    ? RestaurantTableStatuses.Reserved
+                    : RestaurantTableStatuses.Available;
 
     private static bool IsMaintenance(string? status) =>
         string.Equals(status, RestaurantTableStatuses.Maintenance, StringComparison.OrdinalIgnoreCase);

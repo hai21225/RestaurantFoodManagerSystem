@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Báo cáo - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1"><link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1"><link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/reports.css?v=20261101-f5-ui">
 
 <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
@@ -37,6 +37,12 @@
                     </form>
                     <p class="reporting-caption report-timezone">Giờ Việt Nam · Tuần bắt đầu từ thứ Hai</p>
                     <p id="reportFilterHint" class="reporting-caption"></p>
+                    <div class="admin-tabs" role="tablist" aria-label="Loại báo cáo" style="margin: 14px 0 18px; display: flex; flex-wrap: wrap;">
+                        <button class="admin-tab is-active" type="button" role="tab" aria-selected="true" data-report-tab="revenue">Doanh thu</button>
+                        <button class="admin-tab" type="button" role="tab" aria-selected="false" data-report-tab="top-dishes">Top món bán chạy</button>
+                        <button class="admin-tab" type="button" role="tab" aria-selected="false" data-report-tab="profitability">Giá vốn &amp; Lợi nhuận (COGS)</button>
+                    </div>
+                    <div id="tabRevenuePanel" role="tabpanel">
                     <nav class="report-section-links" aria-label="Đi đến phần báo cáo"><a href="#chartTitle">Biểu đồ ↓</a><a href="#reportDetailTitle">Bảng số liệu ↓</a></nav>
                     <p id="reportEmpty" class="report-empty" role="status"></p>
                     <div class="management-summary report-metrics" id="revenueSummary" aria-label="Kết quả báo cáo"></div>
@@ -57,11 +63,38 @@
                         <p id="reportUpdated" class="reporting-caption"></p>
                     </section>
                     <p class="reporting-caption report-footnote">Doanh thu chỉ gồm giao dịch đã thu, loại khoản đã hoàn tiền. CSV gồm toàn bộ nhóm thời gian và lấy số liệu mới nhất của kỳ tại lúc xuất.</p>
+                    </div>
+
+                    <section id="tabTopDishesPanel" class="panel report-detail" hidden role="tabpanel" aria-labelledby="topDishesTitle">
+                        <div class="panel-header">
+                            <div><h3 id="topDishesTitle">Top món bán chạy</h3><p id="topDishesHint" class="reporting-caption"></p></div>
+                            <button class="secondary-action" type="button" id="exportTopDishes" disabled>Xuất CSV Top món ↓</button>
+                        </div>
+                        <div class="report-table-wrap"><table class="revenue-table"><caption class="sr-only">Danh sách top món bán chạy theo số lượng và doanh thu</caption>
+                            <thead><tr><th>Món ăn</th><th>Kích cỡ</th><th>Số lượng</th><th>Doanh thu</th><th>Giá vốn (COGS)</th><th>Lợi nhuận gộp</th><th>Biên LN (%)</th></tr></thead>
+                            <tbody id="topDishesRows"></tbody>
+                        </table></div>
+                    </section>
+
+                    <section id="tabProfitabilityPanel" hidden role="tabpanel" aria-labelledby="profitabilityTitle">
+                        <p id="profitabilityWarning" class="report-empty" role="status" hidden></p>
+                        <div class="management-summary report-metrics" id="profitabilitySummary" aria-label="Tổng hợp giá vốn và lợi nhuận" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-bottom: 18px;"></div>
+                        <section class="panel report-detail">
+                            <div class="panel-header">
+                                <div><h3 id="profitabilityTitle">Giá vốn &amp; Lợi nhuận (COGS)</h3><p id="profitabilityHint" class="reporting-caption"></p></div>
+                                <button class="secondary-action" type="button" id="exportProfitability" disabled>Xuất CSV Giá vốn ↓</button>
+                            </div>
+                            <div class="report-table-wrap"><table class="revenue-table"><caption class="sr-only">Chi tiết giá vốn và lợi nhuận gộp theo món</caption>
+                                <thead><tr><th>Món ăn</th><th>Kích cỡ</th><th>Số lượng</th><th>Doanh thu</th><th>Giá vốn (COGS)</th><th>Lợi nhuận gộp</th><th>Biên LN (%)</th></tr></thead>
+                                <tbody id="profitabilityRows"></tbody>
+                            </table></div>
+                        </section>
+                    </section>
                 </section>
             </main>
         </div>
     </div>
-    <script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
+    <script src="../js/common/auth.js?v=20261117-v2fix1"></script><script src="../js/common/api.js?v=20261117-v2fix1"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/reporting-session.js"></script><script src="../js/pages/reports.js?v=20261112-stitch-layout3"></script>
 </body>
 </html>

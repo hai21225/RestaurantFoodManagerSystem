@@ -19,7 +19,8 @@
     let preparationHistory = { orderId: null, rows: [], state: "idle" };
     const closed = () => session.order && pos.terminal(session.order.status);
     const hasValidTableId = () => Number.isInteger(session.tableId) && session.tableId > 0 && session.tableId <= 2147483647;
-    const hasTableContext = () => session.isOperator() && session.table?.isActive && session.table.status !== "Maintenance" && (session.loaded || session.loading);
+    const isReservedLocked = () => session.loaded && session.table?.status === "Reserved" && !session.order;
+    const hasTableContext = () => session.isOperator() && session.table?.isActive && session.table.status !== "Maintenance" && !isReservedLocked() && (session.loaded || session.loading);
     const locked = () => !session.loaded || session.loading || session.busy || Boolean(session.pending) || session.hasExtraPending() || !session.isOperator() || closed() || !session.table?.isActive || session.table.status === "Maintenance" || (!session.order && session.table.status !== "Available");
     const findFood = (sizeId) => state.foods.find((food) => food.sizes.some((size) => size.sizeId === sizeId));
 
@@ -32,15 +33,17 @@
         const ready = Boolean(hasTableContext());
         const opening = !ready && hasValidTableId() && (session.loading || (!session.loaded && !entryError));
         const maintenance = session.loaded && session.table?.status === "Maintenance";
+        const reserved = isReservedLocked();
         $("#orderEntryCard").hidden = ready;
         $("#orderContextBar").hidden = !ready;
         $("#orderLayout").hidden = !ready;
         $("#cartDock").hidden = !ready;
         $("#activeOrderPanel").hidden = !ready || !session.order;
         $(".order-screen").classList.toggle("is-awaiting-table", !ready);
-        $("#orderEntryTitle").textContent = opening ? "Đang mở bàn…" : maintenance ? "Bàn đang bảo trì" : entryError ? "Chưa mở được bàn" : "Chọn bàn để bắt đầu";
+        $("#orderEntryTitle").textContent = opening ? "Đang mở bàn…" : maintenance ? "Bàn đang bảo trì" : reserved ? "Bàn đang có khách giữ" : entryError ? "Chưa mở được bàn" : "Chọn bàn để bắt đầu";
         $("#orderEntryDescription").textContent = opening ? "Đang tải thông tin bàn và đơn hiện tại."
             : maintenance ? "Bàn này tạm ngừng phục vụ. Chọn một bàn khác để đặt món."
+            : reserved ? "Bàn này đang được giữ cho lịch đặt trước và không thể mở đơn vãng lai. Vui lòng xác nhận khách tới tại Sơ đồ bàn hoặc chọn bàn khác."
             : entryError || "Chọn bàn đang phục vụ hoặc bàn trống. Thực đơn và đơn tạm sẽ xuất hiện sau khi mở bàn.";
         $("#orderEntryChooseTable").textContent = hasValidTableId() ? "Chọn bàn khác" : "Chọn bàn";
         $("#orderEntryRetry").hidden = !hasValidTableId() || opening;
@@ -94,6 +97,7 @@
             : !session.isOperator() ? "Bạn đang xem đơn; chỉ phục vụ và quản trị viên được sửa tại POS."
             : session.order ? [table.areaName, `Đơn #${session.order.orderId}`, "Chọn món bên dưới để gọi thêm."].filter(Boolean).join(" · ")
             : table.status === "Maintenance" ? "Bàn đang bảo trì. Hãy chọn bàn khác."
+            : table.status === "Reserved" ? "Bàn đang có khách giữ cho lịch đặt trước, không thể mở đơn vãng lai."
             : table.status !== "Available" ? "Chưa xác định được đơn của bàn đang sử dụng. Hãy làm mới hoặc chọn lại bàn."
             : "Bàn chưa có đơn đang mở. Chọn món rồi gửi bếp.";
     }
@@ -273,7 +277,10 @@
         renderButtons();
         try {
             await task;
-            if (session.order) window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(session.order));
+            if (session.order) {
+                window.localStorage.setItem("restaurant.lastOrder", JSON.stringify(session.order));
+                window.restaurantRealtime?.joinOrder(session.order.orderId);
+            }
             if (!quiet) message(previouslyLoaded ? "Đã tải trạng thái mới nhất từ máy chủ." : "");
             render();
             // Không chờ truy vấn phụ trước khi mở form hoặc hoàn tất refresh nghiệp vụ.
@@ -479,6 +486,16 @@
         preparationClock = window.setInterval(() => { if (!document.hidden) renderPreparationTimes(); }, 1000);
     }
     startPolling();
+    let realtimeTimer = null;
+    const scheduleRealtimeRefresh = () => {
+        if (realtimeTimer) return;
+        realtimeTimer = window.setTimeout(() => {
+            realtimeTimer = null;
+            if (!session.busy && !session.loading && !dialog.open && !dishDialog.open && !$("#orderHistoryDialog").open) refresh(true);
+        }, 150);
+    };
+    ["OrderItemsAdded", "OrderItemQuantityAdjusted", "OrderItemCancelled", "KitchenTicketStatusChanged", "KitchenItemStatusChanged", "OrderStatusChanged", "OrderPaid"]
+        .forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleRealtimeRefresh));
     window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
     window.addEventListener("pagehide", () => { window.clearInterval(poll); window.clearInterval(preparationClock); });
 })();

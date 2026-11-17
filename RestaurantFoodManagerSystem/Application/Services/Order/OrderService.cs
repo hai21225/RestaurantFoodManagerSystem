@@ -162,15 +162,40 @@ public sealed partial class OrderService
         }
         else
         {
-            var windowEnd = now.AddHours(2);
-            var hasUpcomingReservation = await _db.TableReservations.AnyAsync(
-                r => r.TableId == request.TableId
-                  && (r.Status == TableReservationStatuses.Confirmed || r.Status == TableReservationStatuses.Seated)
-                  && r.ReservedFrom < windowEnd
-                  && r.ReservedTo > now,
-                ct);
-            if (hasUpcomingReservation)
-                throw new InvalidOperationException("Table is reserved for an upcoming booking");
+            var seatedReservation = !isCustomerCaller
+                ? await _db.TableReservations
+                    .OrderByDescending(r => r.SeatedAt ?? r.UpdatedAt)
+                    .FirstOrDefaultAsync(
+                        r => r.TableId == request.TableId
+                          && r.Status == TableReservationStatuses.Seated
+                          && r.OrderId == null,
+                        ct)
+                : await _db.TableReservations
+                    .OrderByDescending(r => r.SeatedAt ?? r.UpdatedAt)
+                    .FirstOrDefaultAsync(
+                        r => r.TableId == request.TableId
+                          && r.Status == TableReservationStatuses.Seated
+                          && r.OrderId == null
+                          && r.CustomerUserId == _currentUser.UserId,
+                        ct);
+
+            if (seatedReservation is not null)
+            {
+                reservation = seatedReservation;
+            }
+            else
+            {
+                var windowEnd = now.AddHours(2);
+                var hasUpcomingReservation = await _db.TableReservations.AnyAsync(
+                    r => r.TableId == request.TableId
+                      && (r.Status == TableReservationStatuses.Pending
+                          || r.Status == TableReservationStatuses.Confirmed
+                          || r.Status == TableReservationStatuses.Seated)
+                      && r.ReservedFrom <= windowEnd,
+                    ct);
+                if (hasUpcomingReservation)
+                    throw new InvalidOperationException("Table is reserved for an upcoming booking");
+            }
         }
 
         var preparedItems = await PrepareItemsAsync(request.Items, ct);

@@ -12,6 +12,35 @@
 .service-workspace .login-error { border-radius: 8px; }
 .service-workspace .login-password-toggle { border-radius: 8px; }
 .service-workspace .login-dialog { border-radius: 14px; }
+.service-workspace .auth-links {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.service-workspace .auth-link-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fcf9f4;
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    text-align: center;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.service-workspace .auth-link-item:hover {
+    background: var(--surface-strong);
+    border-color: var(--primary);
+    color: var(--primary-strong);
+}
 .service-workspace .setup-grid { gap: 18px; }
 .service-workspace .setup-grid .login-password-field { display: block; }
 .service-workspace .setup-grid .login-password-toggle { color: var(--primary-strong); }

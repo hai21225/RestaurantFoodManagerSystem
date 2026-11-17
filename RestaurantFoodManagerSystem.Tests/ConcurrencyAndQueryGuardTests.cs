@@ -135,7 +135,8 @@ public sealed class ConcurrencyAndQueryGuardTests : TestBase
         using var db = NewContext(new CommandWatchInterceptor(state));
         var all = await new RestaurantTableService(db).GetAllRestaurantTablesAsync(CancellationToken.None);
 
-        Assert.Equal(2, state.Commands.Count);
+        // 3 batched queries: tables (+Area), occupied orders, and active reservations (no N+1).
+        Assert.Equal(3, state.Commands.Count);
         Assert.Equal("Available", all.Single(x => x.TableId == free.TableId).Status);
         Assert.Equal("Occupied", all.Single(x => x.TableId == busy1.TableId).Status);
         Assert.Equal("Occupied", all.Single(x => x.TableId == busy2.TableId).Status);

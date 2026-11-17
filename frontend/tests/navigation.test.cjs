@@ -94,23 +94,27 @@ async function openPage(role, apiFirst = false, options = {}) {
 }
 
 for (const [role, expected] of [
-    ['Waiter',['Bàn ăn','Đặt món','Tài khoản']],
+    ['Waiter',['Bàn ăn','Đặt bàn','Tài khoản']],
     ['Chef',['Bếp','Tài khoản']],
-    ['Cashier',['Thanh toán','Tài khoản']],
-    ['WarehouseManager',['Món ăn','Kho hàng','Nguyên liệu / Công thức','Nhập hàng','Tài khoản','Danh mục / Topping']]
+    ['Cashier',['Đặt bàn','Thanh toán','Tài khoản']],
+    ['WarehouseManager',['Món ăn','Kho hàng','Nguyên liệu / Công thức','Nhập hàng','Tài khoản','Danh mục / Topping']],
+    ['Customer',['Đặt bàn','Gọi món QR','Thực đơn','Tài khoản']]
 ]) {
     test(`${role}: navigation nạp trước API vẫn hiện đủ mục đúng quyền sau /users/me`, async () => {
-        assert.deepEqual(await openPage(role), expected);
+        assert.deepEqual(await openPage(role, false, { screen: role === 'Customer' ? 'reservations' : undefined }), expected);
     });
 }
-test('Admin nạp menu trước API vẫn có toàn bộ 17 mục sau bootstrap', async () => {
-    assert.equal((await openPage('Admin')).length, 17);
+test('Admin nạp menu trước API vẫn có toàn bộ 17 mục sau bootstrap (ẩn Đặt món, thêm Đặt bàn)', async () => {
+    const items = await openPage('Admin');
+    assert.equal(items.length, 17);
+    assert.equal(items.includes('Đặt món'), false);
+    assert.equal(items.includes('Đặt bàn'), true);
 });
 
 test('Pilot Phục vụ có menu trực tiếp đúng quyền; Admin vẫn giữ đủ nhóm, trang cũ không đổi', async () => {
     const waiter = await openPage('Waiter', true, { screen:'order', service:true, mobile:true, inspect:true });
     assert.equal(waiter.navigation.classList.contains('nav-service-direct'), true);
-    assert.deepEqual(waiter.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Bàn ăn','Đặt món','Tài khoản']);
+    assert.deepEqual(waiter.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Bàn ăn','Đặt bàn','Tài khoản']);
     const admin = await openPage('Admin', true, { screen:'tables', service:true, mobile:true, inspect:true });
     assert.equal(admin.navigation.classList.contains('nav-service-direct'), false);
     assert.equal(admin.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).length, 17);
@@ -121,18 +125,19 @@ test('Pilot Phục vụ có menu trực tiếp đúng quyền; Admin vẫn giữ
 test('Pilot Tiện ích đơn của Thu ngân không mở thêm menu POS/Bếp', async () => {
     const p = await openPage('Cashier', true, { screen:'order-tools', service:true, mobile:true, inspect:true });
     assert.equal(p.navigation.classList.contains('nav-service-direct'), true);
-    assert.deepEqual(p.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Thanh toán','Tài khoản']);
+    assert.deepEqual(p.navigation.all().filter(x => x.classList.contains('nav-item') && !x.hidden).map(x => x.textContent), ['Đặt bàn','Thanh toán','Tài khoản']);
 });
 test('thứ tự chuẩn auth → api → navigation vẫn giữ đủ màn Phục vụ', async () => {
-    assert.deepEqual(await openPage('Waiter',true), ['Bàn ăn','Đặt món','Tài khoản']);
+    assert.deepEqual(await openPage('Waiter',true), ['Bàn ăn','Đặt bàn','Tài khoản']);
 });
 
 test('Thanh dưới hiện màn đang mở, đổi đúng khi xoay màn và vẫn giữ danh sách đúng quyền', async () => {
     for (const [role, screen, expected, desktop] of [
         ['Waiter', 'tables', 'Bàn ăn', 'Công việc'],
-        ['Waiter', 'order', 'Đặt món', 'Công việc'],
-        ['Waiter', 'order-tools', 'Đặt món', 'Công việc'],
-        ['WarehouseManager', 'inventory', 'Kho hàng', 'Quản lý kho']
+        ['Waiter', 'order', 'Bàn ăn', 'Công việc'],
+        ['Waiter', 'order-tools', 'Bàn ăn', 'Công việc'],
+        ['WarehouseManager', 'inventory', 'Kho hàng', 'Quản lý kho'],
+        ['Customer', 'reservations', 'Đặt bàn', 'Khách hàng']
     ]) {
         const p = await openPage(role, false, { screen, mobile: true, inspect: true });
         const group = p.navigation.children.find(item => item.all().some(child => child.id === (role === 'WarehouseManager' ? 'nav-management-toggle' : 'nav-overview-toggle')));
@@ -144,7 +149,7 @@ test('Thanh dưới hiện màn đang mở, đổi đúng khi xoay màn và vẫ
         p.media.matches = true; p.media.change();
         assert.equal(toggle.children[0].textContent, expected);
         const visible = p.navigation.all().filter(item => item.classList.contains('nav-item') && !item.hidden).map(item => item.textContent);
-        if (role === 'Waiter') assert.deepEqual(visible, ['Bàn ăn', 'Đặt món', 'Tài khoản']);
+        if (role === 'Waiter') assert.deepEqual(visible, ['Bàn ăn', 'Đặt bàn', 'Tài khoản']);
     }
 });
 
@@ -161,7 +166,7 @@ test('Đổi module quản trị ngay trong trang cập nhật nhãn thanh dư�
 test('Liên kết pilot giữ phiên bản HTML khi chuyển màn và không thêm lựa chọn bàn ngầm', async () => {
     const p = await openPage('Waiter',true,{screen:'order',service:true,inspect:true});
     const links=p.navigation.all().filter(x=>x.classList.contains('nav-item')&&!x.hidden);
-    for(const label of ['Bàn ăn','Đặt món']) {
+    for(const label of ['Bàn ăn','Đặt bàn']) {
         const target=new URL(links.find(x=>x.textContent===label).dataset.page);
         assert.equal(target.searchParams.get('ui'),'20261112-print1');
         assert.equal(target.searchParams.has('tableId'),false);
@@ -173,7 +178,7 @@ test('Liên kết pilot giữ phiên bản HTML khi chuyển màn và không th�
 });
 
 test('Sahara Bếp/Thu ngân dùng tab trực tiếp và giữ đúng quyền sau chuẩn hóa URL', async () => {
-    for (const [role, expected] of [['Chef', ['Bếp', 'Tài khoản']], ['Cashier', ['Thanh toán', 'Tài khoản']]]) {
+    for (const [role, expected] of [['Chef', ['Bếp', 'Tài khoản']], ['Cashier', ['Đặt bàn', 'Thanh toán', 'Tài khoản']]]) {
         const p = await openPage(role, true, { service:true, mobile:true, inspect:true });
         assert.equal(p.navigation.classList.contains('nav-service-direct'), true);
         const visible = p.navigation.all().filter(x=>x.classList.contains('nav-item')&&!x.hidden);

@@ -93,9 +93,12 @@
         for (const id of ["invoiceTotalsSection", "invoicePrintActions", "paymentMethodSection", "orderPaymentHistory"]) $(id).hidden = !order;
         const tableStatuses = { Available: "Trống", Occupied: "Có khách", Maintenance: "Bảo trì", Reserved: "Đã đặt" };
         const tableStatus = session.tables.find((t) => t.tableId === order?.tableId)?.status;
+        const depositNote = order && (order.reservationId || order.depositAmount || order.depositDeducted)
+            ? `<p class="payment-hint">Đặt bàn ${order.reservationId ? `#${esc(order.reservationId)}` : ""}${order.depositAmount ? ` · Tiền cọc: ${money(order.depositAmount)}` : ""}${order.depositDeducted ? ` · Đã khấu trừ cọc: ${money(order.depositDeducted)}` : " · Tiền cọc (nếu đã thu) sẽ được khấu trừ khi thanh toán."}</p>`
+            : "";
         html("billDetail", order ? `<div class="bill-heading"><strong>Bàn ${esc(tableName(order.tableId))} · ORD-${order.orderId}</strong>
             <span>Mở lúc ${time(order.createdAt)}</span><span>Trạng thái bàn: ${esc(tableStatuses[tableStatus] || tableStatus || "—")}</span>
-            ${order.note ? `<p>Ghi chú hóa đơn: ${esc(order.note)}</p>` : ""}${!session.loaded ? '<p class="is-error">Chi tiết lần trước chỉ để tham khảo. Bấm Làm mới để tải lại trước khi thu tiền.</p>' : ""}</div>${itemsHtml(order.items)}` : `<p class="empty-state">${reads.queue.failed ? "Không tải được danh sách đơn. Bấm Làm mới để thử lại." : reads.queue.loading ? "Đang tải danh sách đơn…" : "Chọn đơn để xem món và lịch sử thanh toán."}</p>`);
+            ${depositNote}${order.note ? `<p>Ghi chú hóa đơn: ${esc(order.note)}</p>` : ""}${!session.loaded ? '<p class="is-error">Chi tiết lần trước chỉ để tham khảo. Bấm Làm mới để tải lại trước khi thu tiền.</p>' : ""}</div>${itemsHtml(order.items)}` : `<p class="empty-state">${reads.queue.failed ? "Không tải được danh sách đơn. Bấm Làm mới để thử lại." : reads.queue.loading ? "Đang tải danh sách đơn…" : "Chọn đơn để xem món và lịch sử thanh toán."}</p>`);
         html("paymentTotals", totals(order)); $("paymentBlock").textContent = stale() ? "Dữ liệu chưa được làm mới đầy đủ. Bấm Làm mới trước khi ghi nhận khoản thu." : session.block();
         $("confirmPaymentButton").disabled = paymentLocked() || Boolean(session.block()) || state.method === "MoMo";
         $("confirmPaymentButton").textContent = session.busy ? "Đang xử lý…" : "Xác nhận đã nhận tiền";
@@ -142,8 +145,33 @@
         $("ledgerPrev").disabled = locked() || !ready("ledger") || session.ledger.page <= 1;
         $("ledgerNext").disabled = locked() || !ready("ledger") || session.ledger.page * session.ledger.pageSize >= session.ledger.total;
     }
+    function renderShift() {
+        const shift = session.currentShift;
+        $("cashierShiftTitle").textContent = !session.shiftLoaded ? "Đang kiểm tra ca…"
+            : shift ? `Ca #${shift.shiftId} · Mở lúc ${time(shift.openedAt)}` : "Chưa mở ca thu ngân";
+        $("closeShiftButton").hidden = !shift;
+        $("closeShiftButton").disabled = locked();
+        $("openShiftForm").hidden = !session.shiftLoaded || Boolean(shift);
+        $("openShiftSubmit").disabled = locked();
+        $("shiftHistoryButton").disabled = fetching();
+        $("shiftSummary").hidden = !shift;
+        if (shift) {
+            html("shiftSummary", [
+                ["Tiền đầu ca", money(shift.openingCash)],
+                ["Thu tiền mặt", money(shift.cashTotal)],
+                ["Thu thẻ", money(shift.cardTotal)],
+                ["Thu MoMo", money(shift.momoTotal)],
+                ["Hoàn tiền", money(shift.refundTotal)],
+                ["Tiền mặt dự kiến", money(shift.expectedCash)]
+            ].map(([label, value]) => `<article class="payment-summary-card"><span>${label}</span><strong>${esc(value)}</strong></article>`).join(""));
+        }
+    }
+    function renderShiftHistory(list) {
+        $("shiftHistoryBody").innerHTML = list.length ? `<table class="payment-table"><thead><tr><th>Ca</th><th>Thu ngân</th><th>Mở ca</th><th>Đóng ca</th><th>Đầu ca</th><th>Dự kiến</th><th>Thực tế</th><th>Chênh lệch</th><th>Trạng thái</th></tr></thead><tbody>${list.map((s) => `<tr><td>#${s.shiftId}</td><td>${esc(s.cashierName || `#${s.cashierUserId}`)}</td><td>${time(s.openedAt)}</td><td>${time(s.closedAt)}</td><td>${money(s.openingCash)}</td><td>${money(s.expectedCash)}</td><td>${s.actualCash != null ? money(s.actualCash) : "—"}</td><td>${s.variance != null ? money(s.variance) : "—"}</td><td>${esc(s.status === "Open" ? "Đang mở" : "Đã đóng")}</td></tr>`).join("")}</tbody></table>`
+            : '<p class="empty-state">Chưa có lịch sử ca thu ngân.</p>';
+    }
     function render() {
-        renderQueue(); renderDetail(); renderLedger();
+        renderShift(); renderQueue(); renderDetail(); renderLedger();
         $("pendingPayment").hidden = !session.pending;
         $("pendingDescription").textContent = session.pending ? `Yêu cầu ${session.pending.kind === "refund" ? "hoàn tiền" : "thanh toán"} của ORD-${session.pending.orderId} chưa được đối chiếu xong. Không gửi lại lệnh. Hãy tải phiếu thu mới nhất.` : "";
         $("reviewPaymentButton").disabled = fetching();
@@ -275,6 +303,50 @@
     $("closeReceiptButton").addEventListener("click", () => $("receiptDialog").close());
     $("receiptDialog").addEventListener("close", () => { state.printing = false; });
     $("printReceiptButton").addEventListener("click", () => window.print());
+    $("openShiftForm").addEventListener("submit", (event) => {
+        event.preventDefault(); if (locked()) return;
+        run(async () => {
+            const shift = await session.openShift({ openingCash: $("openingCashInput").value, note: $("openShiftNoteInput").value });
+            $("openShiftForm").reset(); $("openingCashInput").value = "0";
+            notice(`Đã mở ca thu ngân #${shift.shiftId}.`);
+        });
+    });
+    function updateVariancePreview() {
+        const expected = Number(session.currentShift?.expectedCash ?? 0), actual = Number($("actualCashInput").value);
+        $("closeShiftVariancePreview").textContent = Number.isFinite(actual) ? `Chênh lệch dự kiến: ${money(actual - expected)}` : "";
+    }
+    $("closeShiftButton").addEventListener("click", () => {
+        if (locked() || !session.currentShift) return;
+        $("closeShiftSummary").textContent = `Ca #${session.currentShift.shiftId} · Tiền mặt dự kiến: ${money(session.currentShift.expectedCash)}.`;
+        $("actualCashInput").value = String(session.currentShift.expectedCash ?? 0);
+        $("closeShiftNoteInput").value = "";
+        updateVariancePreview();
+        $("closeShiftDialog").showModal();
+    });
+    $("actualCashInput").addEventListener("input", updateVariancePreview);
+    $("cancelCloseShiftButton").addEventListener("click", () => $("closeShiftDialog").close());
+    $("closeShiftForm").addEventListener("submit", (event) => {
+        event.preventDefault(); if (locked() || !session.currentShift) return;
+        const shiftId = session.currentShift.shiftId;
+        run(async () => {
+            const closed = await session.closeShift(shiftId, { actualCash: $("actualCashInput").value, note: $("closeShiftNoteInput").value });
+            $("closeShiftDialog").close();
+            notice(`Đã đóng ca #${closed?.shiftId ?? shiftId}. Chênh lệch: ${closed?.variance != null ? money(closed.variance) : "—"}.`);
+        });
+    });
+    $("shiftHistoryButton").addEventListener("click", () => run(async () => {
+        const list = await session.loadShiftHistory();
+        renderShiftHistory(list);
+        $("shiftHistoryDialog").showModal();
+    }));
+    $("closeShiftHistoryButton").addEventListener("click", () => $("shiftHistoryDialog").close());
+    for (const eventName of ["OrderCreated", "OrderStatusChanged", "PaymentSucceeded", "PaymentFailed", "PaymentRefunded"]) {
+        window.restaurantRealtime?.on(eventName, () => {
+            if (!session.hasAccess() || !auth.getToken() || locked() || $("confirmDialog").open || $("closeShiftDialog").open || state.printing) return;
+            state.lastRefresh = Date.now();
+            run(refresh);
+        });
+    }
     let poll;
     function startPoll() {
         window.clearInterval(poll);

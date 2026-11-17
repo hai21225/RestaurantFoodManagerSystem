@@ -113,6 +113,13 @@ public sealed partial class KitchenService
                 ki.Status = KitchenStatuses.Preparing;
             }
         }
+        else if (KitchenStatuses.IsDone(status))
+        {
+            foreach (var ki in kitchenItems.Where(x => !KitchenStatuses.IsCancelled(x.Status) && !KitchenStatuses.IsDone(x.Status)))
+            {
+                ki.Status = status;
+            }
+        }
 
         // C-10: history order khi bếp huỷ phải giữ lý do thật, không chỉ "Updated from kitchen".
         var historyNote = isCancelling
@@ -138,6 +145,17 @@ public sealed partial class KitchenService
                     var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
                     OrderItemMutations.RecordItemHistory(
                         _db, oi, linkedKi?.Id, oldItemStatus, KitchenStatuses.Preparing, changedBy, now, historyNote);
+                }
+            }
+            else if (KitchenStatuses.IsDone(status))
+            {
+                foreach (var oi in ticketOrderItems.Where(x => !KitchenStatuses.IsCancelled(x.Status) && !KitchenStatuses.IsDone(x.Status)))
+                {
+                    var oldItemStatus = oi.Status;
+                    oi.Status = status;
+                    var linkedKi = kitchenItems.FirstOrDefault(x => x.OrderItemId == oi.Id);
+                    OrderItemMutations.RecordItemHistory(
+                        _db, oi, linkedKi?.Id, oldItemStatus, status, changedBy, now, historyNote);
                 }
             }
 
@@ -818,8 +836,20 @@ public sealed partial class KitchenService
 
         try
         {
+            var customerUserId = await _db.Orders
+                .AsNoTracking()
+                .Where(x => x.OrderId == orderId)
+                .Select(x => x.CustomerUserId)
+                .FirstOrDefaultAsync(ct);
+
+            var groups = new List<string>(4) { "role:Kitchen", "role:Waiter", $"order:{orderId}" };
+            if (customerUserId.HasValue)
+            {
+                groups.Add($"customer:{customerUserId.Value}");
+            }
+
             await _hub.Clients
-                .Groups("role:Kitchen", "role:Waiter", $"order:{orderId}")
+                .Groups(groups)
                 .SendAsync(eventName, payload, ct);
         }
         catch (Exception ex)

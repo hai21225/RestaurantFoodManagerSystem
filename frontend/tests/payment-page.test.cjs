@@ -49,6 +49,7 @@ async function page({ empty = true, failQueue = false, failLedger = false, hold 
             const selected = new URL('http://fixture' + route).searchParams.get('status') === 'Ready';
             return { items: !server.empty && selected ? [copy(order)] : [], total: !server.empty && selected ? 1 : 0 };
         }
+        if (route === '/cashier-shifts/current') throw Object.assign(new Error('No open shift'), { status: 404 });
         if (route.startsWith('/payments/order/')) return [];
         if (route === '/orders/42') return copy(order);
         throw new Error('Unexpected GET ' + route);

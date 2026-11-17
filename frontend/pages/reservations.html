@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt bàn - Restaurant Food Manager</title>
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
+    <link rel="stylesheet" href="../css/pages/v2-customer.css?v=20261117-v2fix1">
+    <script src="../js/common/auth.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/common/navigation.js?v=20261112-service-nav10" defer></script>
+    <script src="../js/common/realtime.js?v=20261117-v2fix1" defer></script>
+    <script src="../js/pages/reservations.js?v=20261117-v2fix1" defer></script>
+</head>
+<body class="service-workspace service-workspace--reservations">
+    <div class="app-shell">
+        <aside class="sidebar" aria-label="Điều hướng chính">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true">RF</span>
+                <div>
+                    <strong>Restaurant</strong>
+                    <span>Đặt bàn &amp; Phục vụ</span>
+                </div>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button>
+                <button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
+                <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+                <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button>
+                <button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
+                <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button>
+                <button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
+                <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button>
+                <button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
+                <button class="nav-item" type="button" data-page="reports.html">Báo cáo</button>
+                <button class="nav-item" type="button" data-page="account.html">Tài khoản</button>
+            </nav>
+        </aside>
+
+        <div class="workspace">
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">Quản lý lịch đặt chỗ</p>
+                    <h1>Đặt bàn</h1>
+                </div>
+                <div class="operator">
+                    <span class="operator-role">Khách hàng</span>
+                    <strong>Chưa đăng nhập</strong>
+                </div>
+            </header>
+
+            <main class="content">
+                <p id="reservationNotice" class="v2-notice" role="status" hidden></p>
+
+                <details class="panel" style="margin-bottom: 14px;">
+                    <summary style="cursor: pointer; font-weight: 700;">Hướng dẫn trạng thái đặt bàn &amp; tiền cọc</summary>
+                    <div class="v2-form-grid" style="margin-top: 12px; font-size: 13px; line-height: 1.5;">
+                        <div>
+                            <strong>Trạng thái lịch đặt</strong>
+                            <ul style="margin: 6px 0 0 18px; padding: 0;">
+                                <li><span class="v2-badge is-pending">Chờ xác nhận</span> — Lịch mới tạo, chờ nhân viên duyệt.</li>
+                                <li><span class="v2-badge is-confirmed">Đã xác nhận</span> — Đã giữ bàn; bàn chuyển trạng thái <em>Đang có khách giữ</em> trước giờ hẹn.</li>
+                                <li><span class="v2-badge is-seated">Đã nhận bàn</span> — Khách đã tới, bàn chuyển sang phục vụ.</li>
+                                <li><span class="v2-badge is-available">Hoàn tất</span> — Khách đã thanh toán xong đơn.</li>
+                                <li><span class="v2-badge is-noshow">Không đến</span> — Quá giờ hẹn khách không tới; trả bàn thủ công.</li>
+                                <li><span class="v2-badge is-cancelled">Đã hủy</span> — Lịch đặt đã bị hủy.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <strong>Trạng thái tiền cọc</strong>
+                            <ul style="margin: 6px 0 0 18px; padding: 0;">
+                                <li><strong>Không cần cọc</strong> — Lịch đặt không yêu cầu đặt cọc.</li>
+                                <li><strong>Chờ đặt cọc</strong> — Khách chưa thanh toán tiền cọc.</li>
+                                <li><strong>Đã đặt cọc</strong> — Đã thu tiền cọc (MoMo hoặc thu ngân xác nhận).</li>
+                                <li><strong>Đã trừ vào hóa đơn</strong> — Tiền cọc đã được khấu trừ khi thanh toán.</li>
+                                <li><strong>Đã hoàn cọc</strong> — Tiền cọc đã hoàn trả cho khách.</li>
+                                <li><strong>Mất cọc</strong> — Khách không đến hoặc hủy muộn theo quy định.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Customer view -->
+                <section id="customerSection" hidden>
+                    <div class="v2-section-grid">
+                        <section class="panel" aria-labelledby="myReservationsHeading">
+                            <div class="panel-header">
+                                <div>
+                                    <h2 id="myReservationsHeading">Lịch đặt bàn của tôi</h2>
+                                    <span id="myReservationCount">0 lịch đặt</span>
+                                </div>
+                                <button id="refreshMyBtn" class="secondary-action" type="button">Làm mới</button>
+                            </div>
+                            <div id="myReservationsList" class="v2-card-list"></div>
+                        </section>
+
+                        <aside class="panel" aria-labelledby="bookingFormHeading">
+                            <div class="panel-header">
+                                <h2 id="bookingFormHeading">Tạo lịch đặt bàn</h2>
+                            </div>
+                            <form id="bookingForm" class="v2-card-list" novalidate>
+                                <div class="v2-field">
+                                    <label for="bookArea">Lọc theo khu vực</label>
+                                    <select id="bookArea">
+                                        <option value="all">Tất cả khu vực</option>
+                                    </select>
+                                </div>
+                                <div class="v2-field">
+                                    <label for="bookTable">Chọn bàn</label>
+                                    <select id="bookTable" required></select>
+                                </div>
+                                <div class="v2-field">
+                                    <label for="bookName">Tên khách hàng</label>
+                                    <input id="bookName" type="text" maxlength="150" required placeholder="Họ và tên">
+                                </div>
+                                <div class="v2-field">
+                                    <label for="bookPhone">Số điện thoại</label>
+                                    <input id="bookPhone" type="tel" maxlength="20" required placeholder="Ví dụ: 0901234567">
+                                </div>
+                                <div class="v2-form-grid">
+                                    <div class="v2-field">
+                                        <label for="bookFrom">Từ giờ</label>
+                                        <input id="bookFrom" type="datetime-local" required>
+                                    </div>
+                                    <div class="v2-field">
+                                        <label for="bookTo">Đến giờ</label>
+                                        <input id="bookTo" type="datetime-local" required>
+                                    </div>
+                                </div>
+                                <div class="v2-form-grid">
+                                    <div class="v2-field">
+                                        <label for="bookPartySize">Số khách</label>
+                                        <input id="bookPartySize" type="number" min="1" max="50" value="2" required>
+                                    </div>
+                                    <div class="v2-field">
+                                        <label for="bookDeposit">Tiền cọc (VNĐ)</label>
+                                        <input id="bookDeposit" type="number" min="0" step="10000" value="0">
+                                    </div>
+                                </div>
+                                <div class="v2-field">
+                                    <label for="bookNote">Ghi chú</label>
+                                    <textarea id="bookNote" maxlength="500" placeholder="Yêu cầu chỗ ngồi, dịp đặc biệt..."></textarea>
+                                </div>
+                                <button id="bookSubmitBtn" class="primary-action" type="submit">Xác nhận đặt bàn</button>
+                            </form>
+                        </aside>
+                    </div>
+                </section>
+
+                <!-- Staff management view -->
+                <section id="staffSection" class="panel" aria-labelledby="staffReservationsHeading" hidden>
+                    <div class="panel-header">
+                        <div>
+                            <h2 id="staffReservationsHeading">Danh sách đặt bàn</h2>
+                            <span id="staffReservationCount">0 lịch đặt</span>
+                        </div>
+                        <button id="refreshStaffBtn" class="secondary-action" type="button">Làm mới</button>
+                    </div>
+
+                    <div class="v2-form-grid" style="margin-bottom: 14px;">
+                        <div class="v2-field">
+                            <label for="filterDate">Ngày đặt</label>
+                            <input id="filterDate" type="date">
+                        </div>
+                        <div class="v2-field">
+                            <label for="filterStatus">Trạng thái</label>
+                            <select id="filterStatus">
+                                <option value="">Tất cả trạng thái</option>
+                                <option value="Pending">Chờ xác nhận</option>
+                                <option value="Confirmed">Đã xác nhận</option>
+                                <option value="Seated">Đã nhận bàn</option>
+                                <option value="Completed">Hoàn tất</option>
+                                <option value="NoShow">Không đến</option>
+                                <option value="Cancelled">Đã hủy</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="staffReservationsList" class="v2-card-list"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <dialog id="momoDepositDialog" class="form-dialog" aria-labelledby="momoDepositTitle">
+        <div class="form-dialog-header">
+            <div>
+                <h2 id="momoDepositTitle">Đặt cọc MoMo</h2>
+                <p id="momoDepositDesc">Hoàn tất thanh toán tiền cọc cho lịch đặt bàn.</p>
+            </div>
+            <button id="closeMomoDialogBtn" class="dialog-close-button" type="button" aria-label="Đóng">×</button>
+        </div>
+        <div id="momoDialogBody" class="v2-card-list"></div>
+    </dialog>
+</body>
+</html>

@@ -14,8 +14,7 @@
             const [order, tables] = await Promise.all([this.api.get(`/orders/${this.orderId}`), this.api.get("/restaurant-tables")]);
             if (order?.orderId !== this.orderId || !Array.isArray(order.items) || !Array.isArray(tables)) throw fail("Chưa đọc được đầy đủ đơn/bàn.", 502);
             this.order = order; this.tables = tables;
-            // Danh sách khuyến mãi hiện là AdminOnly; không mở quyền quản trị cho Phục vụ.
-            this.promotions = this.auth.hasRole("Admin") ? await this.api.get("/management/promotions") : [];
+            this.promotions = this.auth.hasRole("Admin", "Waiter") ? await this.api.get("/management/promotions/active") : [];
             this.loaded = true;
         }
         async refresh() { if (this.busy || this.loading) return; this.loading = true; try { await this.load(); } finally { this.loading = false; } }

@@ -1,6 +1,7 @@
 (function () {
     const { StaffSession, snapshot, roleLabels } = window.restaurantStaff;
     const auth = window.restaurantAuth, session = new StaffSession({ api: window.restaurantApi, auth, storage: window.sessionStorage });
+    session.userType = "staff";
     const $ = (id) => document.getElementById(id);
     const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
     const label = (role) => roleLabels[role] || role;

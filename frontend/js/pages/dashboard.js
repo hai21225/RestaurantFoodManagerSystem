@@ -38,17 +38,24 @@
             [["Đơn đã thu hôm nay", data.paidOrderCountToday, "Theo thời điểm thu tiền"], ["Đơn đang mở", data.openOrderCount, "Chưa thanh toán hoặc hủy"],
             ["Nguyên liệu dưới ngưỡng", data.lowStockCount, "Xem thêm tình trạng hỏng/hết tại Kho."]]
             .map(([label, value, note]) => `<article class="dashboard-key-metric"><span>${label}</span><strong>${esc(value)}</strong><small>${note}</small></article>`).join("") + '</div>';
-        $("tableSummary").innerHTML = [["Trống", data.tables.available], ["Có khách", data.tables.occupied], ["Bảo trì / Ngừng dùng", data.tables.maintenance]]
-            .map(([label, value]) => `<span>${label}: <strong>${value}</strong></span>`).join("");
+        $("tableSummary").innerHTML = [
+            ["Trống", data.tables.available],
+            ["Có khách", data.tables.occupied],
+            ...(typeof data.tables.reserved === "number" ? [["Đang giữ", data.tables.reserved]] : []),
+            ["Bảo trì / Ngừng dùng", data.tables.maintenance]
+        ].map(([label, value]) => `<span>${label}: <strong>${value}</strong></span>`).join("");
         $("kitchenSummary").innerHTML = [["Tổng phiếu mở", data.kitchen.open], ["Chờ nhận", data.kitchen.pending], ["Đã nhận / Đang làm", data.kitchen.preparing], ["Đã xong", data.kitchen.ready]]
             .map(([label, value]) => `<span>${label}: <strong>${value}</strong></span>`).join("");
         $("dashboardTableCount").textContent = `${data.tables.total} bàn`;
         $("tableMap").innerHTML = session.tableError ? `<p class="empty-state">${esc(session.tableError)} Bấm Làm mới để tải lại sơ đồ bàn.</p>`
             : session.tables.length ? session.tables.map((table) => {
                 const maintenance = !table.isActive || table.status === "Maintenance";
-                const label = !table.isActive ? "Ngừng sử dụng" : maintenance ? "Bảo trì" : table.status === "Occupied" ? "Có khách" : "Trống";
+                const reserved = table.isActive && table.status === "Reserved";
+                const label = !table.isActive ? "Ngừng sử dụng" : maintenance ? "Bảo trì" : reserved ? "Đang có khách giữ" : table.status === "Occupied" ? "Có khách" : "Trống";
                 const content = `<strong>${esc(table.tableNumber)}</strong><span>${table.capacity} chỗ · ${esc(table.areaName || "Chưa phân khu")}</span><span>${label}</span>`;
-                return maintenance ? `<div class="table-tile is-unavailable">${content}</div>` : `<a class="table-tile ${table.status === "Occupied" ? "is-occupied" : ""}" href="pages/order.html?tableId=${table.tableId}">${content}</a>`;
+                return (maintenance || reserved)
+                    ? `<div class="table-tile ${maintenance ? "is-unavailable" : "is-reserved"}">${content}</div>`
+                    : `<a class="table-tile ${table.status === "Occupied" ? "is-occupied" : ""}" href="pages/order.html?tableId=${table.tableId}">${content}</a>`;
             }).join("") : '<p class="empty-state">Chưa có bàn được khai báo.</p>';
         const rows = data.recentOrders.filter((o) => filter === "all" || (filter === "waiting" && ["Pending", "SentToKitchen"].includes(o.status))
             || (filter === "preparing" && o.status === "Preparing") || (filter === "ready" && ["Ready", "Completed"].includes(o.status)));

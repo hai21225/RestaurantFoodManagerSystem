@@ -1,5 +1,6 @@
 using System.Data;
 using System.Globalization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using RestaurantFoodManagerSystem.Infrastructure.Persistence;
 
@@ -8,12 +9,21 @@ public sealed class ReservationService
     private readonly AppDbContext _db;
     private readonly ICurrentUser _currentUser;
     private readonly MomoPaymentService _momo;
+    private readonly IHubContext<RestaurantHub>? _hub;
+    private readonly ILogger<ReservationService>? _logger;
 
-    public ReservationService(AppDbContext db, ICurrentUser currentUser, MomoPaymentService momo)
+    public ReservationService(
+        AppDbContext db,
+        ICurrentUser currentUser,
+        MomoPaymentService momo,
+        IHubContext<RestaurantHub>? hub = null,
+        ILogger<ReservationService>? logger = null)
     {
         _db = db;
         _currentUser = currentUser;
         _momo = momo;
+        _hub = hub;
+        _logger = logger;
     }
 
     private bool IsCustomerOnlyCaller() =>
@@ -102,7 +112,9 @@ public sealed class ReservationService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
 
-        return ReservationResponse.From(reservation, table.TableNumber);
+        var response = ReservationResponse.From(reservation, table.TableNumber);
+        await BroadcastReservationEventAsync("ReservationCreated", reservation, response, ct);
+        return response;
     }
 
     public async Task<List<ReservationResponse>> GetMyAsync(CancellationToken ct)
@@ -168,6 +180,9 @@ public sealed class ReservationService
         if (r.Status is TableReservationStatuses.Cancelled or TableReservationStatuses.NoShow or TableReservationStatuses.Completed)
             throw new InvalidOperationException($"Reservation is already {r.Status}");
 
+        if (r.Status == TableReservationStatuses.Seated && r.OrderId.HasValue)
+            throw new InvalidOperationException("Khách đã nhận bàn và có đơn gọi món, không thể hủy lịch đặt.");
+
         var now = DateTime.UtcNow;
         r.Status = TableReservationStatuses.Cancelled;
         r.CancelledBy = _currentUser.UserId;
@@ -180,7 +195,9 @@ public sealed class ReservationService
         r.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
-        return ReservationResponse.From(r);
+        var response = ReservationResponse.From(r);
+        await BroadcastReservationEventAsync("ReservationCancelled", r, response, ct);
+        return response;
     }
 
     public async Task<ReservationResponse?> ConfirmAsync(int id, CancellationToken ct)
@@ -197,7 +214,9 @@ public sealed class ReservationService
         r.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
-        return ReservationResponse.From(r);
+        var response = ReservationResponse.From(r);
+        await BroadcastReservationEventAsync("ReservationConfirmed", r, response, ct);
+        return response;
     }
 
     public async Task<ReservationResponse?> SeatAsync(int id, CancellationToken ct)
@@ -213,7 +232,9 @@ public sealed class ReservationService
         r.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
-        return ReservationResponse.From(r);
+        var response = ReservationResponse.From(r);
+        await BroadcastReservationEventAsync("ReservationSeated", r, response, ct);
+        return response;
     }
 
     public async Task<ReservationResponse?> NoShowAsync(int id, CancellationToken ct)
@@ -224,13 +245,19 @@ public sealed class ReservationService
             throw new InvalidOperationException($"Only Pending/Confirmed reservations can be marked NoShow (current: {r.Status})");
 
         var now = DateTime.UtcNow;
+        var deadline = r.ReservedTo == default ? r.ReservedFrom.AddMinutes(30) : r.ReservedTo;
+        if (now <= deadline)
+            throw new InvalidOperationException("Chưa quá giờ hẹn, chưa thể xác nhận trả bàn.");
+
         r.Status = TableReservationStatuses.NoShow;
         if (r.DepositStatus == DepositStatuses.Paid)
             r.DepositStatus = DepositStatuses.Forfeited;
         r.UpdatedAt = now;
 
         await _db.SaveChangesAsync(ct);
-        return ReservationResponse.From(r);
+        var response = ReservationResponse.From(r);
+        await BroadcastReservationEventAsync("ReservationNoShow", r, response, ct);
+        return response;
     }
 
     public async Task<ReservationResponse?> ConfirmDepositAsync(int id, ConfirmDepositRequest? request, CancellationToken ct)
@@ -341,5 +368,68 @@ public sealed class ReservationService
         await _db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return PaymentService.MomoNotificationOutcome.Applied(r.ReservationId);
+    }
+
+    public async Task<PaymentService.MomoNotificationOutcome> SimulateMomoDepositAsync(
+        int id,
+        string? requestId,
+        bool success,
+        CancellationToken ct)
+    {
+        if (!_momo.IsMockMode)
+        {
+            throw new InvalidOperationException(
+                "Simulated payments are only available when Payments:Provider=Mock.");
+        }
+
+        var r = await _db.TableReservations.AsNoTracking().FirstOrDefaultAsync(x => x.ReservationId == id, ct);
+        if (r is null)
+            return PaymentService.MomoNotificationOutcome.Rejected("Reservation not found");
+
+        EnsureCustomerOwnership(r);
+
+        var orderRef = $"RES-{r.ReservationId}";
+        var reqId = string.IsNullOrWhiteSpace(requestId) ? Guid.NewGuid().ToString("N") : requestId.Trim();
+        var payload = _momo.BuildCreatePayload(
+            r.DepositAmount,
+            orderRef,
+            $"Deposit for reservation #{r.ReservationId}",
+            reqId,
+            orderRef,
+            string.Empty);
+
+        var notification = _momo.BuildMockNotification(
+            payload,
+            success,
+            success ? "Mock deposit succeeded" : "Mock deposit failed");
+
+        return await ApplyMomoDepositNotificationAsync(notification, ct);
+    }
+
+    private async Task BroadcastReservationEventAsync(
+        string eventName,
+        TableReservation reservation,
+        ReservationResponse payload,
+        CancellationToken ct)
+    {
+        if (_hub is null) return;
+
+        var groups = new List<string>(3) { "role:Waiter", "role:Cashier" };
+        if (reservation.CustomerUserId.HasValue)
+        {
+            groups.Add($"customer:{reservation.CustomerUserId.Value}");
+        }
+
+        try
+        {
+            await _hub.Clients.Groups(groups).SendAsync(eventName, payload, ct);
+            await _hub.Clients
+                .Groups("role:Waiter", "role:Cashier")
+                .SendAsync("TableStatusChanged", new { tableId = reservation.TableId }, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Failed to broadcast SignalR event {EventName} for reservation {ReservationId}", eventName, reservation.ReservationId);
+        }
     }
 }

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Thanh toán - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3">
-    <link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3">
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1">
+    <link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1">
     <link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/payment.css?v=20261101-mobile-ledger">
     <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
@@ -70,6 +70,21 @@
                             <button type="button" class="secondary-action" id="reviewPaymentButton">Tải phiếu thu để đối chiếu</button>
                             <button type="button" class="secondary-action" id="ackPaymentButton" hidden>Đã đối chiếu, tiếp tục</button>
                         </div>
+                    </section>
+                    <section id="cashierShiftBar" class="panel" aria-labelledby="cashierShiftTitle">
+                        <div class="panel-header">
+                            <div><p class="eyebrow">Ca thu ngân</p><h3 id="cashierShiftTitle">Đang kiểm tra ca…</h3></div>
+                            <div class="payment-actions">
+                                <button class="secondary-action" type="button" id="shiftHistoryButton">Lịch sử ca</button>
+                                <button class="primary-action" type="button" id="closeShiftButton" hidden>Đóng ca &amp; Đối soát</button>
+                            </div>
+                        </div>
+                        <div id="shiftSummary" class="payment-summary" hidden></div>
+                        <form id="openShiftForm" class="payment-filters" hidden>
+                            <label><span>Tiền đầu ca (VND)</span><input id="openingCashInput" type="number" min="0" step="any" value="0" required></label>
+                            <label><span>Ghi chú mở ca</span><input id="openShiftNoteInput" type="text" maxlength="500" placeholder="Không bắt buộc"></label>
+                            <button class="primary-action" type="submit" id="openShiftSubmit">Mở ca</button>
+                        </form>
                     </section>
                     <div id="paymentDesk" class="payment-layout" role="tabpanel" aria-labelledby="checkoutTab">
                         <details id="paymentQueue" class="panel bill-list-panel" open>
@@ -148,10 +163,25 @@
         <div id="receiptPreview"></div>
         <div class="payment-actions"><button class="secondary-action" type="button" id="closeReceiptButton">Đóng phiếu</button><button class="primary-action" type="button" id="printReceiptButton">In / Lưu PDF</button></div>
     </dialog>
+    <dialog id="closeShiftDialog" class="payment-dialog" aria-labelledby="closeShiftTitle">
+        <form id="closeShiftForm">
+            <h2 id="closeShiftTitle">Đóng ca &amp; Đối soát</h2>
+            <p id="closeShiftSummary"></p>
+            <label><span>Tiền mặt thực tế (VND)</span><input id="actualCashInput" type="number" min="0" step="any" required></label>
+            <label><span>Ghi chú đối soát</span><textarea id="closeShiftNoteInput" maxlength="500" rows="2"></textarea></label>
+            <p id="closeShiftVariancePreview" class="payment-hint"></p>
+            <div class="payment-actions"><button class="secondary-action" id="cancelCloseShiftButton" type="button">Hủy</button><button class="primary-action" type="submit">Xác nhận đóng ca</button></div>
+        </form>
+    </dialog>
+    <dialog id="shiftHistoryDialog" class="payment-dialog" aria-labelledby="shiftHistoryTitle">
+        <div class="panel-header"><h2 id="shiftHistoryTitle">Lịch sử ca thu ngân</h2><button class="secondary-action" type="button" id="closeShiftHistoryButton">Đóng</button></div>
+        <div id="shiftHistoryBody" class="payment-table-wrap"></div>
+    </dialog>
     <article id="printReceipt" aria-label="Nội dung phiếu in"></article>
 
-    <script src="../js/common/auth.js?v=20261105-role-access3"></script>
-    <script src="../js/common/api.js?v=20261105-role-access3"></script>
+    <script src="../js/common/auth.js?v=20261117-v2fix1"></script>
+    <script src="../js/common/api.js?v=20261117-v2fix1"></script>
+    <script src="../js/common/realtime.js"></script>
     <script src="../js/common/navigation.js?v=20261112-service-nav10"></script>
     <script src="../js/common/payment-session.js?v=20261101-f67"></script>
     <script src="../js/pages/payment.js?v=20261112-stitch-layout3"></script>

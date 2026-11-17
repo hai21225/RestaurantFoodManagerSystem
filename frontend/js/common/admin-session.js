@@ -95,7 +95,19 @@
             if (this.definition.food && !id(this.foodId)) this.foodId = lookups.foods.find((f) => f.isActive)?.foodId || lookups.foods[0]?.foodId || null;
             if (module === "links") lookups.toppings = await api.get("/toppings?includeInactive=true");
             if (["tables", "promotions"].includes(module)) lookups[module === "tables" ? "areas" : "categories"] = await api.get(module === "tables" ? "/table-areas?includeInactive=true" : "/categories?includeInactive=true");
-            if (module === "promotions") lookups.sizes = (await Promise.all(lookups.foods.map(async (f) => (await api.get(`/foods/${f.foodId}/sizes?includeInactive=true`)).map((s) => ({ ...s, foodName: f.foodName, foodIsActive: f.isActive }))))).flat();
+            if (module === "promotions") {
+                lookups.sizes = (await Promise.all(lookups.foods.map(async (f) => {
+                    try {
+                        const list = await api.get(`/foods/${f.foodId}/sizes?includeInactive=true`);
+                        return (Array.isArray(list) ? list : []).map((s) => ({ ...s, foodName: f.foodName, foodIsActive: f.isActive }));
+                    } catch (error) {
+                        if (error?.status === 401 || error?.status === 403 || error?.status === 0 || error?.status >= 500) {
+                            throw error;
+                        }
+                        return [];
+                    }
+                }))).flat();
+            }
             const data = this.definition.food && !id(this.foodId) ? [] : await api.get(this.path() + (this.definition.singleton ? "" : "?includeInactive=true"));
             const items = this.definition.singleton ? [data] : data;
             if (!Array.isArray(items) || items.some((x) => !x || typeof x !== "object" || (this.definition.singleton ? x.id == null : !id(x[this.definition.id])))) throw fail("Dữ liệu máy chủ chưa đầy đủ. Hãy tải lại.", 502);

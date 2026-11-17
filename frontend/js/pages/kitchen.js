@@ -262,6 +262,17 @@
         preparationClock = window.setInterval(() => { if (!document.hidden) renderPreparationTimes(); }, 1000);
     }
     startPolling();
+    let realtimeTimer = null;
+    const scheduleRealtimeRefresh = () => {
+        if (realtimeTimer) return;
+        realtimeTimer = window.setTimeout(() => {
+            realtimeTimer = null;
+            if (!session.busy && !session.loading && !dialog.open && !printView.isOpen() && !printView.isBusy() && !session.pending) refresh(true, null);
+        }, 150);
+    };
+    ["OrderCreated", "OrderItemsAdded", "OrderItemCancelled", "KitchenTicketStatusChanged",
+        "KitchenItemStatusChanged", "KitchenItemReopened", "KitchenItemPreparedUpdated", "KitchenShortageReported"]
+        .forEach((eventName) => window.restaurantRealtime?.on(eventName, scheduleRealtimeRefresh));
     window.addEventListener("pageshow", (event) => { startPolling(); if (event.persisted) refresh(true); });
     window.addEventListener("pagehide", () => { window.clearInterval(poll); window.clearInterval(preparationClock); });
 })();

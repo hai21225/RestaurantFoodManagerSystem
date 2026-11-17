@@ -1,0 +1,442 @@
+/* Sahara theme extensions for V2 public menu, reservations, and QR ordering */
+.v2-public-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    color: var(--ink);
+}
+
+.v2-public-topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.v2-public-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--ink);
+}
+
+.v2-public-brand-mark {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--primary);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 16px;
+}
+
+.v2-public-brand strong {
+    display: block;
+    font-family: "EB Garamond", Georgia, serif;
+    font-size: 22px;
+    line-height: 1.1;
+}
+
+.v2-public-brand span {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.v2-public-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.v2-public-actions a,
+.v2-public-actions button {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.v2-public-main {
+    width: min(1240px, 100%);
+    margin: 0 auto;
+    padding: 24px 20px 48px;
+    display: grid;
+    gap: 20px;
+}
+
+.v2-promo-banner {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+}
+
+.v2-promo-card {
+    background: linear-gradient(135deg, #fff6ed 0%, #fce8d5 100%);
+    border: 1px solid #e6b893;
+    border-left: 4px solid var(--primary);
+    border-radius: 12px;
+    padding: 14px 16px;
+}
+
+.v2-promo-card strong {
+    display: block;
+    font-size: 16px;
+    color: var(--primary-strong);
+    margin-bottom: 4px;
+}
+
+.v2-promo-card p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink);
+}
+
+.v2-promo-meta {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.v2-section-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 20px;
+    align-items: start;
+}
+
+.v2-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.v2-pill-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.v2-pill {
+    min-height: 44px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.v2-pill.is-active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+}
+
+.v2-search-input {
+    min-height: 44px;
+    min-width: 240px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fcf9f4;
+    color: var(--ink);
+    font-size: 15px;
+}
+
+.v2-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.v2-food-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.v2-food-head {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.v2-food-thumb {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    background: var(--surface-strong);
+    color: var(--primary-strong);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+    font-size: 16px;
+    flex-shrink: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.v2-food-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.v2-food-title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.v2-food-desc {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.v2-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.v2-chip {
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: #fcf9f4;
+    border: 1px solid var(--line);
+    color: var(--ink);
+}
+
+.v2-table-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.v2-table-item {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fcf9f4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.v2-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    background: var(--surface-strong);
+    color: var(--ink);
+}
+
+.v2-badge.is-available,
+.v2-badge.is-confirmed,
+.v2-badge.is-paid {
+    background: #e6f4ea;
+    color: #1e6b3a;
+}
+
+.v2-badge.is-occupied,
+.v2-badge.is-seated,
+.v2-badge.is-pending {
+    background: #fef3e2;
+    color: #9a4b13;
+}
+
+.v2-badge.is-cancelled,
+.v2-badge.is-noshow,
+.v2-badge.is-maintenance {
+    background: #fde8e8;
+    color: #9b1c1c;
+}
+
+.v2-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+}
+
+.v2-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.v2-field label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+}
+
+.v2-field input,
+.v2-field select,
+.v2-field textarea {
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fcf9f4;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 15px;
+}
+
+.v2-field textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.v2-card-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.v2-res-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+    background: #fcf9f4;
+    display: grid;
+    gap: 10px;
+}
+
+.v2-res-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.v2-res-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.v2-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.v2-actions-row button,
+.v2-actions-row a {
+    min-height: 44px;
+}
+
+.v2-notice {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fcf9f4;
+    font-size: 14px;
+    margin: 0;
+}
+
+.v2-notice.is-error {
+    background: #fde8e8;
+    border-color: #f5bcbc;
+    color: #9b1c1c;
+}
+
+.v2-notice.is-success {
+    background: #e6f4ea;
+    border-color: #b7e1c4;
+    color: #1e6b3a;
+}
+
+.v2-qr-gate {
+    max-width: 580px;
+    margin: 16px auto;
+    padding: 24px;
+    display: grid;
+    gap: 14px;
+}
+
+.v2-cart-box {
+    position: sticky;
+    top: 16px;
+    display: grid;
+    gap: 12px;
+}
+
+.v2-cart-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+}
+
+.v2-qty-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.v2-qty-btn {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+@media (max-width: 960px) {
+    .v2-section-grid {
+        grid-template-columns: 1fr;
+    }
+    .v2-cart-box {
+        position: static;
+    }
+}
+
+@media (max-width: 600px) {
+    .v2-public-topbar {
+        padding: 12px 16px;
+    }
+    .v2-public-main {
+        padding: 16px 12px 36px;
+    }
+    .v2-search-input {
+        width: 100%;
+        min-width: 0;
+    }
+}

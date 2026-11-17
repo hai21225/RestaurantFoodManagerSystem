@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nguyên liệu &amp; công thức - Restaurant Food Manager</title>
-    <link rel="stylesheet" href="../css/base.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/layout.css?v=20261105-role-access3"><link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
+    <link rel="stylesheet" href="../css/base.css?v=20261117-v2fix1"><link rel="stylesheet" href="../css/layout.css?v=20261117-v2fix1"><link rel="stylesheet" href="../css/components.css?v=20261109-role-review">
     <link rel="stylesheet" href="../css/pages/management.css"><link rel="stylesheet" href="../css/pages/recipes.css?v=20261101-f6-2">
     <link rel="stylesheet" href="../css/pages/service-workspace.css?v=20261112-stitch-layout3">
     <link rel="stylesheet" href="../css/pages/warehouse-sahara.css?v=20261112-stitch-layout3">
@@ -14,7 +14,7 @@
         <div class="brand"><span class="brand-mark" aria-hidden="true">RF</span><div><strong>Restaurant</strong><span>POS nội bộ</span></div></div>
         <nav class="main-nav">
             <button class="nav-item" type="button" data-page="../index.html">Tổng quan</button><button class="nav-item" type="button" data-page="tables.html">Bàn ăn</button>
-            <button class="nav-item" type="button" data-page="order.html">Đặt món</button><button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
+            <button class="nav-item" type="button" data-page="kitchen.html">Bếp</button>
             <button class="nav-item" type="button" data-page="payment.html">Thanh toán</button><button class="nav-item" type="button" data-page="foods.html">Món ăn</button>
             <button class="nav-item" type="button" data-page="employees.html">Nhân viên</button><button class="nav-item" type="button" data-page="roles.html">Phân quyền</button>
             <button class="nav-item" type="button" data-page="inventory.html">Kho hàng</button><button class="nav-item" type="button" data-page="purchases.html">Nhập hàng</button>
@@ -86,6 +86,6 @@
     <form id="stockStatusForm" class="dialog-form"><label class="form-field"><span>Tình trạng kho</span><select id="stockStatusValue"><option value="Available">Bình thường</option><option value="OutOfStock">Báo hết hàng</option><option value="Spoiled">Báo hỏng</option></select></label><p class="catalog-caption">Đánh dấu tình trạng không đổi số lượng tồn và không tự bật bán lại món. Kiểm kê/điều chỉnh số lượng tại Kho.</p><p id="stockStatusMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="stockStatusDialog" type="button">Hủy</button><button id="stockStatusSubmit" class="primary-action" type="submit">Lưu tình trạng</button></div></form>
 </dialog>
 <dialog id="catalogConfirm" class="form-dialog" aria-labelledby="confirmTitle"><div class="form-dialog-header"><h2 id="confirmTitle">Xác nhận thao tác</h2><button class="dialog-close-button" data-close="catalogConfirm" type="button" aria-label="Đóng">×</button></div><form id="confirmForm" class="dialog-form"><p id="confirmText"></p><p id="confirmMessage" class="catalog-notice" role="alert"></p><div class="catalog-dialog-actions"><button class="secondary-action" data-close="catalogConfirm" type="button">Quay lại</button><button id="confirmSubmit" class="primary-action" type="submit">Xác nhận</button></div></form></dialog>
-<script src="../js/common/auth.js?v=20261105-role-access3"></script><script src="../js/common/api.js?v=20261105-role-access3"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261112-stitch-layout3-fix1"></script>
+<script src="../js/common/auth.js?v=20261117-v2fix1"></script><script src="../js/common/api.js?v=20261117-v2fix1"></script><script src="../js/common/navigation.js?v=20261112-service-nav10"></script><script src="../js/common/dialogs.js"></script><script src="../js/common/catalog-session.js?v=20261101-f6"></script><script src="../js/pages/recipes.js?v=20261112-stitch-layout3-fix1"></script>
 </body>
 </html>
